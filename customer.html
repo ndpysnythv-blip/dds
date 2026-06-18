@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <title>Kora Zola - 点单</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            coffee: { dark: '#6F4E37', main: '#8B5A2B', light: '#D2B48C', cream: '#F5F0E6', white: '#FFFAF0' },
+            pay: { wx: '#07C160', ali: '#1677FF' }
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .card-shadow { box-shadow: 0 2px 8px rgba(111, 78, 55, 0.1); }
+      .btn-hover { @apply transition-all duration-300 hover:scale-105 hover:shadow-lg; }
+      .card-hover { @apply transition-all duration-300 hover:border-coffee-main hover:shadow-md hover:-translate-y-1; }
+      .goods-card { @apply border border-coffee-dark/20 rounded-xl bg-white overflow-hidden p-0 card-hover; }
+    }
+  </style>
+</head>
+<body class="bg-coffee-cream min-h-screen">
+  <!-- 头部 -->
+  <header class="bg-coffee-main text-white p-4 sticky top-0 z-40 shadow-lg">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-mug-hot text-2xl"></i>
+      <div>
+        <h1 class="text-xl font-bold">Kora Zola</h1>
+        <p class="text-xs text-white/80">在线点单</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容 - 点单页面 -->
+  <main id="order-page" class="p-4 pb-32">
+    <!-- 分类选择 -->
+    <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+      <button class="cate-btn px-4 py-2 rounded-full bg-coffee-main text-white text-sm whitespace-nowrap" data-cate="all">
+        全部
+      </button>
+      <button class="cate-btn px-4 py-2 rounded-full bg-white text-coffee-dark text-sm whitespace-nowrap" data-cate="espresso">
+        浓缩咖啡
+      </button>
+      <button class="cate-btn px-4 py-2 rounded-full bg-white text-coffee-dark text-sm whitespace-nowrap" data-cate="latte">
+        拿铁
+      </button>
+      <button class="cate-btn px-4 py-2 rounded-full bg-white text-coffee-dark text-sm whitespace-nowrap" data-cate="dessert">
+        甜点
+      </button>
+      <button class="cate-btn px-4 py-2 rounded-full bg-white text-coffee-dark text-sm whitespace-nowrap" data-cate="drink">
+        饮品
+      </button>
+    </div>
+
+    <!-- 商品列表 -->
+    <div id="goods-list" class="grid grid-cols-2 gap-3">
+    </div>
+  </main>
+
+  <!-- 等待支付页面 -->
+  <main id="waiting-page" class="p-4 hidden">
+    <div class="text-center py-8">
+      <i class="fa-solid fa-clock text-6xl text-coffee-main mb-6"></i>
+      <h2 class="text-2xl font-bold text-coffee-dark mb-4" id="waiting-title">请前往收银台付款</h2>
+      
+      <!-- 核对码显示 -->
+      <div class="bg-white rounded-lg p-6 shadow-lg mb-4" id="verify-section">
+        <h3 class="font-bold text-coffee-dark mb-2">核对码</h3>
+        <div class="text-4xl font-bold text-coffee-main mb-4" id="verify-code">1234</div>
+        <div id="verify-qr" class="inline-block p-2 bg-white border rounded-lg"></div>
+      </div>
+      
+      <!-- 取餐码显示 -->
+      <div class="bg-white rounded-lg p-6 shadow-lg mb-4 hidden" id="pickup-code-section">
+        <h3 class="font-bold text-coffee-dark mb-2">您的取餐码</h3>
+        <div class="text-6xl font-bold text-coffee-main mb-4" id="pickup-code-display">123</div>
+        <div id="pickup-qr" class="inline-block p-2 bg-white border rounded-lg"></div>
+      </div>
+      
+      <!-- 状态显示 -->
+      <div class="bg-white rounded-lg p-4 shadow-lg mb-4">
+        <div class="flex items-center justify-center gap-2">
+          <i class="fa-solid fa-spinner fa-spin text-coffee-main" id="status-icon"></i>
+          <span class="text-lg font-bold" id="status-text">等待付款...</span>
+        </div>
+      </div>
+      
+      <!-- 订单信息 -->
+      <div class="bg-white rounded-lg p-6 shadow-lg">
+        <h3 class="font-bold text-coffee-dark mb-3">您的订单</h3>
+        <div id="waiting-goods" class="text-left mb-4"></div>
+        <p class="text-coffee-main font-bold text-xl" id="waiting-total"></p>
+      </div>
+      
+      <button id="back-to-order" class="mt-8 px-8 py-3 rounded-lg bg-coffee-main text-white font-bold btn-hover">
+        继续点单
+      </button>
+    </div>
+  </main>
+
+  <!-- 取餐号页面（移除） -->
+  <!-- 现在使用同一个页面显示所有状态 -->
+
+  <!-- 底部购物车栏 -->
+  <div id="cart-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-coffee-light/50 z-40 shadow-lg">
+    <div class="p-4">
+      <!-- 备注输入 -->
+      <div class="mb-3">
+        <textarea id="order-remark" class="w-full border border-gray-300 rounded-md p-2 text-sm resize-none" rows="2" placeholder="可选填写备注，如：不加糖、少冰等"></textarea>
+      </div>
+      <!-- 购物车内容 -->
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <i class="fa-solid fa-shopping-cart text-2xl text-coffee-main"></i>
+            <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+          </div>
+          <div>
+            <span class="text-lg font-bold text-coffee-main" id="cart-total">¥0.00</span>
+            <p class="text-xs text-gray-500" id="cart-detail"></p>
+          </div>
+        </div>
+        <button id="submit-order" class="px-6 py-2 rounded-lg bg-coffee-main text-white font-bold btn-hover" disabled>
+          提交订单
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 获取商品数据
+    function getGoodsData() {
+      try {
+        const saved = localStorage.getItem('starCoffeeGoods');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('读取商品失败:', e);
+      }
+      return [
+        { id: 1, name: '经典意式浓缩', price: 18, stock: 99, cate: 'espresso', img: 'https://picsum.photos/id/431/200/150' },
+        { id: 2, name: '美式咖啡', price: 22, stock: 99, cate: 'espresso', img: 'https://picsum.photos/id/766/200/150' },
+        { id: 3, name: '拿铁咖啡', price: 28, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/225/200/150' },
+        { id: 4, name: '卡布奇诺', price: 30, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/312/200/150' },
+        { id: 5, name: '生椰拿铁', price: 32, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/433/200/150' },
+        { id: 6, name: '提拉米苏', price: 26, stock: 50, cate: 'dessert', img: 'https://picsum.photos/id/292/200/150' },
+        { id: 7, name: '蔓越莓司康', price: 16, stock: 30, cate: 'dessert', img: 'https://picsum.photos/id/434/200/150' },
+        { id: 8, name: '鲜榨橙汁', price: 20, stock: 20, cate: 'drink', img: 'https://picsum.photos/id/447/200/150' },
+        { id: 9, name: '气泡水', price: 18, stock: 40, cate: 'drink', img: 'https://picsum.photos/id/488/200/150' },
+        { id: 10, name: '焦糖玛奇朵', price: 35, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/614/200/150' }
+      ];
+    }
+
+    // 获取待处理的用户订单
+    function getPendingOrders() {
+      try {
+        const saved = localStorage.getItem('customerPendingOrders');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('读取订单失败:', e);
+      }
+      return [];
+    }
+
+    // 保存待处理的用户订单
+    function savePendingOrders(orders) {
+      try {
+        localStorage.setItem('customerPendingOrders', JSON.stringify(orders));
+      } catch (e) {
+        console.error('保存订单失败:', e);
+      }
+    }
+
+    // 获取已支付的订单（包含取餐号）
+    function getPaidOrders() {
+      try {
+        const saved = localStorage.getItem('customerPaidOrders');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('读取已支付订单失败:', e);
+      }
+      return [];
+    }
+
+    // 保存已支付的订单
+    function savePaidOrders(orders) {
+      try {
+        localStorage.setItem('customerPaidOrders', JSON.stringify(orders));
+      } catch (e) {
+        console.error('保存已支付订单失败:', e);
+      }
+    }
+
+    // 页面切换
+    function showPage(page) {
+      document.getElementById('order-page').classList.add('hidden');
+      document.getElementById('waiting-page').classList.add('hidden');
+      document.getElementById('cart-bar').classList.add('hidden');
+      
+      document.getElementById(page).classList.remove('hidden');
+      
+      if (page === 'order-page') {
+        document.getElementById('cart-bar').classList.remove('hidden');
+      }
+    }
+    
+    // 更新订单状态显示
+    function updateOrderStatusDisplay(order) {
+      const titleEl = document.getElementById('waiting-title');
+      const statusIconEl = document.getElementById('status-icon');
+      const statusTextEl = document.getElementById('status-text');
+      const verifySection = document.getElementById('verify-section');
+      const pickupCodeSection = document.getElementById('pickup-code-section');
+      const pickupCodeDisplay = document.getElementById('pickup-code-display');
+      const pickupQr = document.getElementById('pickup-qr');
+      
+      if (!order) {
+        titleEl.textContent = '请前往收银台付款';
+        statusIconEl.className = 'fa-solid fa-spinner fa-spin text-coffee-main';
+        statusTextEl.textContent = '等待付款...';
+        verifySection.classList.remove('hidden');
+        pickupCodeSection.classList.add('hidden');
+        return;
+      }
+      
+      // 根据状态更新显示
+      switch (order.status) {
+        case 'making':
+          titleEl.textContent = '正在制作中...';
+          statusIconEl.className = 'fa-solid fa-fire text-orange-500';
+          statusTextEl.textContent = '正在制作中...';
+          verifySection.classList.add('hidden');
+          if (order.pickupCode) {
+            pickupCodeSection.classList.remove('hidden');
+            pickupCodeDisplay.textContent = order.pickupCode;
+            // 生成取餐码二维码
+            pickupQr.innerHTML = '';
+            new QRCode(pickupQr, {
+              text: order.pickupCode,
+              width: 120,
+              height: 120,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+          break;
+        case 'wait':
+          titleEl.textContent = '请取餐';
+          statusIconEl.className = 'fa-solid fa-bell text-green-500';
+          statusTextEl.textContent = '待取餐';
+          verifySection.classList.add('hidden');
+          if (order.pickupCode) {
+            pickupCodeSection.classList.remove('hidden');
+            pickupCodeDisplay.textContent = order.pickupCode;
+            // 生成取餐码二维码
+            pickupQr.innerHTML = '';
+            new QRCode(pickupQr, {
+              text: order.pickupCode,
+              width: 120,
+              height: 120,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+          break;
+        case 'finish':
+          titleEl.textContent = '已取餐';
+          statusIconEl.className = 'fa-solid fa-check-circle text-gray-500';
+          statusTextEl.textContent = '已完成';
+          verifySection.classList.add('hidden');
+          if (order.pickupCode) {
+            pickupCodeSection.classList.remove('hidden');
+            pickupCodeDisplay.textContent = order.pickupCode;
+            // 生成取餐码二维码
+            pickupQr.innerHTML = '';
+            new QRCode(pickupQr, {
+              text: order.pickupCode,
+              width: 120,
+              height: 120,
+              colorDark: '#000000',
+              colorLight: '#ffffff',
+              correctLevel: QRCode.CorrectLevel.H
+            });
+          }
+          break;
+        default:
+          // 等待付款
+          titleEl.textContent = '请前往收银台付款';
+          statusIconEl.className = 'fa-solid fa-spinner fa-spin text-coffee-main';
+          statusTextEl.textContent = '等待付款...';
+          verifySection.classList.remove('hidden');
+          pickupCodeSection.classList.add('hidden');
+      }
+    }
+
+    // 初始化数据
+    let GOODS_DATA = getGoodsData();
+    let cart = {};
+    let currentCate = 'all';
+    let currentOrderId = null;
+
+    // 渲染商品列表
+    function renderGoodsList() {
+      const container = document.getElementById('goods-list');
+      let filteredGoods = currentCate === 'all' ? GOODS_DATA : GOODS_DATA.filter(item => item.cate === currentCate);
+      filteredGoods = filteredGoods.filter(item => item.stock > 0);
+
+      container.innerHTML = filteredGoods.map(goods => `
+        <div class="goods-card">
+          <img src="${goods.img}" alt="${goods.name}" class="w-full h-32 object-cover">
+          <div class="p-3">
+            <h3 class="font-medium text-coffee-dark text-sm mb-1">${goods.name}</h3>
+            <div class="flex justify-between items-center">
+              <span class="text-coffee-main font-bold">¥${goods.price.toFixed(2)}</span>
+              <div class="flex items-center gap-2">
+                <button class="add-minus-btn w-7 h-7 flex items-center justify-center rounded-full bg-coffee-cream text-coffee-dark" data-id="${goods.id}" data-action="minus">
+                  <i class="fa-solid fa-minus text-xs"></i>
+                </button>
+                <span class="text-sm w-6 text-center" id="count-${goods.id}">${cart[goods.id]?.count || 0}</span>
+                <button class="add-minus-btn w-7 h-7 flex items-center justify-center rounded-full bg-coffee-main text-white" data-id="${goods.id}" data-action="plus">
+                  <i class="fa-solid fa-plus text-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 更新购物车显示
+    function updateCartDisplay() {
+      const cartCountEl = document.getElementById('cart-count');
+      const cartTotalEl = document.getElementById('cart-total');
+      const cartDetailEl = document.getElementById('cart-detail');
+      const submitBtn = document.getElementById('submit-order');
+
+      const cartList = Object.values(cart).filter(item => item.count > 0);
+      const totalCount = cartList.reduce((sum, item) => sum + item.count, 0);
+      const totalPrice = cartList.reduce((sum, item) => sum + item.price * item.count, 0);
+
+      cartCountEl.textContent = totalCount;
+      cartTotalEl.textContent = `¥${totalPrice.toFixed(2)}`;
+      cartDetailEl.textContent = cartList.map(item => `${item.name}×${item.count}`).join('，') || '购物车是空的';
+      
+      submitBtn.disabled = totalCount === 0;
+      
+      // 更新商品计数显示
+      GOODS_DATA.forEach(goods => {
+        const countEl = document.getElementById(`count-${goods.id}`);
+        if (countEl) {
+          countEl.textContent = cart[goods.id]?.count || 0;
+        }
+      });
+    }
+
+    // 绑定商品加减事件
+    document.getElementById('goods-list').addEventListener('click', function(e) {
+      const btn = e.target.closest('.add-minus-btn');
+      if (!btn) return;
+      
+      const goodsId = parseInt(btn.dataset.id);
+      const action = btn.dataset.action;
+      const selectedGoods = GOODS_DATA.find(item => item.id === goodsId);
+      
+      if (!selectedGoods) return;
+
+      if (action === 'plus') {
+        if (!cart[goodsId]) {
+          cart[goodsId] = { ...selectedGoods, count: 0 };
+        }
+        cart[goodsId].count++;
+      } else if (action === 'minus') {
+        if (cart[goodsId] && cart[goodsId].count > 0) {
+          cart[goodsId].count--;
+        }
+      }
+
+      updateCartDisplay();
+    });
+
+    // 绑定分类切换事件
+    document.querySelectorAll('.cate-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        currentCate = btn.dataset.cate;
+        document.querySelectorAll('.cate-btn').forEach(b => {
+          b.classList.remove('bg-coffee-main', 'text-white');
+          b.classList.add('bg-white', 'text-coffee-dark');
+        });
+        btn.classList.add('bg-coffee-main', 'text-white');
+        btn.classList.remove('bg-white', 'text-coffee-dark');
+        renderGoodsList();
+      });
+    });
+
+    // 提交订单
+    document.getElementById('submit-order').addEventListener('click', function() {
+      const cartList = Object.values(cart).filter(item => item.count > 0);
+      if (cartList.length === 0) return;
+
+      const remark = document.getElementById('order-remark').value || '';
+      const totalPrice = cartList.reduce((sum, item) => sum + item.price * item.count, 0);
+      
+      // 生成随机核对码（4位数字）
+      const verifyCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+      const newOrder = {
+        id: Date.now(),
+        goods: JSON.parse(JSON.stringify(cart)),
+        total: totalPrice,
+        remark: remark,
+        createTime: Date.now(),
+        verifyCode: verifyCode
+      };
+
+      currentOrderId = newOrder.id;
+      
+      const pendingOrders = getPendingOrders();
+      pendingOrders.push(newOrder);
+      savePendingOrders(pendingOrders);
+
+      // 显示等待支付页面
+      showWaitingPage(newOrder);
+
+      // 清空购物车
+      cart = {};
+      document.getElementById('order-remark').value = '';
+      updateCartDisplay();
+    });
+
+    // 显示等待支付页面
+    function showWaitingPage(order) {
+      const cartList = Object.values(order.goods).filter(item => item.count > 0);
+      
+      document.getElementById('waiting-goods').innerHTML = cartList.map(item => 
+        `<p class="mb-1">${item.name} × ${item.count}</p>`
+      ).join('');
+      document.getElementById('waiting-total').textContent = `¥${order.total.toFixed(2)}`;
+      
+      // 显示核对码
+      document.getElementById('verify-code').textContent = order.verifyCode;
+      
+      // 生成核对码二维码
+      const qrContainer = document.getElementById('verify-qr');
+      qrContainer.innerHTML = ''; // 清空之前的内容
+      new QRCode(qrContainer, {
+        text: order.verifyCode,
+        width: 120,
+        height: 120,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      
+      // 初始状态
+      updateOrderStatusDisplay(null);
+      
+      showPage('waiting-page');
+      
+      // 开始检查订单状态
+      startCheckOrderStatus();
+    }
+
+    // 检查订单状态
+    function startCheckOrderStatus() {
+      const checkInterval = setInterval(() => {
+        const paidOrders = getPaidOrders();
+        const paidOrder = paidOrders.find(order => order.id === currentOrderId);
+        
+        if (paidOrder) {
+          updateOrderStatusDisplay(paidOrder);
+          
+          // 如果订单已完成，可以在这里做一些额外处理
+        }
+      }, 1000);
+    }
+
+    // 返回点单页面
+    document.getElementById('back-to-order')?.addEventListener('click', function() {
+      currentOrderId = null;
+      showPage('order-page');
+    });
+
+    // 监听localStorage变化，实时更新商品数据
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'starCoffeeGoods') {
+        GOODS_DATA = getGoodsData();
+        renderGoodsList();
+      }
+    });
+
+    // 定期同步商品数据
+    setInterval(function() {
+      const newData = getGoodsData();
+      if (JSON.stringify(newData) !== JSON.stringify(GOODS_DATA)) {
+        GOODS_DATA = newData;
+        renderGoodsList();
+      }
+    }, 2000);
+
+    // 初始化
+    renderGoodsList();
+    updateCartDisplay();
+    
+    // 检查是否有未完成的订单
+    const paidOrders = getPaidOrders();
+    const lastPaidOrder = paidOrders.length > 0 ? paidOrders[paidOrders.length - 1] : null;
+    
+    if (lastPaidOrder && Date.now() - lastPaidOrder.createTime < 30 * 60 * 1000) {
+      // 30分钟内的订单，显示订单状态
+      currentOrderId = lastPaidOrder.id;
+      
+      const cartList = Object.values(lastPaidOrder.goods).filter(item => item.count > 0);
+      
+      document.getElementById('waiting-goods').innerHTML = cartList.map(item => 
+        `<p class="mb-1">${item.name} × ${item.count}</p>`
+      ).join('');
+      document.getElementById('waiting-total').textContent = `¥${lastPaidOrder.total.toFixed(2)}`;
+      
+      updateOrderStatusDisplay(lastPaidOrder);
+      showPage('waiting-page');
+      startCheckOrderStatus();
+    }
+  </script>
+</body>
+</html>
