@@ -722,7 +722,7 @@
         <!-- 左侧：上下结构 -->
         <div class="w-56 flex flex-col overflow-hidden bg-coffee-cream/20">
           <!-- 上方：添加元素 -->
-          <div class="p-4 border-b border-coffee-light/30 overflow-y-auto">
+          <div class="flex-1 p-4 border-b border-coffee-light/30 overflow-y-auto">
             <p class="text-coffee-dark font-medium mb-3">添加元素</p>
             <div class="grid grid-cols-1 gap-2">
               <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="remark">
@@ -770,7 +770,7 @@
           <!-- 下方：模板元素 -->
           <div class="flex-1 p-4 overflow-y-auto">
             <p class="text-coffee-dark font-medium mb-2">模板元素</p>
-            <div id="element-list" class="space-y-1 max-h-48 overflow-y-auto">
+            <div id="element-list" class="space-y-1">
               <!-- 元素列表将通过JS动态生成 -->
             </div>
           </div>
@@ -899,19 +899,17 @@
           
           <!-- 底部操作按钮 -->
           <div class="p-4 border-t border-coffee-light/30">
-            <div class="flex items-center justify-between">
-              <button id="reset-template-btn" class="py-1.5 px-3 rounded-md bg-gray-200 text-gray-600 text-xs hover:bg-gray-300 transition-colors flex items-center gap-1">
+            <div class="grid grid-cols-2 gap-3">
+              <button id="reset-template-btn" class="py-3 rounded-md bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-300">
                 <i class="fa-solid fa-rotate-left"></i> 恢复默认
               </button>
-              <div class="flex gap-2">
-                <button id="test-print-btn" class="py-1.5 px-3 rounded-md bg-green-100 text-green-700 border border-green-300 text-xs hover:bg-green-200 transition-colors flex items-center gap-1">
-                  <i class="fa-solid fa-print"></i> 测试打印
-                </button>
-                <button id="cancel-template-editor" class="py-1.5 px-3 rounded-md bg-gray-200 text-gray-600 text-xs hover:bg-gray-300 transition-colors">取消</button>
-                <button id="save-template-editor" class="py-1.5 px-3 rounded-md bg-coffee-main text-white text-xs hover:bg-coffee-dark transition-colors flex items-center gap-1">
-                  <i class="fa-solid fa-save"></i>保存
-                </button>
-              </div>
+              <button id="test-print-btn" class="py-3 rounded-md bg-green-50 text-green-700 text-sm hover:bg-green-100 transition-colors flex items-center justify-center gap-2 border border-green-300">
+                <i class="fa-solid fa-print"></i> 测试打印
+              </button>
+              <button id="cancel-template-editor" class="py-3 rounded-md bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition-colors border border-gray-300">取消</button>
+              <button id="save-template-editor" class="py-3 rounded-md bg-coffee-main text-white text-sm hover:bg-coffee-dark transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-save"></i>保存
+              </button>
             </div>
           </div>
         </div>
