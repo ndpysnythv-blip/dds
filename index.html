@@ -930,7 +930,7 @@
           <i class="fa-solid fa-plus-circle"></i>添加新商品
         </button>
         <button id="to-sort-goods" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
-          <i class="fa-solid fa-sort"></i>调整商品顺序/位置
+          <i class="fa-solid fa-sort"></i>商品管理
         </button>
       </div>
     </div>
@@ -1015,8 +1015,15 @@
           <input type="text" id="edit-goods-barcode" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="例如：8801234567890" maxlength="13">
         </div>
         <div>
-          <label class="text-sm text-coffee-dark mb-1 block">商品图片链接</label>
-          <input type="text" id="edit-goods-img" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="输入图片URL地址">
+          <label class="text-sm text-coffee-dark mb-1 block">商品图片</label>
+          <div class="relative">
+            <img id="edit-goods-img-preview" class="w-24 h-24 object-cover rounded-md border border-coffee-light mb-2" src="" alt="商品图片" style="display:none;">
+            <button id="edit-goods-upload-btn" class="w-full py-3 px-3 border border-coffee-light rounded-md hover:bg-coffee-cream/50 transition-colors flex items-center justify-center gap-2 text-coffee-dark">
+              <i class="fa-solid fa-upload"></i>上传商品图片
+            </button>
+            <input type="file" id="edit-goods-img-upload" accept="image/*" class="hidden">
+            <input type="hidden" id="edit-goods-img">
+          </div>
         </div>
       </div>
       <div class="flex gap-3">
@@ -1822,6 +1829,14 @@
       document.getElementById('edit-goods-stock').value = goods.stock || 99;
       document.getElementById('edit-goods-barcode').value = goods.barcode || '';
       document.getElementById('edit-goods-img').value = goods.img || '';
+      
+      const imgPreview = document.getElementById('edit-goods-img-preview');
+      if (goods.img) {
+        imgPreview.src = goods.img;
+        imgPreview.style.display = 'block';
+      } else {
+        imgPreview.style.display = 'none';
+      }
       
       document.getElementById('edit-goods-modal').classList.remove('hidden');
     }
@@ -4358,6 +4373,27 @@
           document.getElementById('edit-goods-modal').classList.add('hidden');
         });
       });
+      
+      // 图片上传按钮点击
+      document.getElementById('edit-goods-upload-btn').addEventListener('click', function() {
+        document.getElementById('edit-goods-img-upload').click();
+      });
+      
+      // 图片选择后预览
+      document.getElementById('edit-goods-img-upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const base64 = event.target.result;
+            document.getElementById('edit-goods-img').value = base64;
+            const preview = document.getElementById('edit-goods-img-preview');
+            preview.src = base64;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
     }
 
     // 渲染排序商品列表
@@ -4366,7 +4402,7 @@
       el.innerHTML = '';
       GOODS_DATA.forEach(goods => {
         const item = document.createElement('div');
-        item.className = 'sortable-item';
+        item.className = 'sortable-item cursor-pointer';
         item.dataset.id = goods.id;
         item.innerHTML = `
           <div class="flex items-center gap-3">
@@ -4375,6 +4411,11 @@
           </div>
           <span class="text-xs text-gray-500">${goods.cate === 'espresso' ? '意式咖啡' : goods.cate === 'latte' ? '拿铁系列' : goods.cate === 'dessert' ? '甜点小食' : '非咖饮品'}</span>
         `;
+        item.addEventListener('click', function(e) {
+          if (!e.target.closest('.sort-handle')) {
+            openEditGoodsModal(goods.id);
+          }
+        });
         el.appendChild(item);
       });
       new Sortable(el, {
