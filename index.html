@@ -391,49 +391,7 @@
         <button id="to-print-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-print"></i>打印设置
         </button>
-        <button id="to-printer-connect" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
-          <i class="fa-solid fa-plug"></i>打印机连接
-        </button>
       </div>
-    </div>
-  </div>
-
-  <!-- 打印机连接弹窗 -->
-  <div id="printer-connect-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
-      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
-        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-plug text-coffee-main"></i>打印机连接</h2>
-        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      
-      <!-- 打印机状态 -->
-      <div id="printer-status" class="p-4 bg-gray-50 rounded-lg mb-4">
-        <div class="flex items-center gap-3">
-          <div id="printer-status-icon" class="w-4 h-4 rounded-full bg-gray-400"></div>
-          <div>
-            <p id="printer-status-text" class="font-medium text-gray-600">未连接打印机</p>
-            <p id="printer-info" class="text-sm text-gray-400">请扫描USB设备</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- USB设备扫描 -->
-      <div class="mb-4">
-        <button id="connect-usb-btn" class="w-full py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2">
-          <i class="fa-solid fa-usb text-xl"></i>
-          <span>扫描USB设备</span>
-        </button>
-      </div>
-
-      <!-- USB设备列表 -->
-      <div id="usb-device-list-modal" class="max-h-[200px] overflow-y-auto scrollbar-hide mb-4">
-        <p class="text-gray-400 text-center py-4">点击上方按钮扫描USB设备</p>
-      </div>
-
-      <!-- 断开连接按钮 -->
-      <button id="disconnect-usb-modal-btn" class="w-full py-3 rounded-md bg-red-50 border border-red-200 text-red-600 btn-hover flex items-center justify-center gap-2 hidden">
-        <i class="fa-solid fa-unlink"></i>断开连接
-      </button>
     </div>
   </div>
 
@@ -563,58 +521,14 @@
           </label>
         </div>
 
-        <div class="p-3 bg-coffee-cream rounded-lg">
-          <p class="text-coffee-dark font-medium mb-3">打印机连接</p>
-          <div id="browser-support-tip" class="hidden mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p class="text-xs text-yellow-700"><i class="fa-solid fa-exclamation-triangle mr-1"></i>您的浏览器不支持USB打印，建议使用Chrome/Edge</p>
-          </div>
-          <div id="usb-device-status" class="flex items-center gap-2 mb-3">
-            <div id="usb-status-icon" class="w-3 h-3 rounded-full bg-gray-400"></div>
-            <span id="usb-status-text" class="text-sm text-gray-600">未连接USB设备</span>
-          </div>
-          <div class="space-y-2">
-            <button id="scan-usb-btn" class="w-full py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors flex items-center justify-center gap-2">
-              <i class="fa-solid fa-search"></i>扫描USB设备
-            </button>
-            <div id="usb-device-list" class="max-h-40 overflow-y-auto hidden">
-              <p class="text-xs text-gray-500 mb-2">选择要连接的设备：</p>
-            </div>
-            <button id="disconnect-usb-btn" class="w-full py-2 px-3 rounded-md bg-red-50 border border-red-200 text-red-600 text-sm hover:bg-red-100 transition-colors flex items-center justify-center gap-2 hidden">
-              <i class="fa-solid fa-unlink"></i>断开连接
-            </button>
-          </div>
-        </div>
-
         <button id="open-template-editor-btn" class="w-full py-3 rounded-md bg-coffee-cream text-coffee-dark border-2 border-coffee-main btn-hover text-lg flex items-center justify-center gap-2">
           <i class="fa-solid fa-palette"></i>打开模板编辑器
         </button>
-        <button id="open-merge-template-editor-btn" class="w-full py-3 rounded-md bg-blue-50 text-blue-700 border-2 border-blue-300 btn-hover text-lg flex items-center justify-center gap-2 mt-2">
-          <i class="fa-solid fa-layer-group"></i>合并标签模板编辑器
-        </button>
-
-        <button id="test-print-btn" class="w-full py-3 rounded-md bg-green-100 text-green-700 border-2 border-green-300 btn-hover text-lg flex items-center justify-center gap-2">
-          <i class="fa-solid fa-print"></i>打印测试
-        </button>
-
         <button id="save-print-settings" class="w-full py-3 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center justify-center gap-2">
           <i class="fa-solid fa-save"></i>保存设置
         </button>
 
-        <!-- 调试信息区域 -->
-        <div class="mt-4 border-t border-gray-200 pt-4">
-          <button id="toggle-debug" class="w-full py-2 px-3 rounded-md bg-gray-100 text-gray-700 text-sm hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
-            <i class="fa-solid fa-bug"></i>显示/隐藏调试信息
-          </button>
-          <div id="debug-info" class="mt-3 hidden">
-            <div class="bg-gray-900 rounded-lg p-3 max-h-60 overflow-y-auto">
-              <p class="text-xs text-green-400 mb-2">调试日志（按F12可查看浏览器控制台）:</p>
-              <div id="debug-log" class="text-xs text-gray-300 font-mono whitespace-pre-wrap">
-                点击"扫描USB设备"开始调试...
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
       </div>
     </div>
   </div>
@@ -1632,9 +1546,6 @@
         }
       });
       
-      // 合并标签模板编辑器按钮
-      document.getElementById('open-merge-template-editor-btn').addEventListener('click', openMergeTemplateEditor);
-      
       // 合并标签模板编辑器 - 纸张大小改变时更新预览
       document.getElementById('merge-paper-width').addEventListener('input', updateMergeTemplatePreview);
       document.getElementById('merge-paper-height').addEventListener('input', updateMergeTemplatePreview);
@@ -2328,40 +2239,6 @@
         initTemplateCanvas();
       });
 
-      // 打印测试 - 复用 printLabel() 统一逻辑（坐标系与模板编辑器一致）
-      document.getElementById('test-print-btn').addEventListener('click', async () => {
-        try {
-          showTipModal('正在准备测试打印...', 'fa-solid fa-spinner');
-
-          if (printSettings.template === 'custom') {
-            // 自研驱动打印
-            if (!usbDriver.isConnected) {
-              showTipModal('请先连接USB打印机', 'fa-solid fa-exclamation-circle');
-              return;
-            }
-            const testData = usbDriver.generatePrintData(
-              'TEST123',
-              [{ name: '测试商品', quantity: 1, price: '10.00' }],
-              new Date().toLocaleString('zh-CN')
-            );
-            await usbDriver.sendData(testData);
-            showTipModal('测试打印成功！', 'fa-solid fa-check-circle');
-            return;
-          }
-
-          // 浏览器打印：填充测试数据，复用 printLabel
-          currentPrintOrder = {
-            code: 'TEST123',
-            goods: { test1: { id: 'test1', name: '测试商品', price: 10.00, count: 1 } },
-            time: new Date().toLocaleString('zh-CN'),
-            remark: '测试打印'
-          };
-          await printLabel();
-        } catch (error) {
-          showTipModal('打印失败: ' + error.message, 'fa-solid fa-exclamation-circle');
-        }
-      });
-
       // 打印方式切换
       document.querySelectorAll('.print-mode-label').forEach(label => {
         label.addEventListener('click', function() {
@@ -2381,13 +2258,6 @@
             }
           }
         });
-      });
-
-      // 进入打印机连接
-      document.getElementById('to-printer-connect').addEventListener('click', () => {
-        document.getElementById('settings-modal').classList.add('hidden');
-        document.getElementById('printer-connect-modal').classList.remove('hidden');
-        updateUSBStatus();
       });
     }
 
@@ -3899,18 +3769,17 @@
       const statusText = document.getElementById('usb-status-text');
       const disconnectBtn = document.getElementById('disconnect-usb-btn');
 
+      if (!statusIcon || !statusText) return;
+
       if (usbDriver.isConnected) {
         statusIcon.className = 'w-3 h-3 rounded-full bg-green-500';
         statusText.textContent = '已连接USB打印机';
-        disconnectBtn.classList.remove('hidden');
+        if (disconnectBtn) disconnectBtn.classList.remove('hidden');
       } else {
         statusIcon.className = 'w-3 h-3 rounded-full bg-gray-400';
         statusText.textContent = '未连接USB设备';
-        disconnectBtn.classList.add('hidden');
+        if (disconnectBtn) disconnectBtn.classList.add('hidden');
       }
-      
-      // 更新调试日志
-      updateDebugLog();
     }
 
     // 扫描USB设备
@@ -4206,35 +4075,7 @@
         }
       }
 
-      // 打印设置页面 - USB扫描按钮
-      document.getElementById('scan-usb-btn').addEventListener('click', scanUSBDevices);
-      
-      // 打印设置页面 - 断开连接按钮
-      document.getElementById('disconnect-usb-btn').addEventListener('click', disconnectUSB);
-      
-      // 打印设置页面 - 调试信息切换按钮
-      const toggleDebugBtn = document.getElementById('toggle-debug');
-      if (toggleDebugBtn) {
-        toggleDebugBtn.addEventListener('click', () => {
-          const debugInfo = document.getElementById('debug-info');
-          if (debugInfo) {
-            debugInfo.classList.toggle('hidden');
-            updateDebugLog();
-          }
-        });
-      }
-
-      // 打印机连接弹窗 - USB扫描按钮
-      document.getElementById('connect-usb-btn').addEventListener('click', scanUSBDevicesModal);
-
-      // 打印机连接弹窗 - 断开连接按钮
-      document.getElementById('disconnect-usb-modal-btn').addEventListener('click', async () => {
-        await disconnectUSB();
-        updatePrinterConnectStatus();
-      });
-
       // 初始化状态
-      updatePrinterConnectStatus();
       updateUSBStatus();
     }
 
@@ -4245,16 +4086,18 @@
       const printerInfo = document.getElementById('printer-info');
       const disconnectBtn = document.getElementById('disconnect-usb-modal-btn');
 
+      if (!statusIcon || !statusText || !printerInfo) return;
+
       if (usbDriver.isConnected) {
         statusIcon.className = 'w-4 h-4 rounded-full bg-green-500';
         statusText.textContent = '已连接打印机';
         printerInfo.textContent = 'USB打印机';
-        disconnectBtn.classList.remove('hidden');
+        if (disconnectBtn) disconnectBtn.classList.remove('hidden');
       } else {
         statusIcon.className = 'w-4 h-4 rounded-full bg-gray-400';
         statusText.textContent = '未连接打印机';
         printerInfo.textContent = '请扫描USB设备';
-        disconnectBtn.classList.add('hidden');
+        if (disconnectBtn) disconnectBtn.classList.add('hidden');
       }
     }
 
