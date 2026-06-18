@@ -510,15 +510,15 @@
           </div>
         </div>
 
-        <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
+        <div id="auto-call-pickup-entry" class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg cursor-pointer hover:bg-coffee-light/30 transition-colors">
           <div>
             <p class="text-coffee-dark font-medium">自动呼叫取餐</p>
             <p class="text-sm text-gray-500">制作完成扫码后自动播放呼叫</p>
           </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="auto-call-pickup-toggle" class="sr-only peer" checked>
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
-          </label>
+          <div class="flex items-center gap-2">
+            <span id="auto-call-pickup-status" class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">已开启</span>
+            <i class="fa-solid fa-chevron-right text-gray-400"></i>
+          </div>
         </div>
 
         <button id="open-template-editor-btn" class="w-full py-3 rounded-md bg-coffee-cream text-coffee-dark border-2 border-coffee-main btn-hover text-lg flex items-center justify-center gap-2">
@@ -529,6 +529,94 @@
         </button>
 
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 呼叫取餐设置弹窗 -->
+  <div id="call-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-bell text-coffee-main"></i>呼叫取餐设置</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="space-y-4">
+        <!-- 开启自动呼叫 -->
+        <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
+          <div>
+            <p class="text-coffee-dark font-medium">开启自动呼叫</p>
+            <p class="text-sm text-gray-500">制作完成扫码后自动播放呼叫</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="call-settings-auto-toggle" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+          </label>
+        </div>
+
+        <!-- 呼叫内容模板 -->
+        <div class="p-3 bg-coffee-cream rounded-lg">
+          <p class="text-coffee-dark font-medium mb-2">呼叫内容模板</p>
+          <p class="text-xs text-gray-500 mb-3">使用 {code} 代表取餐号码</p>
+          <input type="text" id="call-settings-template" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm" placeholder="请 {code} 号取餐">
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button class="call-template-btn text-xs px-2 py-1 bg-white border border-coffee-light rounded hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="请 {code} 号取餐">请{code}号取餐</button>
+            <button class="call-template-btn text-xs px-2 py-1 bg-white border border-coffee-light rounded hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="{code} 号顾客，您的餐已做好">顾客通知</button>
+            <button class="call-template-btn text-xs px-2 py-1 bg-white border border-coffee-light rounded hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="{code} 号，请前来取餐">简洁版</button>
+          </div>
+        </div>
+
+        <!-- 播放次数 -->
+        <div class="p-3 bg-coffee-cream rounded-lg">
+          <p class="text-coffee-dark font-medium mb-2">播放次数</p>
+          <p class="text-xs text-gray-500 mb-3">呼叫时重复播放的次数</p>
+          <div class="flex items-center gap-3">
+            <input type="range" id="call-settings-repeat" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="1" max="5" value="2">
+            <span id="call-settings-repeat-display" class="font-bold text-coffee-main w-8 text-center">2</span>
+          </div>
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>1次</span>
+            <span>5次</span>
+          </div>
+        </div>
+
+        <!-- 播放间隔 -->
+        <div class="p-3 bg-coffee-cream rounded-lg">
+          <p class="text-coffee-dark font-medium mb-2">播放间隔</p>
+          <p class="text-xs text-gray-500 mb-3">每次播放之间的等待时间（秒）</p>
+          <div class="flex items-center gap-3">
+            <input type="range" id="call-settings-interval" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="1" max="10" value="3">
+            <span id="call-settings-interval-display" class="font-bold text-coffee-main w-12 text-center">3秒</span>
+          </div>
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>1秒</span>
+            <span>10秒</span>
+          </div>
+        </div>
+
+        <!-- 音量大小 -->
+        <div class="p-3 bg-coffee-cream rounded-lg">
+          <p class="text-coffee-dark font-medium mb-2">音量大小</p>
+          <p class="text-xs text-gray-500 mb-3">调整语音播报的音量</p>
+          <div class="flex items-center gap-3">
+            <input type="range" id="call-settings-volume" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="0.1" max="1" step="0.1" value="0.8">
+            <span id="call-settings-volume-display" class="font-bold text-coffee-main w-12 text-center">80%</span>
+          </div>
+          <div class="flex justify-between text-xs text-gray-500 mt-1">
+            <span>10%</span>
+            <span>100%</span>
+          </div>
+        </div>
+
+        <!-- 测试按钮 -->
+        <button id="call-settings-test-btn" class="w-full py-2 px-3 rounded-md bg-green-100 text-green-700 border-2 border-green-300 text-sm hover:bg-green-200 transition-colors flex items-center justify-center gap-2">
+          <i class="fa-solid fa-volume-high"></i>测试播放效果
+        </button>
+
+        <!-- 保存按钮 -->
+        <button id="save-call-settings-btn" class="w-full py-3 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center justify-center gap-2">
+          <i class="fa-solid fa-save"></i>保存设置
+        </button>
       </div>
     </div>
   </div>
@@ -1134,13 +1222,13 @@
     }
 
     // 语音播报功能
-    function speakText(text) {
+    function speakText(text, volume = 1.0) {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-CN';
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
-        utterance.volume = 1.0;
+        utterance.volume = volume;
         window.speechSynthesis.speak(utterance);
       } else {
         console.log('浏览器不支持语音播报');
@@ -1511,6 +1599,7 @@
       bindPickupEvents();
       bindCollapsePanel();
       bindCallModalEvents();
+      bindCallSettingsEvents();
       bindSortGoodsEvents();
       bindAddMoreGoodsEvents();
       bindCheckoutCloseEvent();
@@ -1918,11 +2007,15 @@
       paperHeight: 50,
       autoDismiss: true,
       autoCallPickup: true,
+      callTemplate: '请 {code} 号取餐',
+      callRepeat: 2,
+      callInterval: 3,
+      callVolume: 0.8,
       mergeLabels: false,
       mergePaperWidth: 100,
       mergePaperHeight: 80,
       landscapePrint: false,
-      canvasRotation: 0, // 模板编辑器画布旋转角度：0, 90, 180, 270
+      canvasRotation: 0,
       templateConfig: {
         logo: 'https://img.icons8.com/doodle/96/coffee--v1.png',
         shopName: 'Kora Zola',
@@ -2012,8 +2105,16 @@
     function updatePrintSettingsUI() {
       document.getElementById('auto-print-toggle').checked = printSettings.autoPrint;
       document.getElementById('auto-dismiss-toggle').checked = printSettings.autoDismiss;
-      document.getElementById('auto-call-pickup-toggle').checked = printSettings.autoCallPickup;
       document.getElementById('merge-labels-toggle').checked = printSettings.mergeLabels || false;
+      
+      // 更新呼叫取餐状态显示
+      const callStatus = document.getElementById('auto-call-pickup-status');
+      if (callStatus) {
+        callStatus.textContent = printSettings.autoCallPickup ? '已开启' : '已关闭';
+        callStatus.className = printSettings.autoCallPickup 
+          ? 'text-xs px-2 py-1 bg-green-100 text-green-700 rounded' 
+          : 'text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded';
+      }
       
       // 更新旋转角度显示
       const rotationDisplay = document.getElementById('canvas-rotation-display');
@@ -2059,7 +2160,6 @@
     function savePrintSettings() {
       printSettings.autoPrint = document.getElementById('auto-print-toggle').checked;
       printSettings.autoDismiss = document.getElementById('auto-dismiss-toggle').checked;
-      printSettings.autoCallPickup = document.getElementById('auto-call-pickup-toggle').checked;
       printSettings.mergeLabels = document.getElementById('merge-labels-toggle').checked;
       const selectedModeLabel = document.querySelector('.print-mode-label.border-coffee-main');
       printSettings.printMode = selectedModeLabel ? selectedModeLabel.dataset.mode : 'label';
@@ -2123,10 +2223,9 @@
         autoSavePrintSettings();
       });
 
-      // 自动呼叫取餐开关 - 自动保存
-      document.getElementById('auto-call-pickup-toggle').addEventListener('change', function() {
-        printSettings.autoCallPickup = this.checked;
-        autoSavePrintSettings();
+      // 自动呼叫取餐入口 - 点击打开设置弹窗
+      document.getElementById('auto-call-pickup-entry').addEventListener('click', function() {
+        openCallSettings();
       });
 
       // 合并标签打印开关 - 自动保存
@@ -4830,7 +4929,11 @@
     let callNotificationTimer = null;
     
     window.callCustomer = function(code) {
-      document.getElementById('call-number').textContent = `请 ${code} 号取餐`;
+      // 使用配置的模板生成呼叫文本
+      const template = printSettings.callTemplate || '请 {code} 号取餐';
+      const callText = template.replace('{code}', code.split('').join(' '));
+      
+      document.getElementById('call-number').textContent = template.replace('{code}', code);
       document.getElementById('call-modal').classList.remove('hidden');
 
       // 清除之前的定时器
@@ -4849,10 +4952,22 @@
         document.getElementById('call-goods-list').innerHTML = goodsHtml;
       }
 
-      // 语音播报
-      speakText(`请${code.split('').join(' ')}号取餐`);
+      // 根据配置重复播放语音
+      const repeatCount = printSettings.callRepeat || 2;
+      const intervalSeconds = printSettings.callInterval || 3;
+      const volume = printSettings.callVolume || 0.8;
       
-      // 15秒后自动关闭通知（延长显示时间）
+      let currentRepeat = 0;
+      function playCall() {
+        speakText(callText, volume);
+        currentRepeat++;
+        if (currentRepeat < repeatCount) {
+          setTimeout(playCall, intervalSeconds * 1000);
+        }
+      }
+      playCall();
+      
+      // 15秒后自动关闭通知
       callNotificationTimer = setTimeout(() => {
         hideCallNotification();
       }, 15000);
@@ -4891,6 +5006,68 @@
         popup.style.opacity = '0';
         setTimeout(() => popup.remove(), 500);
       }, 5000);
+    }
+
+    // 打开呼叫取餐设置弹窗
+    function openCallSettings() {
+      document.getElementById('call-settings-auto-toggle').checked = printSettings.autoCallPickup;
+      document.getElementById('call-settings-template').value = printSettings.callTemplate;
+      document.getElementById('call-settings-repeat').value = printSettings.callRepeat;
+      document.getElementById('call-settings-repeat-display').textContent = printSettings.callRepeat;
+      document.getElementById('call-settings-interval').value = printSettings.callInterval;
+      document.getElementById('call-settings-interval-display').textContent = printSettings.callInterval + '秒';
+      document.getElementById('call-settings-volume').value = printSettings.callVolume;
+      document.getElementById('call-settings-volume-display').textContent = Math.round(printSettings.callVolume * 100) + '%';
+      
+      document.getElementById('call-settings-modal').classList.remove('hidden');
+    }
+
+    // 绑定呼叫取餐设置事件
+    function bindCallSettingsEvents() {
+      // 模板快捷按钮
+      document.querySelectorAll('.call-template-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.getElementById('call-settings-template').value = this.dataset.template;
+        });
+      });
+
+      // 播放次数滑块
+      document.getElementById('call-settings-repeat').addEventListener('input', function() {
+        document.getElementById('call-settings-repeat-display').textContent = this.value;
+      });
+
+      // 播放间隔滑块
+      document.getElementById('call-settings-interval').addEventListener('input', function() {
+        document.getElementById('call-settings-interval-display').textContent = this.value + '秒';
+      });
+
+      // 音量滑块
+      document.getElementById('call-settings-volume').addEventListener('input', function() {
+        document.getElementById('call-settings-volume-display').textContent = Math.round(this.value * 100) + '%';
+      });
+
+      // 测试播放
+      document.getElementById('call-settings-test-btn').addEventListener('click', function() {
+        const template = document.getElementById('call-settings-template').value || '请 {code} 号取餐';
+        const text = template.replace('{code}', '88');
+        const volume = parseFloat(document.getElementById('call-settings-volume').value);
+        speakText(text, volume);
+      });
+
+      // 保存设置
+      document.getElementById('save-call-settings-btn').addEventListener('click', function() {
+        printSettings.autoCallPickup = document.getElementById('call-settings-auto-toggle').checked;
+        printSettings.callTemplate = document.getElementById('call-settings-template').value || '请 {code} 号取餐';
+        printSettings.callRepeat = parseInt(document.getElementById('call-settings-repeat').value) || 2;
+        printSettings.callInterval = parseInt(document.getElementById('call-settings-interval').value) || 3;
+        printSettings.callVolume = parseFloat(document.getElementById('call-settings-volume').value) || 0.8;
+        
+        autoSavePrintSettings();
+        updatePrintSettingsUI();
+        
+        document.getElementById('call-settings-modal').classList.add('hidden');
+        showTipModal('呼叫设置已保存', 'fa-solid fa-check-circle');
+      });
     }
 
     // 绑定打印相关事件
