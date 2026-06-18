@@ -487,29 +487,6 @@
           </label>
         </div>
 
-        <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
-          <div>
-            <p class="text-coffee-dark font-medium">合并标签打印</p>
-            <p class="text-sm text-gray-500">将两张标签合并成一张打印（第一张在上，第二张在下）</p>
-          </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="merge-labels-toggle" class="sr-only peer">
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
-          </label>
-        </div>
-
-        <div class="p-3 bg-coffee-cream rounded-lg">
-          <p class="text-coffee-dark font-medium mb-2">打印旋转角度</p>
-          <p class="text-sm text-gray-500 mb-3">在模板编辑器中设置旋转角度后保存</p>
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-600">当前角度:</span>
-            <span id="canvas-rotation-display" class="font-bold text-coffee-main">0°</span>
-            <button id="quick-rotate-btn" class="ml-auto px-3 py-1 bg-white border border-coffee-main text-coffee-dark text-xs rounded hover:bg-coffee-main hover:text-white transition-colors">
-              旋转90°
-            </button>
-          </div>
-        </div>
-
         <div id="auto-call-pickup-entry" class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg cursor-pointer hover:bg-coffee-light/30 transition-colors">
           <div>
             <p class="text-coffee-dark font-medium">自动呼叫取餐</p>
@@ -727,49 +704,60 @@
       </div>
       
       <div class="flex flex-1 overflow-hidden">
-        <!-- 左侧：可添加元素 -->
-        <div class="w-56 p-4 border-r border-coffee-light/30 overflow-y-auto bg-coffee-cream/20">
-          <p class="text-coffee-dark font-medium mb-3">添加元素</p>
-          <div class="grid grid-cols-1 gap-2">
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="remark">
-              <i class="fa-solid fa-sticky-note mr-2"></i> 备注
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="logo">
-              <i class="fa-solid fa-image mr-2"></i> Logo
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="shop-name">
-              <i class="fa-solid fa-store mr-2"></i> 店铺名称
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="code-label">
-              <i class="fa-solid fa-tag mr-2"></i> 取餐码标题
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="code-number">
-              <i class="fa-solid fa-hashtag mr-2"></i> 取餐码数字
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="qrcode">
-              <i class="fa-solid fa-qrcode mr-2"></i> 二维码
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="goods-title">
-              <i class="fa-solid fa-list mr-2"></i> 商品标题
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="goods-list">
-              <i class="fa-solid fa-basket-shopping mr-2"></i> 商品明细
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="total">
-              <i class="fa-solid fa-calculator mr-2"></i> 合计金额
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="time">
-              <i class="fa-solid fa-clock mr-2"></i> 时间
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="footer">
-              <i class="fa-solid fa-quote-right mr-2"></i> 页脚
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="line">
-              <i class="fa-solid fa-minus mr-2"></i> 分隔线
-            </button>
-            <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="text">
-              <i class="fa-solid fa-font mr-2"></i> 自定义文字
-            </button>
+        <!-- 左侧：上下结构 -->
+        <div class="w-56 flex flex-col overflow-hidden bg-coffee-cream/20">
+          <!-- 上方：添加元素 -->
+          <div class="p-4 border-b border-coffee-light/30 overflow-y-auto">
+            <p class="text-coffee-dark font-medium mb-3">添加元素</p>
+            <div class="grid grid-cols-1 gap-2">
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="remark">
+                <i class="fa-solid fa-sticky-note mr-2"></i> 备注
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="logo">
+                <i class="fa-solid fa-image mr-2"></i> Logo
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="shop-name">
+                <i class="fa-solid fa-store mr-2"></i> 店铺名称
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="code-label">
+                <i class="fa-solid fa-tag mr-2"></i> 取餐码标题
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="code-number">
+                <i class="fa-solid fa-hashtag mr-2"></i> 取餐码数字
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="qrcode">
+                <i class="fa-solid fa-qrcode mr-2"></i> 二维码
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="goods-title">
+                <i class="fa-solid fa-list mr-2"></i> 商品标题
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="goods-list">
+                <i class="fa-solid fa-basket-shopping mr-2"></i> 商品明细
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="total">
+                <i class="fa-solid fa-calculator mr-2"></i> 合计金额
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="time">
+                <i class="fa-solid fa-clock mr-2"></i> 时间
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="footer">
+                <i class="fa-solid fa-quote-right mr-2"></i> 页脚
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="line">
+                <i class="fa-solid fa-minus mr-2"></i> 分隔线
+              </button>
+              <button class="add-element-btn py-2 px-3 rounded-md bg-white border border-coffee-main text-coffee-dark text-sm hover:bg-coffee-main hover:text-white transition-colors text-left" data-type="text">
+                <i class="fa-solid fa-font mr-2"></i> 自定义文字
+              </button>
+            </div>
+          </div>
+          
+          <!-- 下方：模板元素 -->
+          <div class="flex-1 p-4 overflow-y-auto">
+            <p class="text-coffee-dark font-medium mb-2">模板元素</p>
+            <div id="element-list" class="space-y-1 max-h-48 overflow-y-auto">
+              <!-- 元素列表将通过JS动态生成 -->
+            </div>
           </div>
         </div>
         
@@ -815,16 +803,8 @@
           </div>
         </div>
         
-        <!-- 右侧：元素列表和控制面板 -->
+        <!-- 右侧：控制面板 -->
         <div class="w-64 border-l border-coffee-light/30 flex flex-col overflow-hidden">
-          <!-- 当前元素列表 -->
-          <div class="p-4 border-b border-coffee-light/30 flex-shrink-0">
-            <p class="text-coffee-dark font-medium mb-2">模板元素</p>
-            <div id="element-list" class="space-y-1 max-h-48 overflow-y-auto">
-              <!-- 元素列表将通过JS动态生成 -->
-            </div>
-          </div>
-          
           <!-- 选中元素控制 -->
           <div class="flex-1 p-4 overflow-y-auto">
             <div id="element-controls" class="space-y-4">
@@ -903,15 +883,20 @@
           </div>
           
           <!-- 底部操作按钮 -->
-          <div class="p-4 border-t border-coffee-light/30 space-y-2">
-            <button id="reset-template-btn" class="w-full py-2 rounded-md bg-gray-200 text-gray-600 text-sm hover:bg-gray-300 transition-colors">
-              <i class="fa-solid fa-rotate-left"></i> 恢复默认
-            </button>
-            <div class="flex gap-2">
-              <button id="cancel-template-editor" class="flex-1 py-2 rounded-md bg-gray-200 text-gray-600 btn-hover">取消</button>
-              <button id="save-template-editor" class="flex-1 py-2 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2">
-                <i class="fa-solid fa-save"></i>保存
+          <div class="p-4 border-t border-coffee-light/30">
+            <div class="flex items-center justify-between">
+              <button id="reset-template-btn" class="py-1.5 px-3 rounded-md bg-gray-200 text-gray-600 text-xs hover:bg-gray-300 transition-colors flex items-center gap-1">
+                <i class="fa-solid fa-rotate-left"></i> 恢复默认
               </button>
+              <div class="flex gap-2">
+                <button id="test-print-btn" class="py-1.5 px-3 rounded-md bg-green-100 text-green-700 border border-green-300 text-xs hover:bg-green-200 transition-colors flex items-center gap-1">
+                  <i class="fa-solid fa-print"></i> 测试打印
+                </button>
+                <button id="cancel-template-editor" class="py-1.5 px-3 rounded-md bg-gray-200 text-gray-600 text-xs hover:bg-gray-300 transition-colors">取消</button>
+                <button id="save-template-editor" class="py-1.5 px-3 rounded-md bg-coffee-main text-white text-xs hover:bg-coffee-dark transition-colors flex items-center gap-1">
+                  <i class="fa-solid fa-save"></i>保存
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -2105,7 +2090,6 @@
     function updatePrintSettingsUI() {
       document.getElementById('auto-print-toggle').checked = printSettings.autoPrint;
       document.getElementById('auto-dismiss-toggle').checked = printSettings.autoDismiss;
-      document.getElementById('merge-labels-toggle').checked = printSettings.mergeLabels || false;
       
       // 更新呼叫取餐状态显示
       const callStatus = document.getElementById('auto-call-pickup-status');
@@ -2160,7 +2144,6 @@
     function savePrintSettings() {
       printSettings.autoPrint = document.getElementById('auto-print-toggle').checked;
       printSettings.autoDismiss = document.getElementById('auto-dismiss-toggle').checked;
-      printSettings.mergeLabels = document.getElementById('merge-labels-toggle').checked;
       const selectedModeLabel = document.querySelector('.print-mode-label.border-coffee-main');
       printSettings.printMode = selectedModeLabel ? selectedModeLabel.dataset.mode : 'label';
       printSettings.template = document.querySelector('input[name="print-template"]:checked').value;
@@ -2227,22 +2210,6 @@
       document.getElementById('auto-call-pickup-entry').addEventListener('click', function() {
         openCallSettings();
       });
-
-      // 合并标签打印开关 - 自动保存
-      document.getElementById('merge-labels-toggle').addEventListener('change', function() {
-        printSettings.mergeLabels = this.checked;
-        autoSavePrintSettings();
-      });
-
-      // 快速旋转按钮 - 自动保存
-      const quickRotateBtn = document.getElementById('quick-rotate-btn');
-      if (quickRotateBtn) {
-        quickRotateBtn.addEventListener('click', function() {
-          printSettings.canvasRotation = (printSettings.canvasRotation + 90) % 360;
-          autoSavePrintSettings();
-          updatePrintSettingsUI();
-        });
-      }
 
       // 打印方式选择 - 自动保存 (包含label点击
       document.querySelectorAll('.print-mode-label').forEach(label => {
@@ -3263,6 +3230,25 @@
           localStorage.setItem('printSettings', JSON.stringify(printSettings));
           document.getElementById('template-editor-modal').classList.add('hidden');
           showTipModal(`${currentEditMode === 'receipt' ? '小票' : '标签'}模板布局已保存`, 'fa-solid fa-check-circle');
+        });
+      }
+      
+      // 测试打印按钮
+      const testPrintBtn = document.getElementById('test-print-btn');
+      if (testPrintBtn) {
+        testPrintBtn.addEventListener('click', async function() {
+          // 先保存当前模板到localStorage，确保测试打印使用最新设置
+          saveCurrentTemplate();
+          
+          currentPrintOrder = {
+            code: 'TEST123',
+            goods: { test1: { id: 'test1', name: '测试商品', price: 10.00, count: 1 } },
+            time: new Date().toLocaleString('zh-CN'),
+            remark: '测试打印'
+          };
+          
+          document.getElementById('template-editor-modal').classList.add('hidden');
+          await printLabel();
         });
       }
       
