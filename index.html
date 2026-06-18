@@ -76,6 +76,14 @@
       .price-input { @apply w-20 text-center bg-coffee-cream border border-coffee-main rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-coffee-dark; }
       /* 总金额改价：总金额点击样式 */
       .total-price-num { @apply cursor-pointer hover:text-coffee-dark transition-colors; }
+      /* 弹窗淡入淡出动画：使用 transition 而非 animation，避免 hidden 切换时动画失效 */
+      .modal-fade {
+        transition: opacity 0.25s ease-out;
+        opacity: 0;
+      }
+      .modal-fade:not(.hidden) {
+        opacity: 1;
+      }
       @keyframes fadeIn {
         from { opacity: 0; transform: translate(-50%, -10px); }
         to { opacity: 1; transform: translate(-50%, 0); }
@@ -919,7 +927,7 @@
   </div>
 
   <!-- 商品管理弹窗 -->
-  <div id="goods-manage-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="goods-manage-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-cogs text-coffee-main"></i>商品管理</h2>
@@ -930,14 +938,15 @@
           <i class="fa-solid fa-plus-circle"></i>添加新商品
         </button>
         <button id="to-sort-goods" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
-          <i class="fa-solid fa-sort"></i>商品管理
+          <i class="fa-solid fa-list-check"></i>商品列表/调整顺序
         </button>
       </div>
+      <p class="text-xs text-gray-500 text-center"><i class="fa-solid fa-lightbulb text-coffee-light"></i> 提示：进入商品列表后，点击商品可编辑详情，拖拽可调整展示顺序</p>
     </div>
   </div>
 
   <!-- 添加新商品弹窗 -->
-  <div id="add-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="add-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-plus-square text-coffee-main"></i>添加新商品</h2>
@@ -981,7 +990,7 @@
   </div>
 
   <!-- 编辑商品弹窗 -->
-  <div id="edit-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="edit-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-60 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 id="edit-goods-title" class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-pencil text-coffee-main"></i>编辑商品</h2>
@@ -1038,15 +1047,15 @@
   </div>
 
   <!-- 调整商品顺序弹窗 -->
-  <div id="sort-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="sort-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
-        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-sort text-coffee-main"></i>调整商品顺序</h2>
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-list-check text-coffee-main"></i>商品列表 / 调整顺序</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="mb-4">
-        <p class="text-sm text-coffee-dark mb-2"><i class="fa-solid fa-info-circle text-coffee-light"></i> 拖拽商品项可调整展示顺序，点击保存生效</p>
-        <div id="sortable-goods-list" class="max-h-[400px] overflow-y-auto scrollbar-hide p-2 border border-coffee-light/30 rounded-lg"></div>
+        <p class="text-sm text-coffee-dark mb-2"><i class="fa-solid fa-hand-pointer text-coffee-light"></i> 点击商品可编辑详情，拖拽左侧把手可调整展示顺序</p>
+        <div id="sortable-goods-list" class="max-h-[400px] overflow-y-auto scrollbar-hide p-2 border border-gray-100 rounded-lg"></div>
       </div>
       <button id="save-sort-btn" class="w-full py-3 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center justify-center gap-2">
         <i class="fa-solid fa-save"></i>保存商品顺序
@@ -1055,7 +1064,7 @@
   </div>
 
   <!-- 添加更多商品弹窗 -->
-  <div id="add-more-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="add-more-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-plus text-coffee-main"></i>添加更多商品</h2>
@@ -1792,18 +1801,33 @@
         `;
         goodsListEl.appendChild(goodsCard);
         // 点击卡片任意位置都能添加商品
+        // 单击：添加商品到购物车；双击/右键：编辑商品详情
+        // 使用 clickTimer 延迟单击处理，避免双击时误触发两次单击
+        let clickTimer = null;
         goodsCard.addEventListener('click', function() {
-          const goodsId = goods.id;
-          const selectedGoods = GOODS_DATA.find(item => item.id === goodsId);
-          currentGoods[goodsId] = currentGoods[goodsId] ? { ...selectedGoods, count: currentGoods[goodsId].count + 1 } : { ...selectedGoods, count: 1 };
-          updateBottomAmount();
-          openCheckoutModal();
+          if (clickTimer) return; // 已有双击等待中，跳过单击
+          clickTimer = setTimeout(() => {
+            const goodsId = goods.id;
+            const selectedGoods = GOODS_DATA.find(item => item.id === goodsId);
+            currentGoods[goodsId] = currentGoods[goodsId] ? { ...selectedGoods, count: currentGoods[goodsId].count + 1 } : { ...selectedGoods, count: 1 };
+            updateBottomAmount();
+            openCheckoutModal();
+            clickTimer = null;
+          }, 250);
         });
         goodsCard.addEventListener('dblclick', function() {
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
           openEditGoodsModal(goods.id);
         });
         goodsCard.addEventListener('contextmenu', function(e) {
           e.preventDefault();
+          if (clickTimer) {
+            clearTimeout(clickTimer);
+            clickTimer = null;
+          }
           openEditGoodsModal(goods.id);
         });
       });
@@ -1817,27 +1841,55 @@
       showTipModal('商品删除成功！', 'fa-solid fa-check-circle');
     }
 
-    // 打开编辑商品弹窗
+    // 关闭所有弹窗（统一管理弹窗层级，避免多个弹窗同时打开导致遮挡）
+    function closeAllModals() {
+      try {
+        const modalIds = [
+          'goods-manage-modal',
+          'add-goods-modal',
+          'edit-goods-modal',
+          'sort-goods-modal',
+          'add-more-goods-modal'
+        ];
+        modalIds.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.classList.add('hidden');
+        });
+      } catch (err) {
+        console.warn('关闭弹窗时出现异常:', err);
+      }
+    }
+
+    // 打开编辑商品弹窗（从任意入口进入：主页面双击/右键、商品管理列表点击）
     function openEditGoodsModal(goodsId) {
       const goods = GOODS_DATA.find(item => item.id === goodsId);
       if (!goods) return;
-      
+
+      // 填充表单数据，添加空值容错
       document.getElementById('edit-goods-id').value = goods.id;
-      document.getElementById('edit-goods-name').value = goods.name;
-      document.getElementById('edit-goods-price').value = goods.price;
-      document.getElementById('edit-goods-cate').value = goods.cate;
+      document.getElementById('edit-goods-name').value = goods.name || '';
+      document.getElementById('edit-goods-price').value = goods.price || 0;
+      document.getElementById('edit-goods-cate').value = goods.cate || 'latte';
       document.getElementById('edit-goods-stock').value = goods.stock || 99;
       document.getElementById('edit-goods-barcode').value = goods.barcode || '';
       document.getElementById('edit-goods-img').value = goods.img || '';
-      
+
+      // 图片预览处理
       const imgPreview = document.getElementById('edit-goods-img-preview');
-      if (goods.img) {
-        imgPreview.src = goods.img;
-        imgPreview.style.display = 'block';
-      } else {
-        imgPreview.style.display = 'none';
+      if (imgPreview) {
+        if (goods.img) {
+          imgPreview.src = goods.img;
+          imgPreview.style.display = 'block';
+        } else {
+          imgPreview.style.display = 'none';
+        }
       }
-      
+
+      // 先关闭可能遮挡的弹窗，确保编辑弹窗在最上层
+      document.getElementById('sort-goods-modal').classList.add('hidden');
+      document.getElementById('goods-manage-modal').classList.add('hidden');
+
+      // 打开编辑弹窗（z-60 确保在排序弹窗之上）
       document.getElementById('edit-goods-modal').classList.remove('hidden');
     }
 
