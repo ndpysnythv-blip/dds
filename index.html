@@ -2764,7 +2764,7 @@
         item.innerHTML = `
           <div class="flex items-center justify-between p-2 rounded cursor-pointer hover:bg-coffee-light/20 ${selectedElement === el.id ? 'bg-coffee-main/20' : ''}">
             <div class="flex items-center gap-2">
-              <span class="w-5 h-5 flex items-center justify-center bg-coffee-main text-white text-xs rounded-full font-bold">${index + 1}</span>
+              <span class="w-5 h-5 flex items-center justify-center border-2 border-coffee-main text-coffee-main text-xs rounded-full font-bold bg-transparent">${index + 1}</span>
               <i class="fa-solid ${el.type === 'image' ? 'fa-image' : el.type === 'qrcode' ? 'fa-qrcode' : el.type === 'line' ? 'fa-minus' : 'fa-font'} text-coffee-main"></i>
               <span class="text-sm text-coffee-dark">${displayName}</span>
             </div>
