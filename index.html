@@ -511,14 +511,14 @@
   </div>
 
   <!-- 呼叫取餐设置弹窗 -->
-  <div id="call-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
-      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+  <div id="call-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 px-6 pt-6">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-bell text-coffee-main"></i>呼叫取餐设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       
-      <div class="space-y-5">
+      <div class="space-y-5 overflow-y-auto p-6 flex-1">
         <!-- 开启自动呼叫 -->
         <div class="flex items-center justify-between p-4 bg-coffee-cream rounded-lg">
           <div>
@@ -599,16 +599,16 @@
             <span>100%</span>
           </div>
         </div>
-
-        <!-- 操作按钮 -->
-        <div class="flex gap-3">
-          <button id="call-settings-test-btn" class="flex-1 py-3 rounded-md bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 transition-colors flex items-center justify-center gap-2">
-            <i class="fa-solid fa-volume-high"></i>测试播放效果
-          </button>
-          <button id="save-call-settings-btn" class="flex-1 py-3 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2">
-            <i class="fa-solid fa-save"></i>保存设置
-          </button>
-        </div>
+      </div>
+      
+      <!-- 操作按钮 -->
+      <div class="flex gap-3 p-6 border-t border-coffee-light/30 bg-white">
+        <button id="call-settings-test-btn" class="flex-1 py-3 rounded-md bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 transition-colors flex items-center justify-center gap-2">
+          <i class="fa-solid fa-volume-high"></i>测试播放效果
+        </button>
+        <button id="save-call-settings-btn" class="flex-1 py-3 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2">
+          <i class="fa-solid fa-save"></i>保存设置
+        </button>
       </div>
     </div>
   </div>
