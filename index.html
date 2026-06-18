@@ -512,88 +512,103 @@
 
   <!-- 呼叫取餐设置弹窗 -->
   <div id="call-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-bell text-coffee-main"></i>呼叫取餐设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       
-      <div class="space-y-4">
+      <div class="space-y-5">
         <!-- 开启自动呼叫 -->
-        <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
+        <div class="flex items-center justify-between p-4 bg-coffee-cream rounded-lg">
           <div>
             <p class="text-coffee-dark font-medium">开启自动呼叫</p>
             <p class="text-sm text-gray-500">制作完成扫码后自动播放呼叫</p>
           </div>
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="call-settings-auto-toggle" class="sr-only peer">
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+            <div class="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-coffee-main"></div>
           </label>
         </div>
 
         <!-- 呼叫内容模板 -->
-        <div class="p-3 bg-coffee-cream rounded-lg">
+        <div class="p-4 bg-coffee-cream rounded-lg">
           <p class="text-coffee-dark font-medium mb-2">呼叫内容模板</p>
           <p class="text-xs text-gray-500 mb-3">使用 {code} 代表取餐号码</p>
-          <input type="text" id="call-settings-template" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm" placeholder="请 {code} 号取餐">
-          <div class="mt-2 flex flex-wrap gap-2">
-            <button class="call-template-btn text-xs px-2 py-1 bg-white border border-coffee-light rounded hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="请 {code} 号取餐">请{code}号取餐</button>
-            <button class="call-template-btn text-xs px-2 py-1 bg-white border border-coffee-light rounded hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="{code} 号顾客，您的餐已做好">顾客通知</button>
-            <button class="call-template-btn text-xs px-2 py-1 bg-white border border-coffee-light rounded hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="{code} 号，请前来取餐">简洁版</button>
+          <input type="text" id="call-settings-template" class="w-full py-3 px-4 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="请 {code} 号取餐">
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button class="call-template-btn text-sm px-3 py-1.5 bg-white border border-coffee-light rounded-md hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="请 {code} 号取餐">请{code}号取餐</button>
+            <button class="call-template-btn text-sm px-3 py-1.5 bg-white border border-coffee-light rounded-md hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="{code} 号顾客，您的餐已做好">顾客通知</button>
+            <button class="call-template-btn text-sm px-3 py-1.5 bg-white border border-coffee-light rounded-md hover:border-coffee-main hover:text-coffee-main transition-colors" data-template="{code} 号，请前来取餐">简洁版</button>
           </div>
         </div>
 
         <!-- 播放次数 -->
-        <div class="p-3 bg-coffee-cream rounded-lg">
-          <p class="text-coffee-dark font-medium mb-2">播放次数</p>
-          <p class="text-xs text-gray-500 mb-3">呼叫时重复播放的次数</p>
-          <div class="flex items-center gap-3">
-            <input type="range" id="call-settings-repeat" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="1" max="5" value="2">
-            <span id="call-settings-repeat-display" class="font-bold text-coffee-main w-8 text-center">2</span>
+        <div class="p-4 bg-coffee-cream rounded-lg">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-coffee-dark font-medium">播放次数</p>
+              <p class="text-xs text-gray-500">呼叫时重复播放的次数</p>
+            </div>
+            <span id="call-settings-repeat-display" class="font-bold text-coffee-main text-xl w-10 text-center">2</span>
           </div>
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <input type="range" id="call-settings-repeat" class="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="1" max="5" value="2">
+          <div class="flex justify-between text-xs text-gray-500 mt-2">
             <span>1次</span>
+            <span>2次</span>
+            <span>3次</span>
+            <span>4次</span>
             <span>5次</span>
           </div>
         </div>
 
         <!-- 播放间隔 -->
-        <div class="p-3 bg-coffee-cream rounded-lg">
-          <p class="text-coffee-dark font-medium mb-2">播放间隔</p>
-          <p class="text-xs text-gray-500 mb-3">每次播放之间的等待时间（秒）</p>
-          <div class="flex items-center gap-3">
-            <input type="range" id="call-settings-interval" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="1" max="10" value="3">
-            <span id="call-settings-interval-display" class="font-bold text-coffee-main w-12 text-center">3秒</span>
+        <div class="p-4 bg-coffee-cream rounded-lg">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-coffee-dark font-medium">播放间隔</p>
+              <p class="text-xs text-gray-500">每次播放之间的等待时间</p>
+            </div>
+            <span id="call-settings-interval-display" class="font-bold text-coffee-main text-xl w-12 text-center">3秒</span>
           </div>
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <input type="range" id="call-settings-interval" class="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="1" max="10" value="3">
+          <div class="flex justify-between text-xs text-gray-500 mt-2">
             <span>1秒</span>
+            <span>3秒</span>
+            <span>5秒</span>
+            <span>8秒</span>
             <span>10秒</span>
           </div>
         </div>
 
         <!-- 音量大小 -->
-        <div class="p-3 bg-coffee-cream rounded-lg">
-          <p class="text-coffee-dark font-medium mb-2">音量大小</p>
-          <p class="text-xs text-gray-500 mb-3">调整语音播报的音量</p>
-          <div class="flex items-center gap-3">
-            <input type="range" id="call-settings-volume" class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="0.1" max="1" step="0.1" value="0.8">
-            <span id="call-settings-volume-display" class="font-bold text-coffee-main w-12 text-center">80%</span>
+        <div class="p-4 bg-coffee-cream rounded-lg">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-coffee-dark font-medium">音量大小</p>
+              <p class="text-xs text-gray-500">调整语音播报的音量</p>
+            </div>
+            <span id="call-settings-volume-display" class="font-bold text-coffee-main text-xl w-14 text-center">80%</span>
           </div>
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <input type="range" id="call-settings-volume" class="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-coffee-main" min="0.1" max="1" step="0.1" value="0.8">
+          <div class="flex justify-between text-xs text-gray-500 mt-2">
             <span>10%</span>
+            <span>30%</span>
+            <span>50%</span>
+            <span>80%</span>
             <span>100%</span>
           </div>
         </div>
 
-        <!-- 测试按钮 -->
-        <button id="call-settings-test-btn" class="w-full py-2 px-3 rounded-md bg-green-100 text-green-700 border-2 border-green-300 text-sm hover:bg-green-200 transition-colors flex items-center justify-center gap-2">
-          <i class="fa-solid fa-volume-high"></i>测试播放效果
-        </button>
-
-        <!-- 保存按钮 -->
-        <button id="save-call-settings-btn" class="w-full py-3 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center justify-center gap-2">
-          <i class="fa-solid fa-save"></i>保存设置
-        </button>
+        <!-- 操作按钮 -->
+        <div class="flex gap-3">
+          <button id="call-settings-test-btn" class="flex-1 py-3 rounded-md bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 transition-colors flex items-center justify-center gap-2">
+            <i class="fa-solid fa-volume-high"></i>测试播放效果
+          </button>
+          <button id="save-call-settings-btn" class="flex-1 py-3 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2">
+            <i class="fa-solid fa-save"></i>保存设置
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1209,14 +1224,25 @@
     // 语音播报功能
     function speakText(text, volume = 1.0) {
       if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'zh-CN';
-        utterance.rate = 1.0;
+        utterance.rate = 1.2;
         utterance.pitch = 1.0;
         utterance.volume = volume;
         window.speechSynthesis.speak(utterance);
       } else {
         console.log('浏览器不支持语音播报');
+      }
+    }
+
+    // 预加载语音合成引擎
+    function preloadSpeechSynthesis() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+        const utterance = new SpeechSynthesisUtterance('');
+        utterance.volume = 0;
+        window.speechSynthesis.speak(utterance);
       }
     }
 
@@ -1574,6 +1600,7 @@
 
     // 页面初始化
     document.addEventListener('DOMContentLoaded', function() {
+      preloadSpeechSynthesis();
       renderGoodsList('all');
       bindCategoryEvents();
       bindGoodsManageEvents();
