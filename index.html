@@ -1280,24 +1280,29 @@
     async function printLabel() {
       // 使用 currentPrintOrder 获取数据
       if (!currentPrintOrder) return;
-      
+
       const code = currentPrintOrder.code;
       const goods = currentPrintOrder.goods;
       const time = currentPrintOrder.time;
       const remark = currentPrintOrder.remark || '';
-      
+
       // 重新生成二维码 - 只包含取餐码
       const qrContainer = document.createElement('div');
       generateQRCode(qrContainer, code, 128);
       const qrSvg = qrContainer.innerHTML;
-      
-      const paperWidth = printSettings.paperWidth || 80;
-      const paperHeight = printSettings.paperHeight || 50;
+
+      const paperWidthMM = printSettings.paperWidth || 80;
+      const paperHeightMM = printSettings.paperHeight || 50;
       const printMode = printSettings.printMode || 'label';
       const mergeLabels = printSettings.mergeLabels || false;
-      const mergePaperWidth = printSettings.mergePaperWidth || 100;
-      const mergePaperHeight = printSettings.mergePaperHeight || 80;
+      const mergePaperWidthMM = printSettings.mergePaperWidth || 100;
+      const mergePaperHeightMM = printSettings.mergePaperHeight || 80;
       const canvasRotation = printSettings.canvasRotation || 0;
+
+      // mm → px（96dpi），与模板编辑器中的 3.78 倍率一致
+      const MM_TO_PX = 3.78;
+      const paperWidthPX = Math.round(paperWidthMM * MM_TO_PX);
+      const paperHeightPX = Math.round(paperHeightMM * MM_TO_PX);
 
       // 自研驱动模式 - 使用USB直接打印
       if (printSettings.template === 'custom') {
@@ -1307,7 +1312,6 @@
         }
         const success = await printWithUSBDriver(code, currentPrintOrder?.goods, time, remark);
         if (success) {
-          // 直接关闭所有相关弹窗，跳回主页面
           document.getElementById('print-preview-modal').classList.add('hidden');
           document.getElementById('code-modal').classList.add('hidden');
           document.getElementById('tip-modal').classList.add('hidden');
@@ -1316,43 +1320,17 @@
         return;
       }
 
-      // 生成两张标签的内容
+      // 生成两张标签内容（内容内部是像素坐标，与模板编辑器完全一致）
       const label1 = generateSingleLabelContent(code, currentPrintOrder?.goods, time, qrSvg, printMode, 1, remark);
       const label2 = generateSingleLabelContent(code, currentPrintOrder?.goods, time, qrSvg, printMode, 2, remark);
 
-      // 系统原生打印 - 使用 native-print-content 元素
       const printArea = document.getElementById('native-print-content');
-      
-      if (mergeLabels) {
-        // 合并标签模式：将两张标签横向排列（第一张在左，第二张在右），每张都旋转90度
-        // 使用合并标签设置的纸张大小
-        const singleLabelWidth = mergePaperHeight;
-        const singleLabelHeight = mergePaperWidth;
-        const totalWidth = singleLabelWidth * 2;
-        
-        printArea.innerHTML = `
-          <div style="width: ${totalWidth}mm; height: ${singleLabelHeight}mm; position: relative; overflow: hidden;">
-            <!-- 第一张标签（左侧，旋转90度） -->
-            <div style="position: absolute; top: 0; left: 0; width: ${singleLabelWidth}mm; height: ${singleLabelHeight}mm;">
-              <div style="width: ${paperWidth}mm; height: ${paperHeight}mm; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeight / 2}mm; margin-left: -${paperWidth / 2}mm; transform: rotate(90deg); transform-origin: center center;">
-                ${label1}
-              </div>
-            </div>
-            <!-- 第二张标签（右侧，旋转90度） -->
-            <div style="position: absolute; top: 0; left: ${singleLabelWidth}mm; width: ${singleLabelWidth}mm; height: ${singleLabelHeight}mm;">
-              <div style="width: ${paperWidth}mm; height: ${paperHeight}mm; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeight / 2}mm; margin-left: -${paperWidth / 2}mm; transform: rotate(90deg); transform-origin: center center;">
-                ${label2}
-              </div>
-            </div>
-          </div>
-        `;
-        
-        // 设置打印纸张大小（横向打印，纸张宽高互换）
-        const style = document.createElement('style');
-        style.id = 'temp-print-style';
-        style.textContent = `
+
+      // 封装通用的打印样式（@page 使用像素，与 label 内容坐标保持一致）
+      function buildPrintStyle(pageWidthPX, pageHeightPX) {
+        return `
           @page {
-            size: ${totalWidth}mm ${singleLabelHeight}mm;
+            size: ${pageWidthPX}px ${pageHeightPX}px;
             margin: 0mm;
           }
           #native-print-content {
@@ -1372,9 +1350,8 @@
             #native-print-content {
               display: block !important;
               position: absolute !important;
-              left: 0;
-              top: 0;
-              width: 100% !important;
+              left: 0 !important;
+              top: 0 !important;
               background: white !important;
               z-index: 99999 !important;
               padding: 0 !important;
@@ -1382,187 +1359,91 @@
             }
           }
         `;
-        
-        // 移除旧的临时样式
+      }
+
+      function applyStyle(cssText) {
         const oldStyle = document.getElementById('temp-print-style');
         if (oldStyle) oldStyle.remove();
-        
+        const style = document.createElement('style');
+        style.id = 'temp-print-style';
+        style.textContent = cssText;
         document.head.appendChild(style);
+      }
+
+      if (mergeLabels) {
+        // 合并标签模式：两张标签横向排列，每张各占一半页面
+        // 单张标签在合并纸张内的大小 = 合并纸张高度（纵向）× 合并纸张宽度的一半（横向）
+        // 这里用像素做单位，与模板内容坐标一致
+        const mergePageWidthPX = Math.round(mergePaperWidthMM * MM_TO_PX);
+        const mergePageHeightPX = Math.round(mergePaperHeightMM * MM_TO_PX);
+        const halfWidthPX = Math.round(mergePageWidthPX / 2);
+
+        printArea.innerHTML = `
+          <div style="width: ${mergePageWidthPX}px; height: ${mergePageHeightPX}px; position: relative; overflow: hidden; background: white;">
+            <div style="position: absolute; top: 0; left: 0; width: ${halfWidthPX}px; height: ${mergePageHeightPX}px;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(90deg); transform-origin: center center;">
+                ${label1}
+              </div>
+            </div>
+            <div style="position: absolute; top: 0; left: ${halfWidthPX}px; width: ${halfWidthPX}px; height: ${mergePageHeightPX}px;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(90deg); transform-origin: center center;">
+                ${label2}
+              </div>
+            </div>
+          </div>
+        `;
+        applyStyle(buildPrintStyle(mergePageWidthPX, mergePageHeightPX));
       } else {
-        // 普通模式：两张标签分开打印
+        // 普通模式：两张标签分开打印，每张一页
         if (canvasRotation === 90 || canvasRotation === 270) {
-          // 旋转90或270度打印
-          const printWidth = canvasRotation === 90 ? paperHeight : paperHeight;
-          const printHeight = canvasRotation === 90 ? paperWidth : paperWidth;
-          
+          // 旋转 90/270：页面宽高互换，内容在页面中心旋转
+          const pageWidthPX = paperHeightPX;
+          const pageHeightPX = paperWidthPX;
+
           printArea.innerHTML = `
-            <div style="page-break-after: always; break-after: page; width: ${printWidth}mm; height: ${printHeight}mm; position: relative; overflow: hidden;">
-              <div style="width: ${paperWidth}mm; height: ${paperHeight}mm; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeight / 2}mm; margin-left: -${paperWidth / 2}mm; transform: rotate(${canvasRotation}deg); transform-origin: center center;">
+            <div style="page-break-after: always; break-after: page; width: ${pageWidthPX}px; height: ${pageHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(${canvasRotation}deg); transform-origin: center center;">
                 ${label1}
               </div>
             </div>
-            <div style="page-break-after: avoid; break-after: auto; width: ${printWidth}mm; height: ${printHeight}mm; position: relative; overflow: hidden;">
-              <div style="width: ${paperWidth}mm; height: ${paperHeight}mm; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeight / 2}mm; margin-left: -${paperWidth / 2}mm; transform: rotate(${canvasRotation}deg); transform-origin: center center;">
+            <div style="page-break-after: avoid; break-after: auto; width: ${pageWidthPX}px; height: ${pageHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(${canvasRotation}deg); transform-origin: center center;">
                 ${label2}
               </div>
             </div>
           `;
-          
-          // 设置打印纸张大小（横向打印，纸张宽高互换）
-          const style = document.createElement('style');
-          style.id = 'temp-print-style';
-          style.textContent = `
-            @page {
-              size: ${printWidth}mm ${printHeight}mm;
-              margin: 0mm;
-            }
-            #native-print-content {
-              display: none;
-            }
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-              #native-print-content,
-              #native-print-content * {
-                visibility: visible !important;
-                color: #000 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              #native-print-content {
-                display: block !important;
-                position: absolute !important;
-                left: 0;
-                top: 0;
-                width: 100% !important;
-                background: white !important;
-                z-index: 99999 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-            }
-          `;
-          
-          // 移除旧的临时样式
-          const oldStyle = document.getElementById('temp-print-style');
-          if (oldStyle) oldStyle.remove();
-          
-          document.head.appendChild(style);
+          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX));
         } else if (canvasRotation === 180) {
-          // 旋转180度打印
           printArea.innerHTML = `
-            <div style="page-break-after: always; break-after: page; width: ${paperWidth}mm; height: ${paperHeight}mm; position: relative; overflow: hidden;">
-              <div style="width: ${paperWidth}mm; height: ${paperHeight}mm; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeight / 2}mm; margin-left: -${paperWidth / 2}mm; transform: rotate(180deg); transform-origin: center center;">
+            <div style="page-break-after: always; break-after: page; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(180deg); transform-origin: center center;">
                 ${label1}
               </div>
             </div>
-            <div style="page-break-after: avoid; break-after: auto; width: ${paperWidth}mm; height: ${paperHeight}mm; position: relative; overflow: hidden;">
-              <div style="width: ${paperWidth}mm; height: ${paperHeight}mm; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeight / 2}mm; margin-left: -${paperWidth / 2}mm; transform: rotate(180deg); transform-origin: center center;">
+            <div style="page-break-after: avoid; break-after: auto; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(180deg); transform-origin: center center;">
                 ${label2}
               </div>
             </div>
           `;
-          
-          // 设置打印纸张大小
-          const style = document.createElement('style');
-          style.id = 'temp-print-style';
-          style.textContent = `
-            @page {
-              size: ${paperWidth}mm ${paperHeight}mm portrait;
-              margin: 0mm;
-            }
-            #native-print-content {
-              display: none;
-            }
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-              #native-print-content,
-              #native-print-content * {
-                visibility: visible !important;
-                color: #000 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              #native-print-content {
-                display: block !important;
-                position: absolute !important;
-                left: 0;
-                top: 0;
-                width: 100% !important;
-                background: white !important;
-                z-index: 99999 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-            }
-          `;
-          
-          // 移除旧的临时样式
-          const oldStyle = document.getElementById('temp-print-style');
-          if (oldStyle) oldStyle.remove();
-          
-          document.head.appendChild(style);
+          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
         } else {
-          // 竖排打印模式（默认，不旋转）
+          // 默认：不旋转，两张标签各自一页
           printArea.innerHTML = `
-            <div style="page-break-after: always; break-after: page;">
+            <div style="page-break-after: always; break-after: page; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
               ${label1}
             </div>
-            <div style="page-break-after: avoid; break-after: auto;">
+            <div style="page-break-after: avoid; break-after: auto; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
               ${label2}
             </div>
           `;
-          
-          // 设置打印纸张大小
-          const style = document.createElement('style');
-          style.id = 'temp-print-style';
-          style.textContent = `
-            @page {
-              size: ${paperWidth}mm ${paperHeight}mm portrait;
-              margin: 0mm;
-            }
-            #native-print-content {
-              display: none;
-            }
-            @media print {
-              body * {
-                visibility: hidden !important;
-              }
-              #native-print-content,
-              #native-print-content * {
-                visibility: visible !important;
-                color: #000 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              #native-print-content {
-                display: block !important;
-                position: absolute !important;
-                left: 0;
-                top: 0;
-                width: 100% !important;
-                background: white !important;
-                z-index: 99999 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-              }
-            }
-          `;
-          
-          // 移除旧的临时样式
-          const oldStyle = document.getElementById('temp-print-style');
-          if (oldStyle) oldStyle.remove();
-          
-          document.head.appendChild(style);
+          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
         }
       }
-      
+
       // 调用系统原生打印
       window.print();
-      
+
       // 打印完成后，恢复原来的结构
       window.onafterprint = () => {
         printArea.innerHTML = `
@@ -1582,10 +1463,9 @@
 <div id="native-print-time" class="time"></div>
 <div id="native-print-footer" class="footer">请凭此票取餐 谢谢惠顾</div>
         `.trim();
-        
+
         window.onafterprint = null;
-        
-        // 直接关闭所有相关弹窗，跳回主页面
+
         document.getElementById('print-preview-modal').classList.add('hidden');
         document.getElementById('code-modal').classList.add('hidden');
         document.getElementById('tip-modal').classList.add('hidden');
@@ -2448,129 +2328,35 @@
         initTemplateCanvas();
       });
 
-      // 打印测试
+      // 打印测试 - 复用 printLabel() 统一逻辑（坐标系与模板编辑器一致）
       document.getElementById('test-print-btn').addEventListener('click', async () => {
         try {
           showTipModal('正在准备测试打印...', 'fa-solid fa-spinner');
-          
-          // 准备测试数据
-          const testCode = 'TEST123';
-          const testGoods = { test1: { id: 'test1', name: '测试商品', price: 10.00, count: 1 } };
-          const testTime = new Date().toLocaleString('zh-CN');
-          
-          // 生成测试二维码 - 只包含取餐码
-          const testQrContainer = document.createElement('div');
-          generateQRCode(testQrContainer, testCode, 128);
-          const testQrSvg = testQrContainer.innerHTML;
-          
+
           if (printSettings.template === 'custom') {
             // 自研驱动打印
             if (!usbDriver.isConnected) {
               showTipModal('请先连接USB打印机', 'fa-solid fa-exclamation-circle');
               return;
             }
-            
             const testData = usbDriver.generatePrintData(
-              testCode,
+              'TEST123',
               [{ name: '测试商品', quantity: 1, price: '10.00' }],
-              testTime
+              new Date().toLocaleString('zh-CN')
             );
-            
             await usbDriver.sendData(testData);
             showTipModal('测试打印成功！', 'fa-solid fa-check-circle');
-          } else {
-            // 浏览器打印 - 使用 native-print-content 元素
-            const paperWidth = printSettings.paperWidth || 80;
-            const paperHeight = printSettings.paperHeight || 50;
-            const printMode = printSettings.printMode || 'label';
-            
-            // 生成两张标签的内容
-            const label1 = generateSingleLabelContent(testCode, testGoods, testTime, testQrSvg, printMode, 1);
-            const label2 = generateSingleLabelContent(testCode, testGoods, testTime, testQrSvg, printMode, 2);
-            
-            // 系统原生打印 - 使用 native-print-content 元素
-            const printArea = document.getElementById('native-print-content');
-            
-            // 清空原有内容，填充模板内容
-            printArea.innerHTML = `
-              <div style="page-break-after: always; break-after: page;">
-                ${label1}
-              </div>
-              <div style="page-break-after: avoid; break-after: auto;">
-                ${label2}
-              </div>
-            `;
-            
-            // 设置打印纸张大小
-            const style = document.createElement('style');
-            style.id = 'temp-print-style';
-            style.textContent = `
-              @page {
-                size: ${paperWidth}mm ${paperHeight}mm portrait;
-                margin: 0mm;
-              }
-              #native-print-content {
-                display: none;
-              }
-              @media print {
-                body * {
-                  visibility: hidden !important;
-                }
-                #native-print-content,
-                #native-print-content * {
-                  visibility: visible !important;
-                  color: #000 !important;
-                  -webkit-print-color-adjust: exact;
-                  print-color-adjust: exact;
-                }
-                #native-print-content {
-                  display: block !important;
-                  position: absolute !important;
-                  left: 0;
-                  top: 0;
-                  width: 100% !important;
-                  background: white !important;
-                  z-index: 99999 !important;
-                  padding: 0 !important;
-                  margin: 0 !important;
-                }
-              }
-            `;
-            
-            // 移除旧的临时样式
-            const oldStyle = document.getElementById('temp-print-style');
-            if (oldStyle) oldStyle.remove();
-            
-            document.head.appendChild(style);
-            
-            // 调用系统原生打印
-            window.print();
-            
-            // 打印完成后，恢复原来的结构
-            window.onafterprint = () => {
-              printArea.innerHTML = `
-<div id="native-print-logo" class="logo-wrap"></div>
-<div id="native-print-shop-name" class="shop-name">Kora Zola</div>
-<div class="divider"></div>
-<div id="native-print-title" class="code-label">取餐码</div>
-<div id="native-print-code" class="code-number"></div>
-<div id="native-print-qrcode" class="qrcode-wrap"></div>
-<div class="divider"></div>
-<div id="native-print-order-title" class="order-title" style="display:none;">--- 订单详情 ---</div>
-<div id="native-print-goods-title" class="goods-title">商品明细</div>
-<div id="native-print-goods" class="goods-list"></div>
-<div id="native-print-goods-detail" class="goods-detail" style="display:none;"></div>
-<div id="native-print-total" class="total-line" style="display:none;"></div>
-<div class="divider"></div>
-<div id="native-print-time" class="time"></div>
-<div id="native-print-footer" class="footer">请凭此票取餐 谢谢惠顾</div>
-              `.trim();
-              
-              window.onafterprint = null;
-              
-              showTipModal('打印测试完成！', 'fa-solid fa-check-circle');
-            };
+            return;
           }
+
+          // 浏览器打印：填充测试数据，复用 printLabel
+          currentPrintOrder = {
+            code: 'TEST123',
+            goods: { test1: { id: 'test1', name: '测试商品', price: 10.00, count: 1 } },
+            time: new Date().toLocaleString('zh-CN'),
+            remark: '测试打印'
+          };
+          await printLabel();
         } catch (error) {
           showTipModal('打印失败: ' + error.message, 'fa-solid fa-exclamation-circle');
         }
@@ -3557,19 +3343,22 @@
       selectElement(newId);
     }
 
-    // 生成单张标签内容
+    // 生成单张标签内容（坐标系与模板编辑器完全一致）
     function generateSingleLabelContent(code, goods, time, qrSvg, printMode, templateIndex, remark = '') {
       const storageKey = getTemplateStorageKey(printMode, templateIndex);
       const savedElements = JSON.parse(localStorage.getItem(storageKey) || '[]');
-      const elements = savedElements.length > 0 ? savedElements : getDefaultElements(printMode);
+      const elements = savedElements.length > 0 ? savedElements : getDefaultElements(printMode, templateIndex);
       const config = printSettings.templateConfig || {};
       const paperWidth = printSettings.paperWidth || 80;
       const paperHeight = printSettings.paperHeight || 50;
-      
-      let html = '';
-      const canvasWidth = 300;
-      const canvasHeight = 400;
-      
+
+      // 与模板编辑器保持一致：画布宽度 = 纸张毫米数 * 3.78
+      const canvasWidth = Math.round(paperWidth * 3.78);
+      // 画布高度按模板元素的最大 y+height 自动计算，最小为纸张高度*3.78
+      const minCanvasHeight = Math.round(paperHeight * 3.78);
+      const maxElementBottom = elements.reduce((m, el) => Math.max(m, (el.y || 0) + (el.height || 0)), 0);
+      const canvasHeight = Math.max(minCanvasHeight, maxElementBottom + 10);
+
       // 准备商品明细数据
       let goodsText = '';
       let totalAmount = 0;
@@ -3579,31 +3368,34 @@
           totalAmount += g.price * g.count;
         });
       }
-      
+
+      let html = '';
       elements.forEach(el => {
         if (!el.visible) return;
-        
+
         const style = `
           position: absolute !important;
           left: ${el.x}px !important;
           top: ${el.y}px !important;
           width: ${el.width}px !important;
           ${el.type !== 'line' ? `height: ${el.height}px !important;` : ''}
-          ${el.type === 'text' ? `font-size: ${el.fontSize}px !important; font-weight: ${el.fontWeight} !important;` : ''}
+          ${el.type === 'text' ? `font-size: ${el.fontSize}px !important; font-weight: ${el.fontWeight} !important; font-family: 'Microsoft YaHei', sans-serif !important; color: #000 !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; line-height: 1.3 !important; white-space: pre-wrap !important;` : ''}
+          box-sizing: border-box !important;
+          overflow: hidden !important;
         `;
-        
+
         let content = '';
-        
+
         if (el.type === 'image') {
           const logoUrl = config.logo || 'https://img.icons8.com/doodle/96/coffee--v1.png';
-          content = `<img src="${logoUrl}" style="width: 100% !important; height: 100% !important; object-fit: contain !important;">`;
+          content = `<img src="${logoUrl}" style="width: 100% !important; height: 100% !important; object-fit: contain !important; display: block !important;">`;
         } else if (el.type === 'qrcode') {
           content = qrSvg;
         } else if (el.type === 'line') {
-          content = `<div style="width: 100% !important; border-top: 2px solid #000 !important;"></div>`;
+          content = `<div style="width: 100% !important; border-top: 2px dashed #000 !important;"></div>`;
         } else if (el.type === 'text') {
           let text = el.text;
-          
+
           // 替换动态内容
           if (el.id.includes('shop-name')) {
             text = config.shopName || 'Kora Zola';
@@ -3620,22 +3412,21 @@
           } else if (el.id.includes('footer')) {
             text = config.customFooter || (printMode === 'receipt' ? '感谢惠顾 欢迎再来' : '请凭此标签取餐');
           } else if (el.id.includes('remark')) {
-            // 只有备注存在时才显示
             if (remark && remark.trim()) {
               text = `备注：${remark}`;
             } else {
-              // 没有备注时不显示
-              return;
+              return; // 没有备注时不显示
             }
           }
-          
-          content = `<div style="white-space: pre-wrap !important; word-wrap: break-word !important; text-align: center !important;">${text.replace(/\n/g, '<br>')}</div>`;
+
+          content = text.replace(/\n/g, '<br>');
         }
-        
+
         html += `<div style="${style}">${content}</div>`;
       });
-      
-      return `<div style="position: relative !important; width: ${canvasWidth}px !important; min-height: ${canvasHeight}px !important; overflow: hidden !important; page-break-inside: avoid !important;">${html}</div>`;
+
+      // 返回的容器尺寸与模板编辑器保持一致，这样打印时与预览完全相同
+      return `<div style="position: relative !important; width: ${canvasWidth}px !important; min-height: ${canvasHeight}px !important; overflow: hidden !important; page-break-inside: avoid !important; background: white !important;">${html}</div>`;
     }
 
     // 生成自定义模板的打印内容（两张标签）
