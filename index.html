@@ -387,19 +387,32 @@
   </div>
 
   <!-- 设置弹窗 -->
-  <div id="settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-cogs text-coffee-main"></i>设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="grid grid-cols-1 gap-4 mb-6">
+      <div class="grid grid-cols-1 gap-3 mb-6">
         <button id="to-goods-manage" class="py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-box"></i>商品管理
         </button>
         <button id="to-print-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-print"></i>打印设置
         </button>
+        <button id="to-call-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-bullhorn"></i>呼叫取餐设置
+        </button>
+        <button id="to-api-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-plug"></i>API / 外部平台对接
+        </button>
+      </div>
+      <!-- 同步状态指示 -->
+      <div id="sync-status-panel" class="border-t border-coffee-light/30 pt-4">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-600"><i class="fa-solid fa-sync text-coffee-main"></i> 多设备实时同步</span>
+          <span id="sync-status-text" class="text-gray-500"><i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接</span>
+        </div>
       </div>
     </div>
   </div>
@@ -1046,6 +1059,135 @@
     </div>
   </div>
 
+  <!-- API设置弹窗 / 外部平台对接 -->
+  <div id="api-settings-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-xl p-6 my-8">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4 sticky top-0 bg-white z-10">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-plug text-coffee-main"></i>API / 外部平台对接</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 多设备实时同步 -->
+      <div class="mb-6 p-4 bg-coffee-cream/40 rounded-lg">
+        <h3 class="font-bold text-coffee-dark mb-2 flex items-center gap-2"><i class="fa-solid fa-sync text-coffee-main"></i>多设备实时同步</h3>
+        <p class="text-sm text-gray-600 mb-3">同一局域网下多台电脑/平板打开网页自动同步商品数据和订单</p>
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">同步服务器地址（WebSocket）</label>
+            <input id="api-sync-server" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="例如：ws://192.168.1.100:8765  留空则仅使用浏览器本地同步">
+          </div>
+          <div class="flex gap-2 items-center">
+            <button id="api-sync-connect" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
+              <i class="fa-solid fa-plug"></i><span>连接</span>
+            </button>
+            <button id="api-sync-disconnect" class="py-2 px-4 rounded-md bg-gray-400 text-white btn-hover text-sm flex items-center gap-2 hidden">
+              <i class="fa-solid fa-unlink"></i><span>断开</span>
+            </button>
+            <span id="api-sync-status" class="text-sm text-gray-500 flex-1 text-right"><i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接</span>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            <i class="fa-solid fa-info-circle"></i>
+            启动同步服务：运行项目目录下的 <code class="bg-white px-1 py-0.5 rounded border border-coffee-light">sync-server.py</code>
+            ，其他设备连接到该地址后即可实时同步。同一浏览器内的多标签页自动使用本地同步，无需运行服务器。
+          </p>
+        </div>
+      </div>
+
+      <!-- 支付宝对接 -->
+      <div class="mb-6 p-4 bg-coffee-cream/40 rounded-lg">
+        <h3 class="font-bold text-coffee-dark mb-2 flex items-center gap-2"><i class="fa-solid fa-credit-card text-blue-600"></i>支付宝支付 / 订单同步</h3>
+        <p class="text-sm text-gray-600 mb-3">对接支付宝开放平台，自动接收外卖订单并处理支付</p>
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">AppID</label>
+            <input id="api-alipay-appid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="例如：2021001234567890">
+          </div>
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">应用私钥（应用 RSA2 私钥）</label>
+            <textarea id="api-alipay-privatekey" rows="3" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-xs font-mono" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"></textarea>
+          </div>
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">支付宝公钥</label>
+            <textarea id="api-alipay-publickey" rows="3" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-xs font-mono" placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm text-coffee-dark mb-1 block">环境</label>
+              <select id="api-alipay-env" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main">
+                <option value="sandbox">沙箱环境（测试）</option>
+                <option value="production">正式环境</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-coffee-dark mb-1 block">签名方式</label>
+              <select id="api-alipay-sign" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main">
+                <option value="RSA2">RSA2（推荐）</option>
+                <option value="RSA">RSA</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center justify-between p-2 bg-white rounded-md border border-coffee-light/50">
+            <span class="text-sm text-gray-600">启用支付宝对接</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="api-alipay-enable" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 外卖平台对接 -->
+      <div class="mb-6 p-4 bg-coffee-cream/40 rounded-lg">
+        <h3 class="font-bold text-coffee-dark mb-2 flex items-center gap-2"><i class="fa-solid fa-motorcycle text-orange-500"></i>外卖平台订单接收</h3>
+        <p class="text-sm text-gray-600 mb-3">美团、饿了么等外卖平台订单自动同步到本系统</p>
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">美团商家ID / 店铺ID</label>
+            <input id="api-meituan-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="例如：12345678">
+          </div>
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">美团 AppKey / AppSecret（用竖线分隔）</label>
+            <input id="api-meituan-appkey" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="appkey|appsecret">
+          </div>
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">饿了么商家ID</label>
+            <input id="api-ele-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="例如：88001234">
+          </div>
+          <div>
+            <label class="text-sm text-coffee-dark mb-1 block">饿了么 AccessToken</label>
+            <input id="api-ele-token" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="从开放平台获取">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center justify-between p-2 bg-white rounded-md border border-coffee-light/50">
+              <span class="text-sm text-gray-600">启用美团</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="api-meituan-enable" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between p-2 bg-white rounded-md border border-coffee-light/50">
+              <span class="text-sm text-gray-600">启用饿了么</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="api-ele-enable" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 测试与保存 -->
+      <div class="flex gap-2 items-center justify-end">
+        <button id="api-test-btn" class="py-2 px-4 rounded-md bg-blue-500 text-white btn-hover text-sm flex items-center gap-2">
+          <i class="fa-solid fa-vial"></i>测试连接
+        </button>
+        <button id="api-save-btn" class="py-3 px-6 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center gap-2">
+          <i class="fa-solid fa-save"></i>保存设置
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 调整商品顺序弹窗 -->
   <div id="sort-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
@@ -1140,12 +1282,13 @@
     </div>
   </div>
 
-  <!-- 全局提示弹窗 -->
-  <div id="tip-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-64 p-6 transform transition-all text-center">
+  <!-- 全局提示弹窗（增强版：支持输入框） -->
+  <div id="tip-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] hidden">
+    <div class="bg-white rounded-lg card-shadow w-80 p-6 transform transition-all text-center">
       <i id="tip-icon" class="text-4xl mb-4 text-coffee-main"></i>
-      <p id="tip-text" class="text-lg font-medium"></p>
-      <button id="tip-confirm" class="mt-6 w-full py-2 rounded-md bg-coffee-main text-white btn-hover">确认</button>
+      <p id="tip-text" class="text-lg font-medium mb-4"></p>
+      <input id="tip-input" type="text" class="hidden w-full border border-coffee-light rounded-lg p-3 text-center text-xl font-bold text-coffee-main mb-4 focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="请输入">
+      <button id="tip-confirm" class="w-full py-2 rounded-md bg-coffee-main text-white btn-hover">确认</button>
     </div>
   </div>
 
@@ -1761,6 +1904,10 @@
         updatePendingOrders();
       }, 2000);
       
+      // 绑定API设置与多设备同步系统
+      bindApiSettingsEvents();
+      initSyncSystem();
+
       console.log('页面初始化完成，商品总数：', GOODS_DATA.length);
     });
 
@@ -2473,7 +2620,7 @@
           });
           this.classList.remove('border-gray-200');
           this.classList.add('border-coffee-main');
-          
+
           const newMode = this.dataset.mode;
           if (newMode && newMode !== currentEditMode) {
             currentEditMode = newMode;
@@ -2484,6 +2631,259 @@
           }
         });
       });
+
+      // 进入呼叫取餐设置
+      document.getElementById('to-call-settings').addEventListener('click', () => {
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('call-settings-modal').classList.remove('hidden');
+      });
+
+      // 进入API设置
+      document.getElementById('to-api-settings').addEventListener('click', () => {
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('api-settings-modal').classList.remove('hidden');
+        loadApiSettings();
+      });
+    }
+
+    // ========== API 设置存储与读取 ==========
+    const API_STORAGE_KEY = 'starCoffeeApiSettings';
+    const DEFAULT_API_SETTINGS = {
+      syncServer: '',
+      alipay: { appid: '', privateKey: '', publicKey: '', env: 'sandbox', sign: 'RSA2', enabled: false },
+      meituan: { shopId: '', appKey: '', enabled: false },
+      ele: { shopId: '', token: '', enabled: false }
+    };
+    function loadApiSettings() {
+      try {
+        const saved = localStorage.getItem(API_STORAGE_KEY);
+        const s = saved ? { ...DEFAULT_API_SETTINGS, ...JSON.parse(saved) } : { ...DEFAULT_API_SETTINGS };
+        document.getElementById('api-sync-server').value = s.syncServer || '';
+        document.getElementById('api-alipay-appid').value = s.alipay?.appid || '';
+        document.getElementById('api-alipay-privatekey').value = s.alipay?.privateKey || '';
+        document.getElementById('api-alipay-publickey').value = s.alipay?.publicKey || '';
+        document.getElementById('api-alipay-env').value = s.alipay?.env || 'sandbox';
+        document.getElementById('api-alipay-sign').value = s.alipay?.sign || 'RSA2';
+        document.getElementById('api-alipay-enable').checked = !!s.alipay?.enabled;
+        document.getElementById('api-meituan-shopid').value = s.meituan?.shopId || '';
+        document.getElementById('api-meituan-appkey').value = s.meituan?.appKey || '';
+        document.getElementById('api-meituan-enable').checked = !!s.meituan?.enabled;
+        document.getElementById('api-ele-shopid').value = s.ele?.shopId || '';
+        document.getElementById('api-ele-token').value = s.ele?.token || '';
+        document.getElementById('api-ele-enable').checked = !!s.ele?.enabled;
+      } catch (err) { console.warn('读取API设置失败:', err); }
+    }
+    function saveApiSettings() {
+      try {
+        const s = {
+          syncServer: document.getElementById('api-sync-server').value.trim(),
+          alipay: {
+            appid: document.getElementById('api-alipay-appid').value.trim(),
+            privateKey: document.getElementById('api-alipay-privatekey').value.trim(),
+            publicKey: document.getElementById('api-alipay-publickey').value.trim(),
+            env: document.getElementById('api-alipay-env').value,
+            sign: document.getElementById('api-alipay-sign').value,
+            enabled: document.getElementById('api-alipay-enable').checked
+          },
+          meituan: {
+            shopId: document.getElementById('api-meituan-shopid').value.trim(),
+            appKey: document.getElementById('api-meituan-appkey').value.trim(),
+            enabled: document.getElementById('api-meituan-enable').checked
+          },
+          ele: {
+            shopId: document.getElementById('api-ele-shopid').value.trim(),
+            token: document.getElementById('api-ele-token').value.trim(),
+            enabled: document.getElementById('api-ele-enable').checked
+          }
+        };
+        localStorage.setItem(API_STORAGE_KEY, JSON.stringify(s));
+        showTipModal('API设置已保存', 'fa-solid fa-check-circle');
+      } catch (err) { showTipModal('API设置保存失败', 'fa-solid fa-exclamation-circle'); }
+    }
+
+    // ========== 多设备实时同步核心逻辑 ==========
+    // 本地存储键列表，监听这些键的变化进行跨设备同步
+    const SYNC_STORAGE_KEYS = ['starCoffeeGoods', 'customerPendingOrders', 'customerPaidOrders', 'printSettings', API_STORAGE_KEY];
+    // 同步事件节流：防止循环广播（自己触发自己）
+    let _lastBroadcastMsg = '';
+    let _selfChangeSources = new Set();
+
+    // —— 方式1：localStorage storage 事件（同一浏览器多标签页/窗口，零配置生效）
+    window.addEventListener('storage', function(e) {
+      if (!e.key || !SYNC_STORAGE_KEYS.includes(e.key)) return;
+      try {
+        // 商品数据变化 -> 重新渲染
+        if (e.key === 'starCoffeeGoods') {
+          const parsed = JSON.parse(e.newValue || '[]');
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            GOODS_DATA = parsed;
+            const active = document.querySelector('.category-btn.active');
+            renderGoodsList(active ? active.dataset.cate : 'all');
+            console.log('[同步] 从其他标签页同步商品数据，条数:', parsed.length);
+          }
+        }
+        // 订单变化 -> 触发订单面板刷新（如果存在相关函数）
+        else if (e.key === 'customerPendingOrders' || e.key === 'customerPaidOrders') {
+          console.log('[同步] 订单数据变化来自其他标签页');
+          // 重新刷新列表：如果存在 pending-list 就更新
+          if (typeof refreshOrderList === 'function') refreshOrderList();
+        }
+      } catch (err) { console.warn('[同步] 处理storage事件失败:', err); }
+    });
+
+    // —— 方式2：WebSocket 跨设备实时同步（局域网多台电脑/平板）
+    let _wsSyncClient = null;
+    function updateSyncStatusUI(state, message) {
+      const statusEl = document.getElementById('api-sync-status');
+      const syncStatusText = document.getElementById('sync-status-text');
+      const connectBtn = document.getElementById('api-sync-connect');
+      const disconnectBtn = document.getElementById('api-sync-disconnect');
+      let html = '';
+      if (state === 'connected') html = '<i class="fa-solid fa-circle text-green-500 text-xs"></i> 已连接' + (message ? ' - ' + message : '');
+      else if (state === 'connecting') html = '<i class="fa-solid fa-circle text-yellow-500 text-xs fa-spin"></i> 连接中...';
+      else if (state === 'error') html = '<i class="fa-solid fa-circle text-red-500 text-xs"></i> ' + (message || '连接失败');
+      else html = '<i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接';
+      if (statusEl) statusEl.innerHTML = html;
+      if (syncStatusText) syncStatusText.innerHTML = html;
+      if (state === 'connected') {
+        if (connectBtn) connectBtn.classList.add('hidden');
+        if (disconnectBtn) disconnectBtn.classList.remove('hidden');
+      } else {
+        if (connectBtn) connectBtn.classList.remove('hidden');
+        if (disconnectBtn) disconnectBtn.classList.add('hidden');
+      }
+    }
+    function connectSyncServer() {
+      const serverAddr = document.getElementById('api-sync-server').value.trim();
+      if (!serverAddr) { showTipModal('请输入同步服务器地址', 'fa-solid fa-exclamation-circle'); return; }
+      try {
+        if (_wsSyncClient) { try { _wsSyncClient.close(); } catch(e){} _wsSyncClient = null; }
+        updateSyncStatusUI('connecting');
+        const ws = new WebSocket(serverAddr);
+        ws.onopen = function() {
+          _wsSyncClient = ws;
+          updateSyncStatusUI('connected', serverAddr);
+          // 连接建立后拉取最新数据
+          ws.send(JSON.stringify({ type: 'hello', ts: Date.now() }));
+          ws.send(JSON.stringify({ type: 'pull', keys: SYNC_STORAGE_KEYS }));
+          console.log('[同步] WebSocket已连接:', serverAddr);
+        };
+        ws.onmessage = function(e) {
+          try {
+            const msg = JSON.parse(e.data);
+            // 收到广播：应用到本地
+            if (msg.type === 'broadcast' && msg.key && SYNC_STORAGE_KEYS.includes(msg.key) && msg.value !== undefined) {
+              // 防止循环：如果这就是我们刚才发出去的内容则跳过
+              const sig = msg.key + ':' + msg.value;
+              if (sig === _lastBroadcastMsg) return;
+              localStorage.setItem(msg.key, msg.value);
+              // 触发一次数据重渲染（不会再次触发storage事件，因为本页面setItem自己不触发）
+              if (msg.key === 'starCoffeeGoods') {
+                const parsed = JSON.parse(msg.value || '[]');
+                if (Array.isArray(parsed)) {
+                  GOODS_DATA = parsed;
+                  const active = document.querySelector('.category-btn.active');
+                  renderGoodsList(active ? active.dataset.cate : 'all');
+                }
+              }
+            } else if (msg.type === 'pull-response' && msg.data) {
+              // 拉取到的全量数据 -> 应用
+              for (const k of Object.keys(msg.data)) {
+                if (!SYNC_STORAGE_KEYS.includes(k)) continue;
+                const curVal = localStorage.getItem(k);
+                if (curVal !== msg.data[k]) {
+                  localStorage.setItem(k, msg.data[k] || '');
+                  if (k === 'starCoffeeGoods') {
+                    const parsed = JSON.parse(msg.data[k] || '[]');
+                    GOODS_DATA = Array.isArray(parsed) ? parsed : GOODS_DATA;
+                  }
+                }
+              }
+              const active = document.querySelector('.category-btn.active');
+              renderGoodsList(active ? active.dataset.cate : 'all');
+              console.log('[同步] 已从服务器拉取最新数据');
+            }
+          } catch (err) { console.warn('[同步] 解析消息失败:', err); }
+        };
+        ws.onerror = function() { updateSyncStatusUI('error', '连接异常，请检查地址'); };
+        ws.onclose = function() {
+          _wsSyncClient = null;
+          updateSyncStatusUI('disconnected');
+          console.log('[同步] WebSocket已断开');
+        };
+      } catch (err) { updateSyncStatusUI('error', err.message); }
+    }
+    function disconnectSyncServer() {
+      if (_wsSyncClient) {
+        try { _wsSyncClient.close(); } catch(e) {}
+        _wsSyncClient = null;
+      }
+      updateSyncStatusUI('disconnected');
+    }
+    // 本地数据变化 -> 广播到WebSocket
+    function broadcastLocalChange(key, value) {
+      if (!_wsSyncClient || _wsSyncClient.readyState !== 1) return;
+      try {
+        const sig = key + ':' + value;
+        _lastBroadcastMsg = sig;
+        // 100ms 后清空标记，避免同一内容下一次被误过滤
+        setTimeout(() => { if (_lastBroadcastMsg === sig) _lastBroadcastMsg = ''; }, 100);
+        _wsSyncClient.send(JSON.stringify({ type: 'broadcast', key, value, ts: Date.now() }));
+      } catch (err) { console.warn('[同步] 广播失败:', err); }
+    }
+
+    // ========== 绑定 API 设置弹窗事件 ==========
+    function bindApiSettingsEvents() {
+      document.getElementById('api-save-btn').addEventListener('click', function() {
+        saveApiSettings();
+        document.getElementById('api-settings-modal').classList.add('hidden');
+      });
+      document.getElementById('api-sync-connect').addEventListener('click', function() {
+        connectSyncServer();
+      });
+      document.getElementById('api-sync-disconnect').addEventListener('click', function() {
+        disconnectSyncServer();
+      });
+      document.getElementById('api-test-btn').addEventListener('click', function() {
+        const s = {
+          sync: document.getElementById('api-sync-server').value.trim(),
+          alipay: document.getElementById('api-alipay-appid').value.trim(),
+          meituan: document.getElementById('api-meituan-shopid').value.trim(),
+          ele: document.getElementById('api-ele-shopid').value.trim()
+        };
+        let msg = [];
+        if (s.sync) msg.push('同步服务器地址已填写（点击上方\"连接\"测试连通性）');
+        if (s.alipay) msg.push('支付宝 AppID：' + s.alipay.substring(0, 8) + '...');
+        if (s.meituan) msg.push('美团商家ID：' + s.meituan);
+        if (s.ele) msg.push('饿了么商家ID：' + s.ele);
+        if (msg.length === 0) msg.push('还没有填写任何配置项');
+        showTipModal('测试检查：' + msg.join('；'), 'fa-solid fa-vial-circle-check');
+      });
+    }
+
+    // ========== 重写核心数据保存函数，使其触发同步 ==========
+    // 保存对 saveGoodsData 增强：保存后广播到同步服务器
+    const _originalSaveGoodsData = saveGoodsData;
+    window.saveGoodsData = function(goodsData) {
+      _originalSaveGoodsData(goodsData);
+      try { broadcastLocalChange('starCoffeeGoods', JSON.stringify(goodsData)); } catch(e) {}
+    };
+
+    // ========== 启动时：1) 初始化localStorage本地同步 2) 如有配置则连接WebSocket ==========
+    function initSyncSystem() {
+      try {
+        const saved = localStorage.getItem(API_STORAGE_KEY);
+        if (saved) {
+          const s = JSON.parse(saved);
+          if (s && s.syncServer) {
+            // 自动尝试连接（延迟1秒让页面先渲染好）
+            setTimeout(() => {
+              document.getElementById('api-sync-server').value = s.syncServer;
+              connectSyncServer();
+            }, 1000);
+          }
+        }
+      } catch (err) { console.warn('[同步] 初始化失败:', err); }
     }
 
     // 预览模板效果
@@ -4448,7 +4848,7 @@
       });
     }
 
-    // 渲染排序商品列表
+    // 渲染排序商品列表（增强版：显示库存，价格/库存可点击编辑）
     function renderSortableGoodsList() {
       const el = document.getElementById('sortable-goods-list');
       el.innerHTML = '';
@@ -4456,24 +4856,67 @@
         const item = document.createElement('div');
         item.className = 'sortable-item cursor-pointer';
         item.dataset.id = goods.id;
+        const cateText = goods.cate === 'espresso' ? '意式咖啡' : goods.cate === 'latte' ? '拿铁系列' : goods.cate === 'dessert' ? '甜点小食' : '非咖饮品';
         item.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 flex-1">
             <i class="fa-solid fa-grip-lines sort-handle"></i>
-            <span>${goods.name} (¥${goods.price.toFixed(2)})</span>
+            <span class="flex-1">${goods.name}</span>
+            <span class="text-sm text-coffee-main font-bold cursor-pointer hover:underline inline-edit-price" data-id="${goods.id}">¥${goods.price.toFixed(2)}</span>
           </div>
-          <span class="text-xs text-gray-500">${goods.cate === 'espresso' ? '意式咖啡' : goods.cate === 'latte' ? '拿铁系列' : goods.cate === 'dessert' ? '甜点小食' : '非咖饮品'}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-edit-stock text-sm text-green-600 font-medium cursor-pointer hover:underline whitespace-nowrap" data-id="${goods.id}"><i class="fa-solid fa-boxes-stacked text-xs"></i> 库存 ${goods.stock ?? 0}</span>
+            <span class="text-xs text-gray-500">${cateText}</span>
+          </div>
         `;
+        // 点击非排序区域打开编辑弹窗
         item.addEventListener('click', function(e) {
-          if (!e.target.closest('.sort-handle')) {
-            openEditGoodsModal(goods.id);
-          }
+          if (e.target.closest('.sort-handle') || e.target.closest('.inline-edit-price') || e.target.closest('.inline-edit-stock')) return;
+          openEditGoodsModal(goods.id);
         });
+        // 点击价格打开行内编辑
+        item.querySelectorAll('.inline-edit-price').forEach(el => el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openInlineEdit(this, 'price', goods.id);
+        }));
+        // 点击库存打开行内编辑
+        item.querySelectorAll('.inline-edit-stock').forEach(el => el.addEventListener('click', function(e) {
+          e.stopPropagation();
+          openInlineEdit(this, 'stock', goods.id);
+        }));
         el.appendChild(item);
       });
       new Sortable(el, {
         handle: '.sort-handle',
         animation: 150,
         ghostClass: 'bg-coffee-cream/50'
+      });
+    }
+
+    // 行内编辑（点击价格/库存后弹出小型编辑入口
+    function openInlineEdit(el, field, goodsId) {
+      const goods = GOODS_DATA.find(item => item.id === goodsId);
+      if (!goods) return;
+      const oldValue = goods[field];
+      const title = field === 'price' ? '价格' : '库存';
+      const unit = field === 'price' ? '元' : '件';
+      showTipModal(`修改${title}：`, 'fa-solid fa-pencil', null, {
+        input: true,
+        inputValue: String(oldValue),
+        inputType: 'number',
+        inputStep: field === 'price' ? '0.01' : '1',
+        inputMin: '0',
+        onConfirm: (newValue) => {
+          const num = parseFloat(newValue);
+          if (isNaN(num) || num < 0) {
+            showTipModal('请输入有效数值', 'fa-solid fa-exclamation-circle');
+            return;
+          }
+          goods[field] = field === 'price' ? parseFloat(num.toFixed(2)) : Math.floor(num);
+          saveGoodsData(GOODS_DATA);
+          renderSortableGoodsList();
+          renderGoodsList(document.querySelector('.category-btn.active').dataset.cate);
+          showTipModal(`${title}修改成功`, 'fa-solid fa-check-circle');
+        }
       });
     }
 
@@ -5071,21 +5514,47 @@
       });
     }
 
-    // 全局提示弹窗方法（2秒后自动消失）
-    function showTipModal(text, icon, callback) {
+    // 全局提示弹窗方法（增强版：支持输入框模式
+    function showTipModal(text, icon, callback, options) {
       const modal = document.getElementById('tip-modal');
-      document.getElementById('tip-icon').className = icon + ' text-4xl mb-4';
-      document.getElementById('tip-text').textContent = text;
+      const iconEl = document.getElementById('tip-icon');
+      const textEl = document.getElementById('tip-text');
+      const inputEl = document.getElementById('tip-input');
+      iconEl.className = icon + ' text-4xl mb-4';
+      textEl.textContent = text;
+      // 重置输入框
+      inputEl.classList.add('hidden');
+      inputEl.value = '';
+      let autoTimer = null;
+      // 处理 options 的输入配置
+      if (options && options.input) {
+        inputEl.classList.remove('hidden');
+        inputEl.type = options.inputType || 'text';
+        inputEl.value = options.inputValue || '';
+        if (options.inputStep) inputEl.step = options.inputStep;
+        if (options.inputMin !== undefined) inputEl.min = options.inputMin;
+        setTimeout(() => {
+          inputEl.focus();
+          inputEl.select();
+        }, 50);
+        // 输入框模式不自动关闭，等待用户点击确认
+      } else {
+        // 普通模式2秒后自动关闭
+        autoTimer = setTimeout(() => {
+          modal.classList.add('hidden');
+          if (typeof callback === 'function') callback();
+        }, 2000);
+      }
       modal.classList.remove('hidden');
-      window.tipConfirmCallback = callback;
-      
-      // 2秒后自动关闭弹窗
-      setTimeout(() => {
-        modal.classList.add('hidden');
-        if (typeof callback === 'function') {
+      // 确认按钮点击处理
+      window.tipConfirmCallback = function() {
+        if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+        if (options && options.input && typeof options.onConfirm === 'function') {
+          options.onConfirm(inputEl.value);
+        } else if (typeof callback === 'function') {
           callback();
         }
-      }, 2000);
+      };
     }
 
     // 更新当前时间
