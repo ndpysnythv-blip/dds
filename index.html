@@ -1062,39 +1062,7 @@
       </div>
       <p class="text-xs text-gray-500 mb-3">📌 不知道怎么填？点击每个字段右侧的 <i class="fa-solid fa-circle-question text-coffee-main"></i> 查看详细教程</p>
 
-      <!-- Section 1: 多设备连接（默认展开） -->
-      <div class="mb-3 border border-coffee-light/40 rounded-lg overflow-hidden collapsible-section" data-section="sync">
-        <div class="collapsible-header flex items-center justify-between p-3 bg-coffee-cream/50 cursor-pointer hover:bg-coffee-cream/70 transition-colors">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-network-wired text-coffee-main"></i>
-            <span class="font-bold text-coffee-dark">多设备连接</span>
-            <span class="text-xs text-gray-500">· 局域网同步商品/订单</span>
-          </div>
-          <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
-        </div>
-        <div class="collapsible-content p-4 bg-white">
-          <div class="grid grid-cols-1 gap-3">
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-sm text-coffee-dark">同步服务器地址</label>
-                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="sync-server" title="点击查看教程"></i>
-              </div>
-              <input id="api-sync-server" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm" placeholder="例如：ws://192.168.1.100:8765（留空则只浏览器本地同步）">
-            </div>
-            <div class="flex gap-2 items-center flex-wrap pt-1">
-              <button id="api-sync-connect" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
-                <i class="fa-solid fa-plug"></i><span>连接服务器</span>
-              </button>
-              <button id="api-sync-disconnect" class="py-2 px-4 rounded-md bg-gray-400 text-white btn-hover text-sm flex items-center gap-2 hidden">
-                <i class="fa-solid fa-unlink"></i><span>断开</span>
-              </button>
-              <span id="api-sync-status" class="text-sm text-gray-500 flex-1 text-right"><i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 2: 支付宝接入 -->
+      <!-- Section 1: 支付宝接入 -->
       <div class="mb-3 border border-blue-200 rounded-lg overflow-hidden collapsible-section" data-section="alipay">
         <div class="collapsible-header flex items-center justify-between p-3 bg-blue-50 cursor-pointer hover:bg-blue-100/70 transition-colors">
           <div class="flex items-center gap-2">
@@ -1264,6 +1232,38 @@
         </div>
       </div>
 
+      <!-- Section 4: 多设备连接（默认展开） -->
+      <div class="mb-3 border border-coffee-light/40 rounded-lg overflow-hidden collapsible-section" data-section="sync">
+        <div class="collapsible-header flex items-center justify-between p-3 bg-coffee-cream/50 cursor-pointer hover:bg-coffee-cream/70 transition-colors">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-network-wired text-coffee-main"></i>
+            <span class="font-bold text-coffee-dark">多设备连接</span>
+            <span class="text-xs text-gray-500">· 局域网同步商品/订单</span>
+          </div>
+          <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
+        </div>
+        <div class="collapsible-content p-4 bg-white">
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">同步服务器地址</label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="sync-server" title="点击查看教程"></i>
+              </div>
+              <input id="api-sync-server" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm" placeholder="例如：ws://192.168.1.100:8765（留空则只浏览器本地同步）">
+            </div>
+            <div class="flex gap-2 items-center flex-wrap pt-1">
+              <button id="api-sync-connect" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
+                <i class="fa-solid fa-plug"></i><span>连接服务器</span>
+              </button>
+              <button id="api-sync-disconnect" class="py-2 px-4 rounded-md bg-gray-400 text-white btn-hover text-sm flex items-center gap-2 hidden">
+                <i class="fa-solid fa-unlink"></i><span>断开</span>
+              </button>
+              <span id="api-sync-status" class="text-sm text-gray-500 flex-1 text-right"><i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Section 5: 外卖平台对接 -->
       <div class="mb-3 border border-orange-200 rounded-lg overflow-hidden collapsible-section" data-section="takeaway">
         <div class="collapsible-header flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100/70 transition-colors">
@@ -1337,11 +1337,11 @@
       </div>
 
       <!-- 底部：保存 -->
-      <div class="flex gap-2 items-center justify-end pt-4 border-t border-coffee-light/30 mt-4">
-        <button id="api-test-btn" class="py-2 px-4 rounded-md bg-blue-500 text-white btn-hover text-sm flex items-center gap-2">
+      <div class="flex gap-3 items-center justify-end pt-4 border-t border-coffee-light/30 mt-4">
+        <button id="api-test-btn" class="py-2.5 px-5 rounded-md bg-blue-500 text-white btn-hover text-sm flex items-center gap-2">
           <i class="fa-solid fa-vial"></i>检查配置
         </button>
-        <button id="api-save-btn" class="py-3 px-6 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center gap-2">
+        <button id="api-save-btn" class="py-2.5 px-5 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
           <i class="fa-solid fa-save"></i>保存设置
         </button>
       </div>
