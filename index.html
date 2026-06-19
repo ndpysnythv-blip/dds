@@ -1068,8 +1068,7 @@
           <div class="flex items-center gap-2">
             <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none">
               <rect x="1" y="1" width="22" height="22" rx="5" fill="#1677FF"/>
-              <path d="M8 18V6h8v12H8z" fill="white"/>
-              <path d="M8 8h8v2H8zM8 12h8v2H8z" fill="#1677FF"/>
+              <path d="M6 17h12v-2H6v2zm0-4h8v-2H6v2zm0-4h8V7H6v2z" fill="white"/>
             </svg>
             <span class="font-bold text-coffee-dark">支付宝接入</span>
             <span class="text-xs text-gray-500">· 当面付扫码/付款码</span>
@@ -1127,13 +1126,13 @@
         </div>
       </div>
 
-      <!-- Section 3: 微信支付接入 -->
+      <!-- Section 2: 微信支付接入 -->
       <div class="mb-3 border border-green-200 rounded-lg overflow-hidden collapsible-section" data-section="wechat">
         <div class="collapsible-header flex items-center justify-between p-3 bg-green-50 cursor-pointer hover:bg-green-100/70 transition-colors">
           <div class="flex items-center gap-2">
             <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none">
               <rect x="1" y="1" width="22" height="22" rx="5" fill="#07C160"/>
-              <path d="M9 17l3-3 3 3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 18l4-4 4 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <circle cx="8" cy="9" r="2" fill="white"/>
               <circle cx="16" cy="9" r="2" fill="white"/>
             </svg>
@@ -1180,6 +1179,84 @@
                 <input type="checkbox" id="api-wechat-enable" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
               </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: 外卖平台对接 -->
+      <div class="mb-3 border border-orange-200 rounded-lg overflow-hidden collapsible-section" data-section="takeaway">
+        <div class="collapsible-header flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100/70 transition-colors">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-motorcycle text-orange-500"></i>
+            <span class="font-bold text-coffee-dark">外卖平台对接</span>
+            <span class="text-xs text-gray-500">· 美团 / 淘宝闪购</span>
+          </div>
+          <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
+        </div>
+        <div class="collapsible-content p-4 bg-white hidden">
+          <!-- 美团 -->
+          <div class="mb-4 p-3 bg-yellow-50/60 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none">
+                <rect x="1" y="1" width="22" height="22" rx="5" fill="#FFD100"/>
+                <text x="12" y="17" text-anchor="middle" fill="#FF6600" font-size="12" font-weight="bold">美团</text>
+              </svg>美团
+            </h4>
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">商家 ID</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="meituan-shopid" title="点击查看教程"></i>
+                </div>
+                <input id="api-meituan-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：12345678">
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">开发者 AppKey</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="meituan-key" title="点击查看教程"></i>
+                </div>
+                <input id="api-meituan-appkey" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开发者应用 AppKey">
+              </div>
+              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-yellow-200">
+                <span class="text-sm text-gray-700">启用美团同步</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="api-meituan-enable" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <!-- 淘宝闪购 -->
+          <div class="p-3 bg-blue-50/40 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
+              <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none">
+                <rect x="1" y="1" width="22" height="22" rx="5" fill="#FF5000"/>
+                <text x="12" y="17" text-anchor="middle" fill="white" font-size="11" font-weight="bold">闪购</text>
+              </svg>淘宝闪购（原饿了么）
+            </h4>
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">商家 ID</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="ele-shopid" title="点击查看教程"></i>
+                </div>
+                <input id="api-ele-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：88001234">
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">开放平台 AppKey / Token</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="ele-key" title="点击查看教程"></i>
+                </div>
+                <input id="api-ele-token" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开放平台凭证">
+              </div>
+              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-blue-200">
+                <span class="text-sm text-gray-700">启用淘宝闪购同步</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="api-ele-enable" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -1232,7 +1309,7 @@
         </div>
       </div>
 
-      <!-- Section 4: 多设备连接（默认展开） -->
+      <!-- Section 5: 多设备连接（默认展开） -->
       <div class="mb-3 border border-coffee-light/40 rounded-lg overflow-hidden collapsible-section" data-section="sync">
         <div class="collapsible-header flex items-center justify-between p-3 bg-coffee-cream/50 cursor-pointer hover:bg-coffee-cream/70 transition-colors">
           <div class="flex items-center gap-2">
@@ -1259,78 +1336,6 @@
                 <i class="fa-solid fa-unlink"></i><span>断开</span>
               </button>
               <span id="api-sync-status" class="text-sm text-gray-500 flex-1 text-right"><i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 5: 外卖平台对接 -->
-      <div class="mb-3 border border-orange-200 rounded-lg overflow-hidden collapsible-section" data-section="takeaway">
-        <div class="collapsible-header flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100/70 transition-colors">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-motorcycle text-orange-500"></i>
-            <span class="font-bold text-coffee-dark">外卖平台对接</span>
-            <span class="text-xs text-gray-500">· 美团 / 淘宝闪购</span>
-          </div>
-          <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
-        </div>
-        <div class="collapsible-content p-4 bg-white hidden">
-          <!-- 美团 -->
-          <div class="mb-4 p-3 bg-yellow-50/60 rounded-lg border border-yellow-200">
-            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
-              <span class="text-base">🥡</span>美团
-            </h4>
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-sm text-coffee-dark">商家 ID</label>
-                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="meituan-shopid" title="点击查看教程"></i>
-                </div>
-                <input id="api-meituan-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：12345678">
-              </div>
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-sm text-coffee-dark">开发者 AppKey</label>
-                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="meituan-key" title="点击查看教程"></i>
-                </div>
-                <input id="api-meituan-appkey" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开发者应用 AppKey">
-              </div>
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-yellow-200">
-                <span class="text-sm text-gray-700">启用美团同步</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-meituan-enable" class="sr-only peer">
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-          <!-- 淘宝闪购 -->
-          <div class="p-3 bg-blue-50/40 rounded-lg border border-blue-200">
-            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
-              <span class="text-base">🛵</span>淘宝闪购（原饿了么）
-            </h4>
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-sm text-coffee-dark">商家 ID</label>
-                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="ele-shopid" title="点击查看教程"></i>
-                </div>
-                <input id="api-ele-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：88001234">
-              </div>
-              <div>
-                <div class="flex items-center justify-between mb-1">
-                  <label class="text-sm text-coffee-dark">开放平台 AppKey / Token</label>
-                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="ele-key" title="点击查看教程"></i>
-                </div>
-                <input id="api-ele-token" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开放平台凭证">
-              </div>
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-blue-200">
-                <span class="text-sm text-gray-700">启用淘宝闪购同步</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-ele-enable" class="sr-only peer">
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                </label>
-              </div>
             </div>
           </div>
         </div>
