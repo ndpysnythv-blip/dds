@@ -1053,31 +1053,35 @@
     </div>
   </div>
 
-  <!-- 后台设置弹窗（支付API + 多设备同步 + 外卖平台对接 + 订单同步） -->
+  <!-- 后台设置弹窗（简化版） -->
   <div id="api-settings-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-2xl p-6 my-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-server text-coffee-main"></i>后台设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
+      <p class="text-xs text-gray-500 mb-3">📌 不知道怎么填？点击每个字段右侧的 <i class="fa-solid fa-circle-question text-coffee-main"></i> 查看详细教程</p>
 
-      <!-- ========== Section 1: 多设备实时同步（默认展开） ========== -->
+      <!-- Section 1: 多设备连接（默认展开） -->
       <div class="mb-3 border border-coffee-light/40 rounded-lg overflow-hidden collapsible-section" data-section="sync">
         <div class="collapsible-header flex items-center justify-between p-3 bg-coffee-cream/50 cursor-pointer hover:bg-coffee-cream/70 transition-colors">
           <div class="flex items-center gap-2">
-            <i class="fa-solid fa-sync text-coffee-main"></i>
-            <span class="font-bold text-coffee-dark">多设备实时同步</span>
+            <i class="fa-solid fa-network-wired text-coffee-main"></i>
+            <span class="font-bold text-coffee-dark">多设备连接</span>
+            <span class="text-xs text-gray-500">· 局域网同步商品/订单</span>
           </div>
           <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
         </div>
         <div class="collapsible-content p-4 bg-white">
-          <p class="text-sm text-gray-600 mb-3">同一局域网下多台设备打开网页后，商品、订单、库存自动实时同步</p>
           <div class="grid grid-cols-1 gap-3">
             <div>
-              <label class="text-sm text-coffee-dark mb-1 block">同步服务器地址（WebSocket）</label>
-              <input id="api-sync-server" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="例如：ws://192.168.1.100:8765    留空则仅使用浏览器本地同步">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">同步服务器地址</label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="sync-server" title="点击查看教程"></i>
+              </div>
+              <input id="api-sync-server" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm" placeholder="例如：ws://192.168.1.100:8765（留空则只浏览器本地同步）">
             </div>
-            <div class="flex gap-2 items-center flex-wrap">
+            <div class="flex gap-2 items-center flex-wrap pt-1">
               <button id="api-sync-connect" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
                 <i class="fa-solid fa-plug"></i><span>连接服务器</span>
               </button>
@@ -1086,304 +1090,236 @@
               </button>
               <span id="api-sync-status" class="text-sm text-gray-500 flex-1 text-right"><i class="fa-solid fa-circle text-gray-300 text-xs"></i> 未连接</span>
             </div>
-            <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-              <i class="fa-solid fa-info-circle"></i>
-              <strong>启动同步服务：</strong>在其中一台设备上运行项目目录下的
-              <code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded border border-coffee-light text-[11px]">sync-server.py</code>
-              ，然后在其他设备的该页面填入此服务器地址并点连接。<br>
-              <span class="text-green-700">✓ 同一浏览器内的多标签页自动使用本地同步，无需运行服务器</span>
-            </p>
           </div>
         </div>
       </div>
 
-      <!-- ========== Section 2: 支付宝当面付（扫码/付款码） ========== -->
+      <!-- Section 2: 支付宝接入 -->
       <div class="mb-3 border border-blue-200 rounded-lg overflow-hidden collapsible-section" data-section="alipay">
         <div class="collapsible-header flex items-center justify-between p-3 bg-blue-50 cursor-pointer hover:bg-blue-100/70 transition-colors">
           <div class="flex items-center gap-2">
-            <i class="fa-solid fa-credit-card text-blue-600"></i>
-            <span class="font-bold text-coffee-dark">支付宝当面付（扫码 / 付款码支付）</span>
-            <span class="ml-2 text-xs text-gray-500">单笔费率 0.6%</span>
+            <span class="text-xl">💙</span>
+            <span class="font-bold text-coffee-dark">支付宝接入</span>
+            <span class="text-xs text-gray-500">· 当面付扫码/付款码</span>
           </div>
           <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
         </div>
         <div class="collapsible-content p-4 bg-white hidden">
-          <p class="text-sm text-gray-600 mb-3 leading-relaxed">
-            <i class="fa-solid fa-info-circle"></i>
-            用户扫描本系统生成的二维码付款，或收银员用扫码枪扫描用户支付宝付款码收款。
-            开通地址：<a href="https://b.alipay.com" target="_blank" class="text-blue-600 underline">支付宝商家平台</a>
-          </p>
           <div class="grid grid-cols-1 gap-3">
             <div>
-              <label class="text-sm text-coffee-dark mb-1 block">应用 AppID <span class="text-gray-400 text-xs">（必填）</span></label>
-              <input id="api-alipay-appid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main font-mono text-sm" placeholder="2021001234567890">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">应用 AppID <span class="text-gray-400 text-xs">（必填）</span></label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="alipay-appid" title="点击查看教程"></i>
+              </div>
+              <input id="api-alipay-appid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：2021001234567890">
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">应用私钥 <span class="text-gray-400 text-xs">（签名请求用）</span></label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="alipay-privatekey" title="点击查看教程"></i>
+              </div>
+              <textarea id="api-alipay-privatekey" rows="2" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"></textarea>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">支付宝公钥 <span class="text-gray-400 text-xs">（验证通知用）</span></label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="alipay-publickey" title="点击查看教程"></i>
+              </div>
+              <textarea id="api-alipay-publickey" rows="2" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"></textarea>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="text-sm text-coffee-dark mb-1 block">环境</label>
                 <select id="api-alipay-env" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm">
-                  <option value="sandbox">沙箱环境（测试）</option>
+                  <option value="sandbox">沙箱（测试）</option>
                   <option value="production">正式环境</option>
                 </select>
               </div>
               <div>
-                <label class="text-sm text-coffee-dark mb-1 block">签名方式</label>
-                <select id="api-alipay-sign" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm">
-                  <option value="RSA2">RSA2（推荐，SHA256）</option>
-                  <option value="RSA">RSA</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="text-sm text-coffee-dark mb-1 block">应用私钥 <span class="text-gray-400 text-xs">（RSA2 私钥，用于签名请求）</span></label>
-              <textarea id="api-alipay-privatekey" rows="3" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;MIIEpAIBAAKCAQEA...&#10;-----END RSA PRIVATE KEY-----"></textarea>
-            </div>
-            <div>
-              <label class="text-sm text-coffee-dark mb-1 block">支付宝公钥 <span class="text-gray-400 text-xs">（用于验签支付宝异步通知）</span></label>
-              <textarea id="api-alipay-publickey" rows="3" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN PUBLIC KEY-----&#10;MIIBIjANBgkqh...&#10;-----END PUBLIC KEY-----"></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">异步通知地址 <span class="text-gray-400 text-xs">（notify_url）</span></label>
-                <input id="api-alipay-notify" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="https://your-domain.com/api/alipay/notify">
-              </div>
-              <div>
                 <label class="text-sm text-coffee-dark mb-1 block">支付模式</label>
                 <select id="api-alipay-mode" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm">
-                  <option value="precreate">扫码支付（用户扫商家码）</option>
-                  <option value="barcode">付款码支付（商家扫用户码）</option>
-                  <option value="both">两种都启用</option>
+                  <option value="both">扫码 + 付款码</option>
+                  <option value="precreate">扫码支付</option>
+                  <option value="barcode">付款码支付</option>
                 </select>
               </div>
             </div>
             <div class="flex items-center justify-between p-2 bg-blue-50/40 rounded-md border border-blue-200">
-              <span class="text-sm text-gray-700">启用支付宝当面付</span>
+              <span class="text-sm text-gray-700">启用支付宝接入</span>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="api-alipay-enable" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
-            <!-- 开发文档提示 -->
-            <div class="p-2 bg-gray-50 rounded-md border border-gray-200 text-xs text-gray-600 leading-relaxed">
-              <strong>📘 核心接口：</strong><br>
-              • 预下单（生成二维码）：<code class="text-blue-700">alipay.trade.precreate</code> → 返回 <code class="text-blue-700">qr_code</code><br>
-              • 付款码支付：<code class="text-blue-700">alipay.trade.pay</code>（传 auth_code）<br>
-              • 查询订单状态：<code class="text-blue-700">alipay.trade.query</code><br>
-              • 退款：<code class="text-blue-700">alipay.trade.refund</code><br>
-              • 撤销/关单：<code class="text-blue-700">alipay.trade.cancel / close</code><br>
-              <strong>开发文档：</strong><a href="https://opendocs.alipay.com/open-v3/05pf4f" target="_blank" class="text-blue-600 underline ml-1">当面付接入指南</a>
-            </div>
           </div>
         </div>
       </div>
 
-      <!-- ========== Section 3: 微信支付 Native 扫码支付 ========== -->
+      <!-- Section 3: 微信支付接入 -->
       <div class="mb-3 border border-green-200 rounded-lg overflow-hidden collapsible-section" data-section="wechat">
         <div class="collapsible-header flex items-center justify-between p-3 bg-green-50 cursor-pointer hover:bg-green-100/70 transition-colors">
           <div class="flex items-center gap-2">
-            <i class="fa-solid fa-qrcode text-green-600"></i>
-            <span class="font-bold text-coffee-dark">微信支付 Native 扫码支付</span>
-            <span class="ml-2 text-xs text-gray-500">v3 API</span>
+            <span class="text-xl">💚</span>
+            <span class="font-bold text-coffee-dark">微信支付接入</span>
+            <span class="text-xs text-gray-500">· Native 扫码支付</span>
           </div>
           <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
         </div>
         <div class="collapsible-content p-4 bg-white hidden">
-          <p class="text-sm text-gray-600 mb-3 leading-relaxed">
-            <i class="fa-solid fa-info-circle"></i>
-            用户用微信"扫一扫"扫描本系统生成的支付二维码完成付款。开通地址：
-            <a href="https://pay.weixin.qq.com" target="_blank" class="text-green-700 underline">微信支付商户平台</a>
-          </p>
           <div class="grid grid-cols-1 gap-3">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="text-sm text-coffee-dark mb-1 block">商户号 MCHID <span class="text-gray-400 text-xs">（必填）</span></label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">商户号 MCHID</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="wechat-mchid" title="点击查看教程"></i>
+                </div>
                 <input id="api-wechat-mchid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="1600000000">
               </div>
               <div>
-                <label class="text-sm text-coffee-dark mb-1 block">应用 AppID <span class="text-gray-400 text-xs">（必填）</span></label>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">应用 AppID</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="wechat-appid" title="点击查看教程"></i>
+                </div>
                 <input id="api-wechat-appid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="wx1234567890abcdef">
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">APIv3 密钥 <span class="text-gray-400 text-xs">（32位，用于解密回调）</span></label>
-                <input id="api-wechat-apiv3" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="32位字符串">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">APIv3 密钥 <span class="text-gray-400 text-xs">（32位）</span></label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="wechat-apiv3" title="点击查看教程"></i>
               </div>
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">商户证书序列号 <span class="text-gray-400 text-xs">（Serial No.）</span></label>
-                <input id="api-wechat-serial" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="36位序列号">
-              </div>
+              <input id="api-wechat-apiv3" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="32位字符串">
             </div>
             <div>
-              <label class="text-sm text-coffee-dark mb-1 block">商户私钥（apiclient_key.pem 内容）</label>
-              <textarea id="api-wechat-privatekey" rows="3" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN PRIVATE KEY-----&#10;MIIEvQIBADANBgkqh...&#10;-----END PRIVATE KEY-----"></textarea>
-            </div>
-            <div>
-              <label class="text-sm text-coffee-dark mb-1 block">微信支付平台证书（platform_cert.pem 内容）</label>
-              <textarea id="api-wechat-platformcert" rows="3" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN CERTIFICATE-----&#10;MIID...&#10;-----END CERTIFICATE-----"></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">支付通知地址 <span class="text-gray-400 text-xs">（notify_url）</span></label>
-                <input id="api-wechat-notify" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="https://your-domain.com/api/wxpay/notify">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">商户私钥（apiclient_key.pem）</label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="wechat-privatekey" title="点击查看教程"></i>
               </div>
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">API 版本</label>
-                <select id="api-wechat-version" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm">
-                  <option value="v3">API v3（推荐）</option>
-                  <option value="v2">API v2（兼容）</option>
-                </select>
-              </div>
+              <textarea id="api-wechat-privatekey" rows="2" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-[11px] font-mono" placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"></textarea>
             </div>
             <div class="flex items-center justify-between p-2 bg-green-50/40 rounded-md border border-green-200">
-              <span class="text-sm text-gray-700">启用微信扫码支付</span>
+              <span class="text-sm text-gray-700">启用微信支付</span>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" id="api-wechat-enable" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
               </label>
             </div>
-            <!-- 开发文档提示 -->
-            <div class="p-2 bg-gray-50 rounded-md border border-gray-200 text-xs text-gray-600 leading-relaxed">
-              <strong>📘 核心接口（v3）：</strong><br>
-              • Native 下单：<code class="text-green-700">POST /v3/pay/transactions/native</code> → 返回 <code class="text-green-700">code_url</code><br>
-              • 查询订单：<code class="text-green-700">GET /v3/pay/transactions/out-trade-no/{out_trade_no}</code><br>
-              • 关闭订单：<code class="text-green-700">POST /v3/pay/transactions/out-trade-no/{out_trade_no}/close</code><br>
-              • 退款：<code class="text-green-700">POST /v3/refund/domestic/refunds</code><br>
-              <strong>开发文档：</strong><a href="https://pay.weixin.qq.com/doc/v3/merchant/4012791875" target="_blank" class="text-green-700 underline ml-1">Native 支付接入指南</a>
-            </div>
           </div>
         </div>
       </div>
 
-      <!-- ========== Section 4: 外卖平台订单接收 ========== -->
-      <div class="mb-3 border border-orange-200 rounded-lg overflow-hidden collapsible-section" data-section="takeaway">
-        <div class="collapsible-header flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100/70 transition-colors">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-motorcycle text-orange-500"></i>
-            <span class="font-bold text-coffee-dark">外卖平台订单接收</span>
-          </div>
-          <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
-        </div>
-        <div class="collapsible-content p-4 bg-white hidden">
-          <p class="text-sm text-gray-600 mb-3 leading-relaxed">
-            <i class="fa-solid fa-info-circle"></i>
-            美团、淘宝闪购（原饿了么）平台订单自动同步到本系统，自动打印小票并加到待出餐列表
-          </p>
-
-          <!-- 美团子区域 -->
-          <div class="mb-4 p-3 bg-yellow-50/60 rounded-lg border border-yellow-200">
-            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
-              <span class="inline-block w-5 h-5 rounded-full bg-yellow-500 text-white text-xs flex items-center justify-center">美</span>
-              美团外卖配置
-            </h4>
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">商家 ID / 店铺 ID</label>
-                <input id="api-meituan-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：12345678">
-              </div>
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">开发者 AppKey</label>
-                <input id="api-meituan-appkey" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开发者应用 AppKey">
-              </div>
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">开发者 AppSecret</label>
-                <input id="api-meituan-appsecret" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开发者应用 AppSecret">
-              </div>
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-yellow-200">
-                <span class="text-sm text-gray-700">启用美团订单同步</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-meituan-enable" class="sr-only peer">
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <!-- 淘宝闪购（原饿了么）子区域 -->
-          <div class="p-3 bg-blue-50/40 rounded-lg border border-blue-200">
-            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
-              <span class="inline-block w-5 h-5 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">淘</span>
-              淘宝闪购（原饿了么）配置
-            </h4>
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">商家 ID</label>
-                <input id="api-ele-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：88001234">
-              </div>
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">开放平台 AppKey</label>
-                <input id="api-ele-appkey" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开放平台应用 AppKey">
-              </div>
-              <div>
-                <label class="text-sm text-coffee-dark mb-1 block">Access Token / AppSecret</label>
-                <input id="api-ele-token" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="从开放平台获取的 AccessToken">
-              </div>
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-blue-200">
-                <span class="text-sm text-gray-700">启用淘宝闪购订单同步</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-ele-enable" class="sr-only peer">
-                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ========== Section 5: 付款订单同步 ========== -->
+      <!-- Section 4: 订单同步 -->
       <div class="mb-3 border border-purple-200 rounded-lg overflow-hidden collapsible-section" data-section="ordersync">
         <div class="collapsible-header flex items-center justify-between p-3 bg-purple-50 cursor-pointer hover:bg-purple-100/70 transition-colors">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-receipt text-purple-600"></i>
-            <span class="font-bold text-coffee-dark">付款订单同步</span>
+            <span class="font-bold text-coffee-dark">订单同步</span>
+            <span class="text-xs text-gray-500">· Webhook 推送</span>
           </div>
           <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
         </div>
         <div class="collapsible-content p-4 bg-white hidden">
-          <p class="text-sm text-gray-600 mb-3 leading-relaxed">
-            <i class="fa-solid fa-info-circle"></i>
-            订单在收银端完成付款后，自动同步到指定地址（如 ERP、财务系统、商家后台），并可设置自动打印
-          </p>
           <div class="grid grid-cols-1 gap-3">
             <div>
-              <label class="text-sm text-coffee-dark mb-1 block">订单同步接收地址（Webhook URL）</label>
-              <input id="api-order-webhook" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="https://your-domain.com/api/orders/receive">
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-sm text-coffee-dark">Webhook 接收地址</label>
+                <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="order-webhook" title="点击查看教程"></i>
+              </div>
+              <input id="api-order-webhook" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="https://your-domain.com/api/orders">
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="text-sm text-coffee-dark mb-1 block">同步频率</label>
                 <select id="api-order-freq" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm">
-                  <option value="realtime">实时（推荐）</option>
+                  <option value="realtime">实时</option>
                   <option value="30s">每 30 秒</option>
                   <option value="1min">每 1 分钟</option>
-                  <option value="5min">每 5 分钟</option>
                 </select>
               </div>
               <div>
-                <label class="text-sm text-coffee-dark mb-1 block">请求签名密钥</label>
-                <input id="api-order-secret" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="自定义字符串，用于签名验证">
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">签名密钥</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="order-secret" title="点击查看教程"></i>
+                </div>
+                <input id="api-order-secret" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="自定义字符串">
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-purple-200">
-                <span class="text-sm text-gray-700">支付成功即同步</span>
+            <div class="flex items-center justify-between p-2 bg-purple-50/40 rounded-md border border-purple-200">
+              <span class="text-sm text-gray-700">启用订单同步</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="api-order-enable" class="sr-only peer">
+                <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 5: 外卖平台对接 -->
+      <div class="mb-3 border border-orange-200 rounded-lg overflow-hidden collapsible-section" data-section="takeaway">
+        <div class="collapsible-header flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100/70 transition-colors">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-motorcycle text-orange-500"></i>
+            <span class="font-bold text-coffee-dark">外卖平台对接</span>
+            <span class="text-xs text-gray-500">· 美团 / 淘宝闪购</span>
+          </div>
+          <i class="fa-solid fa-chevron-down text-coffee-main collapsible-arrow"></i>
+        </div>
+        <div class="collapsible-content p-4 bg-white hidden">
+          <!-- 美团 -->
+          <div class="mb-4 p-3 bg-yellow-50/60 rounded-lg border border-yellow-200">
+            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
+              <span class="text-base">🥡</span>美团
+            </h4>
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">商家 ID</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="meituan-shopid" title="点击查看教程"></i>
+                </div>
+                <input id="api-meituan-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：12345678">
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">开发者 AppKey</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="meituan-key" title="点击查看教程"></i>
+                </div>
+                <input id="api-meituan-appkey" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开发者应用 AppKey">
+              </div>
+              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-yellow-200">
+                <span class="text-sm text-gray-700">启用美团同步</span>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-order-paid" class="sr-only peer" checked>
-                  <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                  <input type="checkbox" id="api-meituan-enable" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
                 </label>
               </div>
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-purple-200">
-                <span class="text-sm text-gray-700">退款时同步</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-order-refund" class="sr-only peer">
-                  <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
-                </label>
+            </div>
+          </div>
+          <!-- 淘宝闪购 -->
+          <div class="p-3 bg-blue-50/40 rounded-lg border border-blue-200">
+            <h4 class="font-bold text-coffee-dark text-sm mb-3 flex items-center gap-2">
+              <span class="text-base">🛵</span>淘宝闪购（原饿了么）
+            </h4>
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">商家 ID</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="ele-shopid" title="点击查看教程"></i>
+                </div>
+                <input id="api-ele-shopid" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="例如：88001234">
               </div>
-              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-purple-200">
-                <span class="text-sm text-gray-700">启用订单同步</span>
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="text-sm text-coffee-dark">开放平台 AppKey / Token</label>
+                  <i class="fa-solid fa-circle-question text-gray-400 hover:text-coffee-main cursor-pointer text-sm help-btn" data-help="ele-key" title="点击查看教程"></i>
+                </div>
+                <input id="api-ele-token" type="text" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm font-mono" placeholder="开放平台凭证">
+              </div>
+              <div class="flex items-center justify-between p-2 bg-white rounded-md border border-blue-200">
+                <span class="text-sm text-gray-700">启用淘宝闪购同步</span>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="api-order-enable" class="sr-only peer">
-                  <div class="w-10 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                  <input type="checkbox" id="api-ele-enable" class="sr-only peer">
+                  <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
@@ -1391,14 +1327,30 @@
         </div>
       </div>
 
-      <!-- ========== 底部：测试与保存 ========== -->
+      <!-- 底部：保存 -->
       <div class="flex gap-2 items-center justify-end pt-4 border-t border-coffee-light/30 mt-4">
         <button id="api-test-btn" class="py-2 px-4 rounded-md bg-blue-500 text-white btn-hover text-sm flex items-center gap-2">
-          <i class="fa-solid fa-vial"></i>测试连接
+          <i class="fa-solid fa-vial"></i>检查配置
         </button>
         <button id="api-save-btn" class="py-3 px-6 rounded-md bg-coffee-main text-white btn-hover text-lg flex items-center gap-2">
           <i class="fa-solid fa-save"></i>保存设置
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 教程详情弹窗（点击问号按钮弹出） -->
+  <div id="help-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-[60] hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-xl p-6 my-8">
+      <div class="flex justify-between items-start pb-3 border-b border-coffee-light/30 mb-4">
+        <h3 id="help-title" class="text-base font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-lightbulb text-yellow-500"></i>获取教程</h3>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="help-content" class="text-sm text-gray-700 leading-relaxed space-y-3">
+        <!-- 内容由 JS 动态填充 -->
+      </div>
+      <div class="flex justify-end mt-5 pt-4 border-t border-coffee-light/20">
+        <button class="close-modal py-2 px-5 rounded-md bg-coffee-main text-white btn-hover text-sm close-btn"><i class="fa-solid fa-check mr-1"></i>我知道了</button>
       </div>
     </div>
   </div>
@@ -3165,36 +3117,244 @@
       document.getElementById('api-sync-disconnect').addEventListener('click', function() {
         disconnectSyncServer();
       });
+      // =============== 教程弹窗：字典 & 问号按钮事件 ===============
+      const helpContents = {
+        'sync-server': {
+          title: '多设备实时同步配置教程',
+          html: `
+            <div class="space-y-2">
+              <p><strong class="text-coffee-main">① 同一浏览器多标签页同步（零配置即用）</strong></p>
+              <p>在同一台电脑的同一浏览器中，打开多个标签页访问本页面即可。商品、订单、设置的修改会自动同步到其他标签页（通过 localStorage 事件实现）。</p>
+              <p><strong class="text-coffee-main">② 局域网/多设备同步（需要运行 sync-server.py）</strong></p>
+              <p>步骤：</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>在其中一台电脑上，进入项目目录，运行：<code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">python sync-server.py</code>（默认端口 8765）</li>
+                <li>查看该电脑的局域网 IP，例如：<code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">192.168.1.100</code>（Windows 下用 <code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">ipconfig</code>，macOS/Linux 下用 <code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">ifconfig</code> 查看）</li>
+                <li>在所有设备的「同步服务器地址」填入：<code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">ws://192.168.1.100:8765</code>（注意是 ws:// 开头，不是 http://）</li>
+                <li>点击「连接服务器」，状态变为「已连接」即成功</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">⚠️ 确保运行 sync-server.py 的电脑防火墙开放了 8765 端口。</p>
+            </div>`
+        },
+        'alipay-appid': {
+          title: '支付宝 AppID 获取教程',
+          html: `
+            <div class="space-y-2">
+              <p><strong class="text-coffee-main">开通当面付产品（扫码支付/付款码支付）</strong></p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://b.alipay.com" target="_blank" class="text-blue-600 underline">支付宝商家平台</a>（企业支付宝账号）</li>
+                <li>进入「产品中心 → 当面付」，点击"立即开通"</li>
+                <li>填写企业信息：营业执照、门店地址、经营范围等。个人个体户也可申请</li>
+                <li>等待审核通过（通常 1-3 个工作日）</li>
+                <li>审核通过后，进入 <a href="https://openhome.alipay.com/platform/developerIndex.htm" target="_blank" class="text-blue-600 underline">开放平台开发者中心</a></li>
+                <li>创建"网页/移动应用"，提交后获取 <strong>AppID</strong>（形如：2021001234567890）</li>
+                <li>将 AppID 粘贴到本系统的「应用 AppID」字段</li>
+              </ol>
+            </div>`
+        },
+        'alipay-privatekey': {
+          title: '支付宝应用私钥生成教程',
+          html: `
+            <div class="space-y-2">
+              <p><strong class="text-coffee-main">使用支付宝开放平台助手生成密钥</strong></p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>下载「<a href="https://ideservice.alipay.com/ide/getPluginUrl.htm?clientType=assistant" target="_blank" class="text-blue-600 underline">支付宝开放平台开发助手</a>」工具</li>
+                <li>打开后点击"生成密钥"，自动生成应用公钥和应用私钥（RSA2/SHA256）</li>
+                <li>复制"应用公钥"，粘贴到开放平台的「接口加签方式 → 公钥」输入框</li>
+                <li>保存后，支付宝会返回"支付宝公钥"（用于验证通知）</li>
+                <li>将工具生成的<strong>应用私钥</strong>（以 -----BEGIN RSA PRIVATE KEY----- 开头的长文本）粘贴到本系统「应用私钥」字段</li>
+                <li>将<strong>支付宝公钥</strong>粘贴到下一个"支付宝公钥"字段</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">⚠️ 私钥只保存在本地，绝不要上传到任何公开地方。本系统也只保存在您的浏览器 localStorage。</p>
+            </div>`
+        },
+        'alipay-publickey': {
+          title: '支付宝公钥获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>支付宝公钥是由支付宝开放平台在你设置好"应用公钥"后自动返回的一段公钥文本。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>在开放平台，进入「应用详情 → 接口加签方式 → 设置」</li>
+                <li>选择"公钥"模式，粘贴由支付宝开发助手生成的<strong>应用公钥</strong></li>
+                <li>保存后，系统会显示对应的<strong>支付宝公钥</strong>（以 MIIBIj... 开头）</li>
+                <li>复制粘贴到本系统「支付宝公钥」字段</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">注意区分"应用私钥 / 应用公钥 / 支付宝公钥"，三者不是同一个！</p>
+            </div>`
+        },
+        'wechat-mchid': {
+          title: '微信支付商户号（MCHID）获取教程',
+          html: `
+            <div class="space-y-2">
+              <p><strong class="text-coffee-main">开通微信支付商户号</strong></p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://pay.weixin.qq.com" target="_blank" class="text-green-700 underline">微信支付商户平台</a></li>
+                <li>选择"成为商户"，按指引填写营业执照、法人信息、对公账户等（个体户也可申请）</li>
+                <li>绑定一个已认证的公众号（服务号）或小程序作为支付主体</li>
+                <li>审核通过后（通常 1-7 天），系统会分配 10 位数字的<strong>商户号（MCHID）</strong></li>
+                <li>将商户号粘贴到本系统「商户号 MCHID」字段</li>
+              </ol>
+            </div>`
+        },
+        'wechat-appid': {
+          title: '微信 AppID 获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>微信支付需要绑定一个公众号或小程序的 AppID（作为支付发起方标识）。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://mp.weixin.qq.com" target="_blank" class="text-green-700 underline">微信公众平台</a>（服务号）或 <a href="https://open.weixin.qq.com" target="_blank" class="text-green-700 underline">开放平台</a>（网站应用）</li>
+                <li>注册并完成微信认证（需营业执照 + 300 元/年认证费）</li>
+                <li>在「开发 → 基本配置」中可查看 <strong>AppID</strong>（形如 wx1234567890abcdef）</li>
+                <li>在商户平台「产品中心 → 开发配置」中，将该 AppID 添加为授权支付关联</li>
+                <li>将 AppID 粘贴到本系统「应用 AppID」字段</li>
+              </ol>
+            </div>`
+        },
+        'wechat-apiv3': {
+          title: '微信 APIv3 密钥获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>APIv3 密钥（也叫 APIv3 key 或 ApiSecret3）用于解密支付结果回调和退款结果回调，必须是 <strong>32 位字符串</strong>。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://pay.weixin.qq.com" target="_blank" class="text-green-700 underline">微信支付商户平台</a></li>
+                <li>进入「账户中心 → API 安全」</li>
+                <li>在"设置 APIv3 密钥"处点击"设置"（需要管理员扫码验证）</li>
+                <li>自定义一个 32 位的密钥（建议：字母+数字的随机组合），然后保存</li>
+                <li>将该 32 位密钥粘贴到本系统「APIv3 密钥」字段</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">⚠️ 该密钥是支付安全的核心，请勿泄露。</p>
+            </div>`
+        },
+        'wechat-privatekey': {
+          title: '微信商户证书私钥获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>商户 API 证书是微信支付 APIv3 中用于签名请求的凭证（文件名为 apiclient_key.pem）。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://pay.weixin.qq.com" target="_blank" class="text-green-700 underline">微信支付商户平台</a></li>
+                <li>进入「账户中心 → API 安全 → 申请 API 证书」</li>
+                <li>点击"申请证书"，按指引下载"微信支付商户平台证书工具"</li>
+                <li>使用工具生成 CSR，提交后等待审核（通常几小时内通过）</li>
+                <li>审核通过后下载证书包，解压后可获得三个文件：<code class="bg-green-50 px-1.5 py-0.5 rounded text-xs">apiclient_key.pem</code>（私钥）、<code class="bg-green-50 px-1.5 py-0.5 rounded text-xs">apiclient_cert.pem</code>（证书）、<code class="bg-green-50 px-1.5 py-0.5 rounded text-xs">platform_cert.pem</code>（平台证书）</li>
+                <li>用记事本打开 <strong>apiclient_key.pem</strong>，将全部内容（包括 -----BEGIN PRIVATE KEY----- 和 -----END PRIVATE KEY-----）粘贴到本系统字段</li>
+              </ol>
+            </div>`
+        },
+        'order-webhook': {
+          title: '订单同步 Webhook 配置教程',
+          html: `
+            <div class="space-y-2">
+              <p>本系统可将每笔成功支付的订单，以 HTTP POST JSON 的形式推送到您指定的地址。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>准备一个接收 POST 请求的 Web 服务器（任何语言都行：Node.js、PHP、Python 等）</li>
+                <li>确保该服务器有公网可访问的 HTTPS 地址（例如：https://your-domain.com/api/orders）</li>
+                <li>将此地址粘贴到本系统「Webhook 接收地址」字段</li>
+                <li>开启"启用订单同步"开关</li>
+                <li>后续每笔支付成功的订单，本系统会 POST JSON 到该地址，包含：订单号、金额、商品明细、时间戳、签名等</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">💡 请求示例体（字段和签名规则）：如有定制需求请联系开发者。</p>
+            </div>`
+        },
+        'order-secret': {
+          title: '签名密钥设置说明',
+          html: `
+            <div class="space-y-2">
+              <p>签名密钥是 Webhook 推送安全校验的关键。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>自定义一个任意字符串（建议 16-64 位，字母+数字混合），例如：<code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">MyShop2024SecretKey!</code></li>
+                <li>将同一字符串保存到您的后端服务器</li>
+                <li>本系统推送订单时，会用该密钥对订单数据做 HMAC-SHA256 签名，签名放在 HTTP Header 的 <code class="bg-coffee-cream/50 px-1.5 py-0.5 rounded">X-Signature</code> 中</li>
+                <li>您的后端收到请求后，用同样的密钥重新计算签名并比对，只有匹配成功才处理，防止伪造请求</li>
+              </ol>
+            </div>`
+        },
+        'meituan-shopid': {
+          title: '美团商家 ID 获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>对接美团外卖需要通过"美团点评餐饮开放平台"或"美团闪购开放平台"。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://developer.waimai.meituan.com" target="_blank" class="text-yellow-700 underline">美团外卖开放平台</a>（或咨询美团商务经理）</li>
+                <li>注册成为开发者，提交企业资质审核</li>
+                <li>审核通过后创建应用，在应用详情页中获取：<strong>AppKey / AppSecret</strong></li>
+                <li>登录 <a href="https://waimai.meituan.com" target="_blank" class="text-yellow-700 underline">美团商家后台</a>，进入"门店管理 → 门店详情"，在浏览器地址栏可看到 shopId 或 storeId 数字</li>
+                <li>将商家 ID 粘贴到本系统「商家 ID」字段</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">⚠️ 美团接口通常需要商务合作，个人小商家可能无法直接接入；如无法接入，可考虑用本系统的订单导出 Excel 功能手工处理。</p>
+            </div>`
+        },
+        'meituan-key': {
+          title: '美团 AppKey 获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>AppKey 是美团开放平台给每个应用的唯一标识，用于签名 API 请求。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>在 <a href="https://developer.waimai.meituan.com" target="_blank" class="text-yellow-700 underline">美团外卖开放平台</a> 创建应用并完成审核</li>
+                <li>在应用的"应用管理 → 基本信息"中查看 AppKey 和 AppSecret</li>
+                <li>将 AppKey 粘贴到本系统对应字段</li>
+                <li>在"回调接口配置"中，设置您的订单推送接收地址（用于美团主动推送新订单）</li>
+              </ol>
+            </div>`
+        },
+        'ele-shopid': {
+          title: '淘宝闪购（饿了么）商家 ID 获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>饿了么商家端现归属淘宝，统一通过淘宝开放平台/饿了么开放平台接入。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>登录 <a href="https://open.shop.ele.me/openapi" target="_blank" class="text-blue-600 underline">饿了么开放平台</a> 或咨询饿了么商务经理</li>
+                <li>注册开发者账号，提交企业信息</li>
+                <li>创建应用并绑定商户门店，完成审核</li>
+                <li>在"应用信息"中获取 AppKey 与 AccessToken</li>
+                <li>在饿了么商家后台查看店铺 ID（通常为一串数字），粘贴到本系统「商家 ID」字段</li>
+              </ol>
+            </div>`
+        },
+        'ele-key': {
+          title: '淘宝闪购 AppKey / Token 获取教程',
+          html: `
+            <div class="space-y-2">
+              <p>与美团类似，AppKey 用于签名 API 请求，AccessToken 用于调用接口。</p>
+              <ol class="list-decimal list-inside space-y-1 pl-2">
+                <li>在饿了么开放平台创建应用并审核通过</li>
+                <li>在"应用信息 → 接口调用凭证"中查看 AppKey 和 AppSecret</li>
+                <li>通过 OAuth2 授权流程获取商家 AccessToken（通常有有效期限制，过期需刷新）</li>
+                <li>将 AppKey 与 AccessToken 分别保存到对应字段</li>
+              </ol>
+              <p class="text-xs text-gray-500 mt-2">⚠️ 饿了么平台接入门槛相对较高，对订单量有要求。个人小店可暂不接入。</p>
+            </div>`
+        }
+      };
+      // 绑定所有问号按钮
+      document.querySelectorAll('#api-settings-modal .help-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const key = btn.getAttribute('data-help');
+          const content = helpContents[key];
+          if (!content) return;
+          document.getElementById('help-title').innerHTML = '<i class="fa-solid fa-lightbulb text-yellow-500"></i>' + content.title;
+          document.getElementById('help-content').innerHTML = content.html;
+          document.getElementById('help-modal').classList.remove('hidden');
+        });
+      });
+      // 关闭教程弹窗（点击 X 或"我知道了"）
+      document.querySelectorAll('#help-modal .close-btn, #help-modal .close-modal').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.getElementById('help-modal').classList.add('hidden');
+        });
+      });
+
+      // =============== 检查配置按钮 ===============
       document.getElementById('api-test-btn').addEventListener('click', function() {
         const msg = [];
-        // —— 多设备实时同步
-        const sync = _valTrim('api-sync-server');
-        if (sync) msg.push('✓ 同步服务器地址已填 (点击连接按钮测试)');
-        // —— 支付宝
-        const alipayAppid = _valTrim('api-alipay-appid');
-        const alipayPkey = _valTrim('api-alipay-privatekey');
-        if (alipayAppid) msg.push('✓ 支付宝 AppID：' + alipayAppid.substring(0, 8) + '...');
-        if (alipayPkey) msg.push('✓ 支付宝私钥长度：' + alipayPkey.length + ' 字符');
-        // —— 微信
-        const wxMchid = _valTrim('api-wechat-mchid');
-        const wxAppid = _valTrim('api-wechat-appid');
-        const wxApiv3 = _valTrim('api-wechat-apiv3');
-        if (wxMchid) msg.push('✓ 微信商户号：' + wxMchid);
-        if (wxAppid) msg.push('✓ 微信 AppID：' + wxAppid.substring(0, 8) + '...');
-        if (wxApiv3 && wxApiv3.length !== 32) msg.push('⚠ 微信 APIv3 密钥长度不是 32 位（当前：' + wxApiv3.length + '）');
-        // —— 外卖
-        const mt = _valTrim('api-meituan-shopid');
-        if (mt) msg.push('✓ 美团商家ID：' + mt);
-        const ele = _valTrim('api-ele-shopid');
-        if (ele) msg.push('✓ 淘宝闪购商家ID：' + ele);
-        // —— 订单同步
-        const webhook = _valTrim('api-order-webhook');
-        if (webhook) {
-          if (!/^https?:\/\//.test(webhook)) msg.push('⚠ 订单同步 webhook 非 http(s) 开头');
-          else msg.push('✓ 订单同步 webhook 已填：' + webhook.substring(0, 40));
-        }
+        try { if (document.getElementById('api-sync-server').value.trim()) msg.push('✓ 同步服务器地址已填'); } catch(e) {}
+        try { if (document.getElementById('api-alipay-appid').value.trim()) msg.push('✓ 支付宝 AppID：' + document.getElementById('api-alipay-appid').value.trim().substring(0, 8) + '...'); } catch(e) {}
+        try { if (document.getElementById('api-wechat-mchid').value.trim()) msg.push('✓ 微信商户号：' + document.getElementById('api-wechat-mchid').value.trim()); } catch(e) {}
+        try { if (document.getElementById('api-meituan-shopid').value.trim()) msg.push('✓ 美团商家ID：' + document.getElementById('api-meituan-shopid').value.trim()); } catch(e) {}
+        try { if (document.getElementById('api-ele-shopid').value.trim()) msg.push('✓ 淘宝闪购商家ID：' + document.getElementById('api-ele-shopid').value.trim()); } catch(e) {}
+        try { if (document.getElementById('api-order-webhook').value.trim()) msg.push('✓ 订单 Webhook 已配置'); } catch(e) {}
         if (msg.length === 0) msg.push('还没有填写任何配置项');
-        showTipModal('测试检查：' + msg.join('；'), 'fa-solid fa-vial-circle-check');
+        showTipModal('检查：' + msg.join('；'), 'fa-solid fa-circle-check');
       });
     }
 
