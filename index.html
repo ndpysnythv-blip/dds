@@ -404,6 +404,9 @@
         <button id="to-print-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-print"></i>打印设置
         </button>
+        <button id="to-store-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-store"></i>门店设置
+        </button>
         <button id="to-api-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-server"></i>后台设置
         </button>
@@ -1353,6 +1356,258 @@
     </div>
   </div>
 
+  <!-- 门店设置弹窗 -->
+  <div id="store-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-store text-coffee-main"></i>门店设置</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="grid grid-cols-1 gap-3">
+        <button id="to-employee-manage" class="py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-users"></i>员工管理
+        </button>
+        <button id="to-inventory-check" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-warehouse"></i>仓库盘点
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 员工管理弹窗 -->
+  <div id="employee-manage-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-3xl p-6 my-8">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-users text-coffee-main"></i>员工管理</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 员工列表 -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold text-coffee-dark">员工列表</h3>
+          <button id="add-employee-btn" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i>添加员工
+          </button>
+        </div>
+        <div id="employee-list" class="space-y-2 max-h-96 overflow-y-auto">
+          <!-- 员工卡片由 JS 动态渲染 -->
+        </div>
+      </div>
+
+      <!-- 今日签到情况 -->
+      <div>
+        <h3 class="text-base font-bold text-coffee-dark mb-3">今日签到 <span id="today-date" class="text-sm text-gray-500 font-normal"></span></h3>
+        <div id="today-attendance" class="space-y-2 max-h-60 overflow-y-auto">
+          <!-- 签到记录由 JS 动态渲染 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加/编辑员工弹窗 -->
+  <div id="employee-edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 id="employee-edit-title" class="text-lg font-bold text-coffee-dark">添加员工</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">员工姓名</label>
+          <input id="employee-name-input" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="请输入员工姓名">
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">职位</label>
+          <select id="employee-position-input" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main">
+            <option value="店长">店长</option>
+            <option value="咖啡师">咖啡师</option>
+            <option value="服务员">服务员</option>
+            <option value="收银员">收银员</option>
+            <option value="后厨">后厨</option>
+            <option value="保洁">保洁</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">联系电话（选填）</label>
+          <input id="employee-phone-input" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="请输入联系电话">
+        </div>
+      </div>
+      <div class="flex gap-2 justify-end mt-6 pt-4 border-t border-coffee-light/30">
+        <button class="close-modal py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+        <button id="save-employee-btn" class="py-2.5 px-6 rounded-md bg-coffee-main text-white btn-hover text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 签到打卡弹窗 -->
+  <div id="attendance-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-clock text-coffee-main"></i>签到打卡</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div>
+        <label class="block text-sm text-coffee-dark mb-1.5">选择员工</label>
+        <select id="attendance-employee-select" class="w-full px-3 py-2 border border-coffee-light rounded-md mb-4 focus:outline-none focus:border-coffee-main">
+          <!-- 员工列表由 JS 动态填充 -->
+        </select>
+        <div class="bg-coffee-cream p-3 rounded-lg mb-4 text-center">
+          <p class="text-sm text-gray-600">当前时间</p>
+          <p id="attendance-current-time" class="text-2xl font-bold text-coffee-dark">--:--:--</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="check-in-btn" class="py-3 rounded-md bg-green-500 text-white btn-hover text-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>上班签到
+        </button>
+        <button id="check-out-btn" class="py-3 rounded-md bg-blue-500 text-white btn-hover text-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>下班打卡
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 仓库盘点弹窗 -->
+  <div id="inventory-check-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-4xl p-6 my-8">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-warehouse text-coffee-main"></i>仓库盘点</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 概览统计 -->
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="bg-coffee-cream p-4 rounded-lg text-center">
+          <p class="text-sm text-gray-600">商品种类</p>
+          <p id="total-product-types" class="text-2xl font-bold text-coffee-dark">0</p>
+        </div>
+        <div class="bg-coffee-cream p-4 rounded-lg text-center">
+          <p class="text-sm text-gray-600">库存总量</p>
+          <p id="total-inventory-count" class="text-2xl font-bold text-coffee-dark">0</p>
+        </div>
+        <div class="bg-red-100 p-4 rounded-lg text-center">
+          <p class="text-sm text-red-600">即将到期/过期</p>
+          <p id="expiring-items-count" class="text-2xl font-bold text-red-600">0</p>
+        </div>
+      </div>
+
+      <!-- 库存列表表头 -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base font-bold text-coffee-dark">商品库存明细</h3>
+          <button id="add-raw-material-btn" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i>记录原料消耗
+          </button>
+        </div>
+        <div id="inventory-list" class="space-y-2 max-h-[500px] overflow-y-auto">
+          <!-- 库存卡片由 JS 动态渲染 -->
+        </div>
+      </div>
+
+      <!-- 原料使用记录 -->
+      <div>
+        <h3 class="text-base font-bold text-coffee-dark mb-3">近期原料消耗记录</h3>
+        <div id="raw-material-logs" class="space-y-2 max-h-60 overflow-y-auto text-sm">
+          <!-- 记录由 JS 动态渲染 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑商品库存弹窗 -->
+  <div id="inventory-edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark">编辑库存信息</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div class="bg-coffee-cream p-3 rounded-lg">
+          <p class="text-sm text-gray-600">商品</p>
+          <p id="edit-inventory-product-name" class="font-bold text-coffee-dark">--</p>
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">现有库存数量</label>
+          <input id="edit-inventory-qty" type="number" min="0" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="请输入库存数量">
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">原材料/配料（每行一个，用逗号分隔名称和数量）</label>
+          <textarea id="edit-inventory-materials" rows="4" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="例如：&#10;咖啡豆, 200g&#10;牛奶, 500ml&#10;糖浆, 50ml"></textarea>
+          <p class="text-xs text-gray-500 mt-1">格式：名称, 数量单位，每行一项</p>
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">生产日期/进货日期</label>
+          <input id="edit-inventory-produce-date" type="date" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main">
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">保质期（天）</label>
+          <input id="edit-inventory-shelf-life" type="number" min="0" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="例如：30">
+        </div>
+      </div>
+      <div class="flex gap-2 justify-end mt-6 pt-4 border-t border-coffee-light/30">
+        <button class="close-modal py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+        <button id="save-inventory-btn" class="py-2.5 px-6 rounded-md bg-coffee-main text-white btn-hover text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 记录原料消耗弹窗 -->
+  <div id="raw-material-use-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark">记录原料消耗</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">选择商品</label>
+          <select id="raw-material-product-select" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main">
+            <!-- 商品列表由 JS 动态填充 -->
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">消耗数量（份/杯）</label>
+          <input id="raw-material-use-qty" type="number" min="1" value="1" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main">
+        </div>
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">使用时间段</label>
+          <select id="raw-material-time-period" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main">
+            <option value="早班">早班 (8:00-12:00)</option>
+            <option value="午班">午班 (12:00-18:00)</option>
+            <option value="晚班">晚班 (18:00-22:00)</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="bg-coffee-cream p-3 rounded-lg text-sm">
+          <p class="text-coffee-dark font-medium mb-1">备注</p>
+          <textarea id="raw-material-use-note" rows="2" class="w-full px-2 py-1.5 border border-coffee-light rounded-md text-sm focus:outline-none focus:border-coffee-main" placeholder="选填，可记录特殊情况"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-2 justify-end mt-6 pt-4 border-t border-coffee-light/30">
+        <button class="close-modal py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+        <button id="save-raw-material-use-btn" class="py-2.5 px-6 rounded-md bg-coffee-main text-white btn-hover text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 到期提醒弹窗 -->
+  <div id="expiry-alert-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-red-600 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i>库存到期提醒</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="expiry-alert-content" class="space-y-2 max-h-96 overflow-y-auto">
+        <!-- 到期提醒内容由 JS 动态渲染 -->
+      </div>
+      <div class="flex gap-2 justify-end mt-6 pt-4 border-t border-coffee-light/30">
+        <button id="expiry-alert-go-check" class="py-3 px-8 rounded-lg bg-coffee-main text-white btn-hover text-sm w-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">去仓库查看</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 教程详情弹窗（点击问号按钮弹出） -->
   <div id="help-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-[60] hidden modal-fade overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-xl p-6 my-8">
@@ -1364,7 +1619,7 @@
         <!-- 内容由 JS 动态填充 -->
       </div>
       <div class="flex justify-end mt-5 pt-4 border-t border-coffee-light/20">
-        <button class="close-modal py-2.5 px-6 rounded-lg bg-coffee-main text-white btn-hover text-sm close-btn shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"><i class="fa-solid fa-check mr-1.5"></i>我知道了</button>
+        <button class="close-modal py-3 px-8 rounded-lg bg-coffee-main text-white btn-hover text-sm close-btn shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 w-full"><i class="fa-solid fa-check mr-1.5"></i>我知道了</button>
       </div>
     </div>
   </div>
@@ -2177,7 +2432,27 @@
           'add-goods-modal',
           'edit-goods-modal',
           'sort-goods-modal',
-          'add-more-goods-modal'
+          'add-more-goods-modal',
+          'settings-modal',
+          'print-settings-modal',
+          'call-settings-modal',
+          'api-settings-modal',
+          'help-modal',
+          'store-settings-modal',
+          'employee-manage-modal',
+          'employee-edit-modal',
+          'attendance-modal',
+          'inventory-check-modal',
+          'inventory-edit-modal',
+          'raw-material-use-modal',
+          'expiry-alert-modal',
+          'tip-modal',
+          'code-modal',
+          'pay-qrcode-modal',
+          'verify-modal',
+          'pending-orders-modal',
+          'checkout-modal',
+          'print-preview-modal'
         ];
         modalIds.forEach(id => {
           const el = document.getElementById(id);
@@ -3371,6 +3646,547 @@
         showTipModal('检查：' + msg.join('；'), 'fa-solid fa-circle-check');
       });
     }
+
+    // ========== 门店设置 ==========
+    document.getElementById('to-store-settings').addEventListener('click', function() {
+      closeAllModals();
+      document.getElementById('store-settings-modal').classList.remove('hidden');
+    });
+
+    // ========== 员工管理 ==========
+    document.getElementById('to-employee-manage').addEventListener('click', function() {
+      closeAllModals();
+      document.getElementById('employee-manage-modal').classList.remove('hidden');
+      renderEmployeeList();
+      renderTodayAttendance();
+      updateTodayDate();
+    });
+
+    // 全局变量
+    let editingEmployeeId = null;
+    let editingInventoryId = null;
+
+    // 更新今日日期
+    function updateTodayDate() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const el = document.getElementById('today-date');
+      if (el) el.textContent = `(${y}-${m}-${d})`;
+    }
+
+    // 获取员工数据
+    function getEmployees() {
+      try {
+        return JSON.parse(localStorage.getItem('store_employees') || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    // 保存员工数据
+    function saveEmployees(employees) {
+      localStorage.setItem('store_employees', JSON.stringify(employees));
+      broadcastData({ type: 'employees_update', data: employees });
+    }
+
+    // 添加员工
+    document.getElementById('add-employee-btn').addEventListener('click', function() {
+      editingEmployeeId = null;
+      document.getElementById('employee-edit-title').textContent = '添加员工';
+      document.getElementById('employee-name-input').value = '';
+      document.getElementById('employee-position-input').value = '咖啡师';
+      document.getElementById('employee-phone-input').value = '';
+      document.getElementById('employee-edit-modal').classList.remove('hidden');
+    });
+
+    // 保存员工信息
+    document.getElementById('save-employee-btn').addEventListener('click', function() {
+      const name = document.getElementById('employee-name-input').value.trim();
+      const position = document.getElementById('employee-position-input').value;
+      const phone = document.getElementById('employee-phone-input').value.trim();
+      if (!name) { alert('请输入员工姓名'); return; }
+      let employees = getEmployees();
+      if (editingEmployeeId) {
+        const emp = employees.find(e => e.id === editingEmployeeId);
+        if (emp) { emp.name = name; emp.position = position; emp.phone = phone; }
+      } else {
+        employees.push({ id: Date.now(), name, position, phone, createdAt: new Date().toISOString() });
+      }
+      saveEmployees(employees);
+      document.getElementById('employee-edit-modal').classList.add('hidden');
+      renderEmployeeList();
+    });
+
+    // 渲染员工列表
+    function renderEmployeeList() {
+      const employees = getEmployees();
+      const listEl = document.getElementById('employee-list');
+      if (!listEl) return;
+      if (employees.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-user-slash text-3xl mb-2"></i><p>暂无员工，请点击上方按钮添加</p></div>';
+        return;
+      }
+      listEl.innerHTML = employees.map(emp => `
+        <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-coffee-main text-white flex items-center justify-center font-bold">${emp.name.charAt(0)}</div>
+            <div>
+              <p class="font-bold text-coffee-dark">${emp.name}</p>
+              <p class="text-xs text-gray-500">${emp.position}${emp.phone ? ' | ' + emp.phone : ''}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openAttendanceForEmployee(${emp.id})" class="py-1.5 px-3 rounded-md bg-green-500 text-white text-xs btn-hover"><i class="fa-solid fa-clock mr-1"></i>打卡</button>
+            <button onclick="editEmployee(${emp.id})" class="py-1.5 px-3 rounded-md bg-blue-500 text-white text-xs btn-hover"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="deleteEmployee(${emp.id})" class="py-1.5 px-3 rounded-md bg-red-400 text-white text-xs btn-hover"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 编辑员工
+    function editEmployee(id) {
+      const employees = getEmployees();
+      const emp = employees.find(e => e.id === id);
+      if (!emp) return;
+      editingEmployeeId = id;
+      document.getElementById('employee-edit-title').textContent = '编辑员工';
+      document.getElementById('employee-name-input').value = emp.name;
+      document.getElementById('employee-position-input').value = emp.position;
+      document.getElementById('employee-phone-input').value = emp.phone || '';
+      document.getElementById('employee-edit-modal').classList.remove('hidden');
+    }
+
+    // 删除员工
+    function deleteEmployee(id) {
+      if (!confirm('确定删除该员工吗？历史签到记录会保留。')) return;
+      let employees = getEmployees().filter(e => e.id !== id);
+      saveEmployees(employees);
+      renderEmployeeList();
+    }
+
+    // 打开特定员工的打卡
+    function openAttendanceForEmployee(id) {
+      document.getElementById('attendance-modal').classList.remove('hidden');
+      populateAttendanceEmployeeSelect();
+      setTimeout(() => {
+        document.getElementById('attendance-employee-select').value = String(id);
+      }, 50);
+      startAttendanceTime();
+    }
+
+    // 签到打卡弹窗 - 选择员工列表
+    function populateAttendanceEmployeeSelect() {
+      const employees = getEmployees();
+      const selectEl = document.getElementById('attendance-employee-select');
+      if (!selectEl) return;
+      selectEl.innerHTML = '<option value="">请选择员工</option>' + employees.map(e => `<option value="${e.id}">${e.name} - ${e.position}</option>`).join('');
+    }
+
+    let attendanceTimeInterval = null;
+    function startAttendanceTime() {
+      if (attendanceTimeInterval) clearInterval(attendanceTimeInterval);
+      const update = () => {
+        const el = document.getElementById('attendance-current-time');
+        if (!el) { clearInterval(attendanceTimeInterval); return; }
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        el.textContent = `${hh}:${mm}:${ss}`;
+      };
+      update();
+      attendanceTimeInterval = setInterval(update, 1000);
+    }
+
+    // 获取签到记录
+    function getAttendanceRecords() {
+      try {
+        return JSON.parse(localStorage.getItem('attendance_records') || '[]');
+      } catch (e) { return []; }
+    }
+    function saveAttendanceRecords(records) {
+      localStorage.setItem('attendance_records', JSON.stringify(records));
+      broadcastData({ type: 'attendance_update', data: records });
+    }
+
+    // 上班签到
+    document.getElementById('check-in-btn').addEventListener('click', function() {
+      const empId = parseInt(document.getElementById('attendance-employee-select').value);
+      if (!empId) { alert('请选择员工'); return; }
+      const employees = getEmployees();
+      const emp = employees.find(e => e.id === empId);
+      if (!emp) return;
+      const records = getAttendanceRecords();
+      const now = new Date();
+      const todayKey = now.toISOString().slice(0, 10);
+      // 检查今天是否已签到
+      const existing = records.find(r => r.empId === empId && r.date === todayKey && r.checkIn);
+      if (existing) { alert(`${emp.name} 今日已签到`); return; }
+      records.push({ id: Date.now(), empId, empName: emp.name, empPosition: emp.position, date: todayKey, checkIn: now.toISOString(), checkOut: null });
+      saveAttendanceRecords(records);
+      alert(`✓ ${emp.name} 签到成功 ${now.toTimeString().slice(0,5)}`);
+      document.getElementById('attendance-modal').classList.add('hidden');
+      renderTodayAttendance();
+    });
+
+    // 下班打卡
+    document.getElementById('check-out-btn').addEventListener('click', function() {
+      const empId = parseInt(document.getElementById('attendance-employee-select').value);
+      if (!empId) { alert('请选择员工'); return; }
+      const employees = getEmployees();
+      const emp = employees.find(e => e.id === empId);
+      if (!emp) return;
+      const records = getAttendanceRecords();
+      const now = new Date();
+      const todayKey = now.toISOString().slice(0, 10);
+      const record = records.find(r => r.empId === empId && r.date === todayKey);
+      if (!record || !record.checkIn) { alert('请先完成上班签到'); return; }
+      if (record.checkOut) { alert('今日已完成下班打卡'); return; }
+      record.checkOut = now.toISOString();
+      saveAttendanceRecords(records);
+      alert(`✓ ${emp.name} 打卡成功 ${now.toTimeString().slice(0,5)}`);
+      document.getElementById('attendance-modal').classList.add('hidden');
+      renderTodayAttendance();
+    });
+
+    // 渲染今日签到
+    function renderTodayAttendance() {
+      const records = getAttendanceRecords();
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const todayRecords = records.filter(r => r.date === todayKey);
+      const el = document.getElementById('today-attendance');
+      if (!el) return;
+      if (todayRecords.length === 0) {
+        el.innerHTML = '<div class="text-center py-6 text-gray-500"><i class="fa-solid fa-clipboard-list text-2xl mb-2"></i><p>今日暂无签到记录</p></div>';
+        return;
+      }
+      el.innerHTML = todayRecords.map(r => {
+        const checkInTime = r.checkIn ? new Date(r.checkIn).toTimeString().slice(0, 5) : '--:--';
+        const checkOutTime = r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : '未打卡';
+        return `
+        <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-coffee-main text-white flex items-center justify-center text-sm font-bold">${r.empName.charAt(0)}</div>
+            <div>
+              <p class="font-medium text-coffee-dark text-sm">${r.empName} <span class="text-xs text-gray-500">${r.empPosition}</span></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 text-sm">
+            <div class="text-center"><p class="text-xs text-gray-500">签到</p><p class="font-bold text-green-600">${checkInTime}</p></div>
+            <div class="text-center"><p class="text-xs text-gray-500">打卡</p><p class="font-bold ${checkOutTime === '未打卡' ? 'text-gray-400' : 'text-blue-600'}">${checkOutTime}</p></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ========== 仓库盘点 ==========
+    document.getElementById('to-inventory-check').addEventListener('click', function() {
+      closeAllModals();
+      document.getElementById('inventory-check-modal').classList.remove('hidden');
+      renderInventoryList();
+      renderRawMaterialLogs();
+    });
+
+    // 获取商品库存数据（合并 goods 数据）
+    function getInventoryData() {
+      try {
+        return JSON.parse(localStorage.getItem('inventory_data') || '[]');
+      } catch (e) { return []; }
+    }
+    function saveInventoryData(data) {
+      localStorage.setItem('inventory_data', JSON.stringify(data));
+      broadcastData({ type: 'inventory_update', data });
+    }
+
+    // 同步商品到库存
+    function syncGoodsToInventory() {
+      const goods = window.appState ? window.appState.goods : [];
+      const inventory = getInventoryData();
+      let changed = false;
+      (goods || []).forEach(g => {
+        if (!inventory.find(i => i.goodsId === g.id)) {
+          inventory.push({
+            id: Date.now() + Math.random(),
+            goodsId: g.id,
+            productName: g.name,
+            qty: g.stock || 0,
+            materials: [],
+            produceDate: null,
+            shelfLife: 30
+          });
+          changed = true;
+        } else {
+          const item = inventory.find(i => i.goodsId === g.id);
+          if (item.productName !== g.name) { item.productName = g.name; changed = true; }
+          if (item.qty !== g.stock) { item.qty = g.stock; changed = true; }
+        }
+      });
+      if (changed) saveInventoryData(inventory);
+      return inventory;
+    }
+
+    // 渲染库存列表
+    function renderInventoryList() {
+      syncGoodsToInventory();
+      const inventory = getInventoryData();
+      const listEl = document.getElementById('inventory-list');
+      const totalTypesEl = document.getElementById('total-product-types');
+      const totalQtyEl = document.getElementById('total-inventory-count');
+      const expiringEl = document.getElementById('expiring-items-count');
+      if (!listEl) return;
+      const now = new Date();
+      let expiringCount = 0;
+      let totalQty = 0;
+      if (inventory.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-boxes-packing text-3xl mb-2"></i><p>暂无库存数据</p></div>';
+      } else {
+        listEl.innerHTML = inventory.map(item => {
+          totalQty += (item.qty || 0);
+          let expiryText = '';
+          let expiryClass = 'text-gray-500';
+          let expiryDays = null;
+          if (item.produceDate && item.shelfLife) {
+            const produce = new Date(item.produceDate);
+            const expiry = new Date(produce.getTime() + item.shelfLife * 24 * 3600 * 1000);
+            const diffDays = Math.ceil((expiry - now) / (24 * 3600 * 1000));
+            expiryDays = diffDays;
+            if (diffDays < 0) {
+              expiryText = `已过期 ${Math.abs(diffDays)} 天`;
+              expiryClass = 'text-red-600 font-bold';
+              expiringCount++;
+            } else if (diffDays <= 3) {
+              expiryText = `${diffDays} 天后到期`;
+              expiryClass = 'text-orange-500 font-bold';
+              expiringCount++;
+            } else if (diffDays <= 7) {
+              expiryText = `${diffDays} 天后到期`;
+              expiryClass = 'text-yellow-600';
+            } else {
+              expiryText = `${diffDays} 天`;
+              expiryClass = 'text-green-600';
+            }
+          }
+          const materialsText = (item.materials && item.materials.length) ? item.materials.slice(0, 3).map(m => `${m.name}${m.qty || ''}`).join('、') : '暂无原料信息';
+          return `
+            <div class="p-3 bg-coffee-cream/50 rounded-lg">
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <p class="font-bold text-coffee-dark">${item.productName}</p>
+                  <p class="text-xs text-gray-500 mt-1">原料：${materialsText}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div class="text-right">
+                    <p class="text-xs text-gray-500">库存</p>
+                    <p class="text-lg font-bold text-coffee-main cursor-pointer hover:text-coffee-dark" onclick="openInventoryEdit(${item.goodsId})">${item.qty || 0}</p>
+                  </div>
+                  <div class="text-right min-w-[100px]">
+                    <p class="text-xs text-gray-500">保质期</p>
+                    <p class="text-sm ${expiryClass}">${expiryText || '未设置'}</p>
+                  </div>
+                  <button onclick="openInventoryEdit(${item.goodsId})" class="py-1.5 px-3 rounded-md bg-coffee-main text-white text-xs btn-hover"><i class="fa-solid fa-pen"></i>编辑</button>
+                </div>
+              </div>
+            </div>`;
+        }).join('');
+      }
+      if (totalTypesEl) totalTypesEl.textContent = inventory.length;
+      if (totalQtyEl) totalQtyEl.textContent = totalQty;
+      if (expiringEl) expiringEl.textContent = expiringCount;
+    }
+
+    // 打开库存编辑
+    function openInventoryEdit(goodsId) {
+      const inventory = getInventoryData();
+      let item = inventory.find(i => i.goodsId === goodsId);
+      if (!item) {
+        const goods = window.appState ? (window.appState.goods || []).find(g => g.id === goodsId) : null;
+        item = { id: Date.now(), goodsId, productName: goods ? goods.name : '未知商品', qty: 0, materials: [], produceDate: null, shelfLife: 30 };
+        inventory.push(item);
+        saveInventoryData(inventory);
+      }
+      editingInventoryId = item.goodsId;
+      document.getElementById('edit-inventory-product-name').textContent = item.productName;
+      document.getElementById('edit-inventory-qty').value = item.qty || 0;
+      document.getElementById('edit-inventory-materials').value = (item.materials || []).map(m => `${m.name}, ${m.qty}`).join('\n');
+      document.getElementById('edit-inventory-produce-date').value = item.produceDate || '';
+      document.getElementById('edit-inventory-shelf-life').value = item.shelfLife || '';
+      document.getElementById('inventory-edit-modal').classList.remove('hidden');
+    }
+
+    // 保存库存编辑
+    document.getElementById('save-inventory-btn').addEventListener('click', function() {
+      if (editingInventoryId === null) return;
+      const qty = parseInt(document.getElementById('edit-inventory-qty').value) || 0;
+      const materialsRaw = document.getElementById('edit-inventory-materials').value.trim();
+      const materials = materialsRaw.split('\n').filter(l => l.trim()).map(line => {
+        const parts = line.split(',').map(s => s.trim());
+        return { name: parts[0], qty: parts[1] || '' };
+      });
+      const produceDate = document.getElementById('edit-inventory-produce-date').value;
+      const shelfLife = parseInt(document.getElementById('edit-inventory-shelf-life').value) || 30;
+      let inventory = getInventoryData();
+      const item = inventory.find(i => i.goodsId === editingInventoryId);
+      if (item) {
+        item.qty = qty;
+        item.materials = materials;
+        item.produceDate = produceDate || null;
+        item.shelfLife = shelfLife;
+        saveInventoryData(inventory);
+        // 同步到商品的库存
+        if (window.appState && window.appState.goods) {
+          const good = window.appState.goods.find(g => g.id === editingInventoryId);
+          if (good) { good.stock = qty; saveGoodsData ? saveGoodsData(window.appState.goods) : localStorage.setItem('goods_data', JSON.stringify(window.appState.goods)); }
+        }
+      }
+      document.getElementById('inventory-edit-modal').classList.add('hidden');
+      renderInventoryList();
+      checkExpiringItems();
+    });
+
+    // 原料使用记录
+    function getRawMaterialLogs() {
+      try { return JSON.parse(localStorage.getItem('raw_material_logs') || '[]'); } catch (e) { return []; }
+    }
+    function saveRawMaterialLogs(logs) {
+      localStorage.setItem('raw_material_logs', JSON.stringify(logs));
+      broadcastData({ type: 'rawmaterial_update', data: logs });
+    }
+
+    // 打开原料消耗记录
+    document.getElementById('add-raw-material-btn').addEventListener('click', function() {
+      document.getElementById('raw-material-use-modal').classList.remove('hidden');
+      const goods = window.appState ? (window.appState.goods || []) : [];
+      const selectEl = document.getElementById('raw-material-product-select');
+      if (selectEl) {
+        selectEl.innerHTML = '<option value="">请选择商品</option>' + goods.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      }
+      document.getElementById('raw-material-use-qty').value = 1;
+      document.getElementById('raw-material-use-note').value = '';
+    });
+
+    // 保存原料消耗记录
+    document.getElementById('save-raw-material-use-btn').addEventListener('click', function() {
+      const goodsId = parseInt(document.getElementById('raw-material-product-select').value);
+      const qty = parseInt(document.getElementById('raw-material-use-qty').value) || 1;
+      const period = document.getElementById('raw-material-time-period').value;
+      const note = document.getElementById('raw-material-use-note').value.trim();
+      if (!goodsId) { alert('请选择商品'); return; }
+      const goods = window.appState ? (window.appState.goods || []).find(g => g.id === goodsId) : null;
+      const logs = getRawMaterialLogs();
+      logs.unshift({
+        id: Date.now(),
+        productName: goods ? goods.name : '未知商品',
+        goodsId,
+        qty,
+        period,
+        note,
+        timestamp: new Date().toISOString()
+      });
+      // 扣减库存
+      const inventory = getInventoryData();
+      const item = inventory.find(i => i.goodsId === goodsId);
+      if (item) {
+        item.qty = Math.max(0, (item.qty || 0) - qty);
+        saveInventoryData(inventory);
+      }
+      saveRawMaterialLogs(logs.slice(0, 100)); // 最多保留100条
+      document.getElementById('raw-material-use-modal').classList.add('hidden');
+      renderInventoryList();
+      renderRawMaterialLogs();
+    });
+
+    // 渲染原料消耗记录
+    function renderRawMaterialLogs() {
+      const logs = getRawMaterialLogs();
+      const el = document.getElementById('raw-material-logs');
+      if (!el) return;
+      if (logs.length === 0) {
+        el.innerHTML = '<div class="text-center py-4 text-gray-500 text-sm">暂无原料消耗记录</div>';
+        return;
+      }
+      el.innerHTML = logs.slice(0, 20).map(log => {
+        const time = new Date(log.timestamp);
+        const timeStr = `${time.getMonth()+1}/${time.getDate()} ${String(time.getHours()).padStart(2,'0')}:${String(time.getMinutes()).padStart(2,'0')}`;
+        return `<div class="flex items-center justify-between p-2 bg-coffee-cream/30 rounded">
+          <div><span class="font-medium text-coffee-dark">${log.productName}</span> <span class="text-gray-500">× ${log.qty}份</span></div>
+          <div class="text-right">
+            <span class="text-xs text-coffee-main bg-coffee-cream px-2 py-0.5 rounded-full">${log.period}</span>
+            <span class="text-xs text-gray-500 ml-2">${timeStr}</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ========== 到期提醒检测 ==========
+    function checkExpiringItems() {
+      const inventory = getInventoryData();
+      const now = new Date();
+      const expiring = [];
+      inventory.forEach(item => {
+        if (!item.produceDate || !item.shelfLife) return;
+        const produce = new Date(item.produceDate);
+        const expiry = new Date(produce.getTime() + item.shelfLife * 24 * 3600 * 1000);
+        const diffDays = Math.ceil((expiry - now) / (24 * 3600 * 1000));
+        if (diffDays <= 7) {
+          expiring.push({ ...item, daysLeft: diffDays, expiryDate: expiry.toISOString().slice(0, 10) });
+        }
+      });
+      return expiring;
+    }
+
+    function showExpiryAlert() {
+      const expiring = checkExpiringItems();
+      if (expiring.length === 0) return;
+      const contentEl = document.getElementById('expiry-alert-content');
+      if (!contentEl) return;
+      contentEl.innerHTML = expiring.map(item => {
+        const isExpired = item.daysLeft < 0;
+        const colorClass = isExpired ? 'bg-red-100 border-red-300' : (item.daysLeft <= 3 ? 'bg-orange-100 border-orange-300' : 'bg-yellow-100 border-yellow-300');
+        const textClass = isExpired ? 'text-red-600' : (item.daysLeft <= 3 ? 'text-orange-600' : 'text-yellow-700');
+        return `<div class="p-3 border-2 ${colorClass} rounded-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-bold text-coffee-dark">${item.productName}</p>
+              <p class="text-xs text-gray-500">过期日期：${item.expiryDate}</p>
+            </div>
+            <p class="text-sm ${textClass} font-bold">${isExpired ? '已过期 ' + Math.abs(item.daysLeft) + ' 天' : item.daysLeft + ' 天后过期'}</p>
+          </div>
+        </div>`;
+      }).join('');
+      document.getElementById('expiry-alert-modal').classList.remove('hidden');
+    }
+
+    // 去仓库查看
+    document.getElementById('expiry-alert-go-check').addEventListener('click', function() {
+      document.getElementById('expiry-alert-modal').classList.add('hidden');
+      document.getElementById('to-inventory-check').click();
+    });
+
+    // 页面打开时自动检查到期提醒
+    setTimeout(() => {
+      const lastAlert = localStorage.getItem('last_expiry_alert_date');
+      const todayKey = new Date().toISOString().slice(0, 10);
+      if (lastAlert !== todayKey) {
+        const expiring = checkExpiringItems();
+        if (expiring.length > 0) {
+          showExpiryAlert();
+          localStorage.setItem('last_expiry_alert_date', todayKey);
+        }
+      }
+    }, 2000);
+
+    // 每隔3小时检查一次
+    setInterval(() => {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const lastAlert = localStorage.getItem('last_expiry_alert_date');
+      if (lastAlert !== todayKey) {
+        const expiring = checkExpiringItems();
+        if (expiring.length > 0) { showExpiryAlert(); localStorage.setItem('last_expiry_alert_date', todayKey); }
+      }
+    }, 10800000);
 
     // ========== 重写核心数据保存函数，使其触发同步 ==========
     // 保存对 saveGoodsData 增强：保存后广播到同步服务器
