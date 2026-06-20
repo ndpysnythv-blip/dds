@@ -179,6 +179,48 @@
         background: linear-gradient(to bottom right, #dc2626, #991b1b) !important;
         animation: none;
       }
+      .ai-mode-btn {
+        padding: 6px 14px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1.5px solid #d4b896;
+        background: white;
+        color: #6f4e37;
+        transition: all 0.2s;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .ai-mode-btn:hover { background: #f5e6d3; }
+      .ai-mode-btn.active-en {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+        border-color: #1d4ed8;
+      }
+      .ai-mode-btn.active-admin {
+        background: linear-gradient(135deg, #f97316, #ea580c);
+        color: white;
+        border-color: #ea580c;
+      }
+      /* 密码弹窗 */
+      .pwd-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #d4b896;
+        border-radius: 10px;
+        font-size: 16px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .pwd-input:focus { border-color: #6f4e37; }
+      /* 更多设置二级菜单 */
+      .sub-menu-card {
+        background: white;
+        border-radius: 12px;
+        border: 1.5px solid #e5d5c0;
+      }
 
       /* 订单溯源详情水印 */
       .log-watermark {
@@ -591,7 +633,7 @@
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-cogs text-coffee-main"></i>设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div class="grid grid-cols-1 gap-3 mb-6">
+      <div class="grid grid-cols-1 gap-3 mb-4">
         <button id="to-store-settings" class="py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-store"></i>门店设置
         </button>
@@ -601,15 +643,73 @@
         <button id="to-print-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-print"></i>打印设置
         </button>
+        <button id="to-more-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-ellipsis"></i>更多设置
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 更多设置二级菜单 -->
+  <div id="more-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-ellipsis text-coffee-main"></i>更多设置</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="grid grid-cols-1 gap-3 mb-4">
         <button id="to-ai-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-robot"></i>AI助手
-        </button>
-        <button id="to-api-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
-          <i class="fa-solid fa-server"></i>后台设置
         </button>
         <button id="to-log-viewer" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-book"></i>日志记录
         </button>
+        <button id="to-api-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-server"></i>后台设置
+        </button>
+        <button id="to-pwd-change" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-lock"></i>修改密码
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 密码输入弹窗 -->
+  <div id="password-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-sm p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-lock text-coffee-main"></i>请输入密码</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="mb-4">
+        <p class="text-sm text-gray-600 mb-3">设置菜单受密码保护，请输入访问密码。</p>
+        <input id="pwd-input" type="password" class="pwd-input" placeholder="请输入密码" autocomplete="off">
+        <p id="pwd-error" class="hidden text-red-500 text-sm mt-2"><i class="fa-solid fa-circle-exclamation mr-1"></i>密码错误，请重试</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="pwd-cancel" class="flex-1 py-3 rounded-md bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition">取消</button>
+        <button id="pwd-confirm" class="flex-1 py-3 rounded-md bg-coffee-main text-white font-semibold hover:bg-coffee-dark transition">确认</button>
+      </div>
+      <p class="text-xs text-gray-400 mt-4 text-center">默认密码：123456（首次使用请在更多设置中修改）</p>
+    </div>
+  </div>
+
+  <!-- 修改密码弹窗 -->
+  <div id="pwd-change-modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-sm p-6">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-key text-coffee-main"></i>修改密码</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="space-y-3 mb-4">
+        <input id="old-pwd-input" type="password" class="pwd-input" placeholder="旧密码">
+        <input id="new-pwd-input" type="password" class="pwd-input" placeholder="新密码（至少4位）">
+        <input id="confirm-pwd-input" type="password" class="pwd-input" placeholder="确认新密码">
+        <p id="pwd-change-error" class="hidden text-red-500 text-sm"><i class="fa-solid fa-circle-exclamation mr-1"></i><span id="pwd-change-msg">错误</span></p>
+      </div>
+      <div class="flex gap-2">
+        <button id="pwd-change-cancel" class="flex-1 py-3 rounded-md bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition">取消</button>
+        <button id="pwd-change-confirm" class="flex-1 py-3 rounded-md bg-coffee-main text-white font-semibold hover:bg-coffee-dark transition">保存</button>
       </div>
     </div>
   </div>
@@ -3709,6 +3809,9 @@
           'sort-goods-modal',
           'add-more-goods-modal',
           'settings-modal',
+          'more-settings-modal',
+          'password-modal',
+          'pwd-change-modal',
           'print-settings-modal',
           'call-settings-modal',
           'api-settings-modal',
@@ -3729,7 +3832,10 @@
           'verify-modal',
           'pending-orders-modal',
           'checkout-modal',
-          'print-preview-modal'
+          'print-preview-modal',
+          'ai-settings-modal',
+          'log-viewer-modal',
+          'log-order-detail-modal'
         ];
         modalIds.forEach(id => {
           const el = document.getElementById(id);
@@ -4222,23 +4328,183 @@
     }
 
     // 设置相关事件
+    // ========== 密码管理工具 ==========
+    const PWD_KEY = 'starCoffeeSettingsPwd';
+    function getSettingsPassword() {
+      try {
+        return localStorage.getItem(PWD_KEY) || '123456';
+      } catch (e) { return '123456'; }
+    }
+    function verifySettingsPassword(input) {
+      return input === getSettingsPassword();
+    }
+    function changeSettingsPassword(newPwd) {
+      try {
+        localStorage.setItem(PWD_KEY, newPwd);
+        return true;
+      } catch (e) { return false; }
+    }
+    // 待打开的弹窗ID（用于密码验证后打开目标弹窗）
+    let pendingModalAfterAuth = null;
+    function openSettingsModal(modalId) {
+      // 先判断当前会话是否已经授权过
+      try {
+        const sessionKey = 'settingsAuthSession';
+        const savedSession = sessionStorage.getItem(sessionKey);
+        if (savedSession === '1') {
+          // 已授权，直接打开目标弹窗
+          closeAllModals();
+          document.getElementById(modalId).classList.remove('hidden');
+          return;
+        }
+      } catch (e) {}
+      pendingModalAfterAuth = modalId;
+      closeAllModals();
+      document.getElementById('password-modal').classList.remove('hidden');
+      document.getElementById('pwd-input').value = '';
+      document.getElementById('pwd-error').classList.add('hidden');
+      setTimeout(function() {
+        const inp = document.getElementById('pwd-input');
+        if (inp) inp.focus();
+      }, 100);
+    }
+
     function bindSettingsEvents() {
-      // 设置按钮
+      // 设置按钮（受密码保护）
       document.getElementById('settings-btn').addEventListener('click', () => {
-        document.getElementById('settings-modal').classList.remove('hidden');
+        openSettingsModal('settings-modal');
       });
 
-      // 进入商品管理
+      // 进入商品管理（主菜单）
       document.getElementById('to-goods-manage').addEventListener('click', () => {
         document.getElementById('settings-modal').classList.add('hidden');
         document.getElementById('goods-manage-modal').classList.remove('hidden');
       });
 
-      // 进入打印设置
+      // 进入打印设置（主菜单）
       document.getElementById('to-print-settings').addEventListener('click', () => {
         document.getElementById('settings-modal').classList.add('hidden');
         document.getElementById('print-settings-modal').classList.remove('hidden');
         updatePrintSettingsUI();
+      });
+
+      // 进入门店设置（主菜单）
+      document.getElementById('to-store-settings').addEventListener('click', function() {
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('store-settings-modal').classList.remove('hidden');
+      });
+
+      // 进入更多设置（二级菜单）
+      document.getElementById('to-more-settings').addEventListener('click', () => {
+        document.getElementById('settings-modal').classList.add('hidden');
+        document.getElementById('more-settings-modal').classList.remove('hidden');
+      });
+
+      // 更多设置 → AI助手
+      document.getElementById('to-ai-settings').addEventListener('click', function() {
+        document.getElementById('more-settings-modal').classList.add('hidden');
+        document.getElementById('ai-settings-modal').classList.remove('hidden');
+        if (typeof syncAiSettingsToUI === 'function') syncAiSettingsToUI();
+      });
+
+      // 更多设置 → 日志记录
+      document.getElementById('to-log-viewer').addEventListener('click', function() {
+        document.getElementById('more-settings-modal').classList.add('hidden');
+        if (typeof openLogViewer === 'function') openLogViewer();
+        else document.getElementById('log-viewer-modal').classList.remove('hidden');
+      });
+
+      // 更多设置 → 后台设置
+      document.getElementById('to-api-settings').addEventListener('click', () => {
+        document.getElementById('more-settings-modal').classList.add('hidden');
+        document.getElementById('api-settings-modal').classList.remove('hidden');
+        if (typeof loadApiSettings === 'function') loadApiSettings();
+        if (typeof setupCollapsibleSections === 'function') setupCollapsibleSections();
+      });
+
+      // 更多设置 → 修改密码
+      document.getElementById('to-pwd-change').addEventListener('click', () => {
+        document.getElementById('more-settings-modal').classList.add('hidden');
+        document.getElementById('pwd-change-modal').classList.remove('hidden');
+        document.getElementById('old-pwd-input').value = '';
+        document.getElementById('new-pwd-input').value = '';
+        document.getElementById('confirm-pwd-input').value = '';
+        document.getElementById('pwd-change-error').classList.add('hidden');
+        setTimeout(function() {
+          const inp = document.getElementById('old-pwd-input');
+          if (inp) inp.focus();
+        }, 100);
+      });
+
+      // 密码弹窗：取消
+      document.getElementById('pwd-cancel').addEventListener('click', function() {
+        document.getElementById('password-modal').classList.add('hidden');
+        pendingModalAfterAuth = null;
+      });
+      // 密码弹窗：确认
+      document.getElementById('pwd-confirm').addEventListener('click', function() {
+        const val = document.getElementById('pwd-input').value.trim();
+        if (verifySettingsPassword(val)) {
+          // 授权成功，写入会话
+          try { sessionStorage.setItem('settingsAuthSession', '1'); } catch (e) {}
+          document.getElementById('password-modal').classList.add('hidden');
+          if (pendingModalAfterAuth) {
+            document.getElementById(pendingModalAfterAuth).classList.remove('hidden');
+            // 针对某些弹窗的初始化
+            if (pendingModalAfterAuth === 'print-settings-modal') {
+              if (typeof updatePrintSettingsUI === 'function') updatePrintSettingsUI();
+            }
+            if (pendingModalAfterAuth === 'ai-settings-modal') {
+              if (typeof syncAiSettingsToUI === 'function') syncAiSettingsToUI();
+            }
+            pendingModalAfterAuth = null;
+          }
+        } else {
+          document.getElementById('pwd-error').classList.remove('hidden');
+          document.getElementById('pwd-input').value = '';
+        }
+      });
+      // 密码弹窗：回车提交
+      document.getElementById('pwd-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          document.getElementById('pwd-confirm').click();
+        }
+      });
+      // 修改密码：取消
+      document.getElementById('pwd-change-cancel').addEventListener('click', function() {
+        document.getElementById('pwd-change-modal').classList.add('hidden');
+      });
+      // 修改密码：确认
+      document.getElementById('pwd-change-confirm').addEventListener('click', function() {
+        const oldVal = document.getElementById('old-pwd-input').value.trim();
+        const newVal = document.getElementById('new-pwd-input').value.trim();
+        const confirmVal = document.getElementById('confirm-pwd-input').value.trim();
+        const errEl = document.getElementById('pwd-change-error');
+        const msgEl = document.getElementById('pwd-change-msg');
+        if (!verifySettingsPassword(oldVal)) {
+          msgEl.textContent = '旧密码不正确';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        if (newVal.length < 4) {
+          msgEl.textContent = '新密码至少需要4位';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        if (newVal !== confirmVal) {
+          msgEl.textContent = '两次输入的新密码不一致';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        changeSettingsPassword(newVal);
+        errEl.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i>密码修改成功';
+        errEl.classList.remove('hidden', 'text-red-500');
+        errEl.classList.add('text-green-600');
+        setTimeout(function() {
+          document.getElementById('pwd-change-modal').classList.add('hidden');
+          errEl.classList.add('hidden', 'text-red-500');
+          errEl.classList.remove('text-green-600');
+        }, 1000);
       });
 
       // 自动打印开关 - 自动保存
@@ -9819,6 +10085,174 @@
         return null;
       }
 
+      // ========== 后台指令处理 ==========
+      function saveGoodsDataSafe(dataArr) {
+        try {
+          localStorage.setItem('starCoffeeGoods', JSON.stringify(dataArr));
+          if (typeof refreshGoodsDisplay === 'function') refreshGoodsDisplay();
+          return true;
+        } catch (e) { return false; }
+      }
+      function findGoodsByName(text, goodsArr) {
+        // 先精确匹配
+        for (let i = 0; i < goodsArr.length; i++) {
+          if (goodsArr[i].name && text.indexOf(goodsArr[i].name) >= 0) return goodsArr[i];
+        }
+        // 再部分匹配（关键词）
+        for (let i = 0; i < goodsArr.length; i++) {
+          const g = goodsArr[i];
+          const parts = (g.name || '').match(/[\u4e00-\u9fa5A-Za-z]+/g) || [];
+          for (let pi = 0; pi < parts.length; pi++) {
+            const p = parts[pi];
+            if (p.length >= 2 && text.indexOf(p) >= 0) return g;
+          }
+        }
+        return null;
+      }
+      function handleAdminCommand(text, goodsArr) {
+        const lower = text.toLowerCase();
+        // 退出后台
+        if (/退出|结束|stop|quit|exit|返回普通/i.test(lower)) {
+          settings.mode = 'normal';
+          const adminBtn = document.getElementById('ai-mode-admin');
+          if (adminBtn) adminBtn.classList.remove('active-admin');
+          addAIMsg('已退出后台模式。');
+          return;
+        }
+        // 查看库存
+        if (/查看库存|所有库存|库存列表|库存|list stock|list inventory/i.test(lower)) {
+          const summary = goodsArr.map(function (g) {
+            return g.name + ' × ' + (g.stock != null ? g.stock : '-') + '（¥' + g.price + '）';
+          });
+          addAIMsg('当前商品库存：\n' + summary.join('\n'));
+          return;
+        }
+        // 下架商品
+        if (/下架|停用|unlist|disable|offline/i.test(lower)) {
+          const g = findGoodsByName(text, goodsArr);
+          if (!g) { addAIMsg('未找到匹配的商品，请说明具体商品名。'); return; }
+          // 用价格=0 作为下架标记，同时 stock=0；或者修改商品名称加标记
+          const newArr = goodsArr.map(function (x) {
+            if (x.id === g.id) return Object.assign({}, x, { stock: 0 });
+            return x;
+          });
+          if (saveGoodsDataSafe(newArr)) {
+            addAIMsg('已下架【' + g.name + '】（库存设置为 0）。');
+          } else {
+            addAIMsg('保存失败，请在设置中手动操作。');
+          }
+          return;
+        }
+        // 上架商品
+        if (/上架|启用|恢复|list|enable|online/i.test(lower) && !/上架|上架 /i.test('上架')) {
+          const g = findGoodsByName(text, goodsArr);
+          if (!g) { addAIMsg('未找到匹配的商品，请说明具体商品名。'); return; }
+          const newArr = goodsArr.map(function (x) {
+            if (x.id === g.id) return Object.assign({}, x, { stock: x.stock && x.stock > 0 ? x.stock : 99 });
+            return x;
+          });
+          if (saveGoodsDataSafe(newArr)) {
+            addAIMsg('已上架【' + g.name + '】。');
+          } else {
+            addAIMsg('保存失败，请在设置中手动操作。');
+          }
+          return;
+        }
+        // 库存增减：库存 商品名 数量
+        const stockMatch = text.match(/(库存|加|增加|加上|加上|库存加|\+|减去|减|库存减|-)[^0-9]*([\u4e00-\u9fa5A-Za-z\s]+)[\s:：]*(\d+)/);
+        if (stockMatch && stockMatch[3]) {
+          const action = stockMatch[1];
+          const qty = parseInt(stockMatch[3]);
+          const g = findGoodsByName(stockMatch[2], goodsArr) || findGoodsByName(text, goodsArr);
+          if (!g) { addAIMsg('未找到匹配的商品。'); return; }
+          let newStock = qty;
+          let actionMsg = '设置为';
+          if (/加|增加|加上|\+|库存加/i.test(action)) {
+            newStock = (g.stock || 0) + qty;
+            actionMsg = '增加后';
+          } else if (/减|减去|库存减|-/i.test(action)) {
+            newStock = Math.max(0, (g.stock || 0) - qty);
+            actionMsg = '减少后';
+          }
+          const newArr = goodsArr.map(function (x) {
+            if (x.id === g.id) return Object.assign({}, x, { stock: newStock });
+            return x;
+          });
+          if (saveGoodsDataSafe(newArr)) {
+            addAIMsg('【' + g.name + '】' + actionMsg + '库存：' + newStock);
+          } else {
+            addAIMsg('保存失败，请在设置中手动操作。');
+          }
+          return;
+        }
+        // 修改价格：修改价格 商品名 价格
+        const priceMatch = text.match(/(价格|修改价格|改价|调价|price)[^0-9]*([\u4e00-\u9fa5A-Za-z\s]+)[\s:：]*(\d+(?:\.\d+)?)/);
+        if (priceMatch && priceMatch[3]) {
+          const newPrice = parseFloat(priceMatch[3]);
+          const g = findGoodsByName(priceMatch[2], goodsArr) || findGoodsByName(text, goodsArr);
+          if (!g) { addAIMsg('未找到匹配的商品。'); return; }
+          const newArr = goodsArr.map(function (x) {
+            if (x.id === g.id) return Object.assign({}, x, { price: newPrice });
+            return x;
+          });
+          if (saveGoodsDataSafe(newArr)) {
+            addAIMsg('【' + g.name + '】的价格已修改为 ¥' + newPrice.toFixed(2));
+          } else {
+            addAIMsg('保存失败，请在设置中手动操作。');
+          }
+          return;
+        }
+        addAIMsg('未识别的后台指令。可用指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 退出后台');
+      }
+
+      // ========== English 模式处理 ==========
+      function handleEnglishCommand(text, goodsArr) {
+        const lower = text.toLowerCase();
+        // 取消 / 清空
+        if (/cancel|clear|reset|start over|empty/i.test(lower)) {
+          clearCartSafe();
+          addAIMsg('Cart cleared.');
+          return;
+        }
+        // 确认 / 结账
+        if (/confirm|checkout|done|yes|okay|ok/i.test(lower)) {
+          const cart = getCartSummary();
+          if (cart.items.length === 0) { addAIMsg('Your cart is empty.'); return; }
+          const names = cart.items.map(function (g) { return g.name + ' ×' + g.count; });
+          addAIMsg('Confirmed: ' + names.join(', ') + '. Total ¥' + cart.total.toFixed(2));
+          return;
+        }
+        // 英文商品名映射
+        const enMap = [
+          { key: 'latte', preferName: '拿铁' },
+          { key: 'americano', preferName: '美式' },
+          { key: 'espresso', preferName: '浓缩' },
+          { key: 'cappuccino', preferName: '卡布奇诺' },
+          { key: 'macchiato', preferName: '玛奇朵' },
+          { key: 'caramel', preferName: '焦糖玛奇朵' },
+          { key: 'tiramisu', preferName: '提拉米苏' },
+          { key: 'scone', preferName: '司康' },
+          { key: 'orange juice', preferName: '橙汁' },
+          { key: 'juice', preferName: '橙汁' },
+          { key: 'sparkling', preferName: '气泡水' },
+          { key: 'water', preferName: '气泡水' },
+          { key: 'mocha', preferName: '摩卡' }
+        ];
+        for (let i = 0; i < enMap.length; i++) {
+          if (lower.indexOf(enMap[i].key) >= 0) {
+            // 尝试找对应商品（中文关键词部分匹配）
+            const g = findGoodsByName(enMap[i].preferName, goodsArr);
+            if (g) {
+              addGoodsById(g.id, 1);
+              const updated = getCartSummary();
+              addAIMsg('Added ' + g.name + ' to cart. Current total: ¥' + updated.total.toFixed(2));
+              return;
+            }
+          }
+        }
+        addAIMsg('Sorry, I didn\'t catch that. Try: "latte", "americano", "tiramisu", "cancel", "confirm".');
+      }
+
       function handleInput(rawText) {
         const text = (rawText || '').trim();
         if (!text) return;
@@ -10432,17 +10866,59 @@
           }
         });
 
+        // ========== 模式切换按钮：English / 后台模式 ==========
+        const enBtn = document.getElementById('ai-mode-en');
+        const adminBtn = document.getElementById('ai-mode-admin');
+        if (enBtn) {
+          enBtn.addEventListener('click', function () {
+            const isActive = enBtn.classList.contains('active-en');
+            // 互斥：开启英文模式时关闭后台模式
+            if (!isActive) {
+              enBtn.classList.add('active-en');
+              if (adminBtn) adminBtn.classList.remove('active-admin');
+              settings.mode = 'english';
+              // 英文模式提示
+              addAIMsg('English mode activated 🌍. You can now speak or type in English: "latte", "americano", "cancel", etc.');
+              speakWithFallback('English mode activated');
+              // 更新输入框占位符
+              if (inputEl) inputEl.placeholder = 'Type or speak in English...';
+            } else {
+              enBtn.classList.remove('active-en');
+              settings.mode = 'normal';
+              if (inputEl) inputEl.placeholder = '说话或输入…回车发送';
+            }
+          });
+        }
+        if (adminBtn) {
+          adminBtn.addEventListener('click', function () {
+            const isActive = adminBtn.classList.contains('active-admin');
+            // 开启后台模式时需要密码验证
+            if (!isActive) {
+              // 校验密码（复用已授权状态）
+              const auth = (function() { try { return sessionStorage.getItem('settingsAuthSession') === '1'; } catch(e) { return false; } })();
+              if (!auth) {
+                addAIMsg('后台模式需要密码验证，请先进入设置验证密码。');
+                speakWithFallback('请先在设置中输入密码');
+                openSettingsModal('more-settings-modal');
+                return;
+              }
+              adminBtn.classList.add('active-admin');
+              if (enBtn) enBtn.classList.remove('active-en');
+              settings.mode = 'admin';
+              addAIMsg('后台模式已激活 🔧。支持以下指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存 [商品名] [数量]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 退出后台');
+              speakWithFallback('后台模式已激活');
+              if (inputEl) inputEl.placeholder = '管理员指令（例：下架拿铁）';
+            } else {
+              adminBtn.classList.remove('active-admin');
+              settings.mode = 'normal';
+              if (inputEl) inputEl.placeholder = '说话或输入…回车发送';
+              speakWithFallback('已退出后台模式');
+            }
+          });
+        }
+
         // 设置面板的事件绑定
         bindSettingsEvents();
-
-        // 设置主菜单入口
-        const toAi = document.getElementById('to-ai-settings');
-        if (toAi) toAi.addEventListener('click', function () {
-          document.getElementById('settings-modal').classList.add('hidden');
-          const m = document.getElementById('ai-settings-modal');
-          if (m) m.classList.remove('hidden');
-          syncSettingsUI();
-        });
       }
 
       // ========== 10) 设置面板事件 ==========
@@ -10636,7 +11112,11 @@
         </div>
       </div>
       <div id="ai-status-bar" class="hidden px-4 py-2 text-sm text-center bg-coffee-main/10 text-coffee-dark border-t border-coffee-main/10"><span id="ai-status-msg">—</span></div>
-      <div class="p-3 border-t border-coffee-main/20 bg-coffee-white/40">
+      <div class="px-3 pt-3 pb-1 flex gap-2 justify-center border-t border-coffee-main/20 bg-coffee-white/40">
+        <button id="ai-mode-en" class="ai-mode-btn"><i class="fa-solid fa-language"></i>English</button>
+        <button id="ai-mode-admin" class="ai-mode-btn"><i class="fa-solid fa-user-shield"></i>后台模式</button>
+      </div>
+      <div class="px-3 pb-3 pt-2 bg-coffee-white/40">
         <div class="flex gap-2 items-center">
           <button id="ai-voice-btn" class="flex-shrink-0 w-12 h-12 rounded-full bg-coffee-main text-white hover:bg-coffee-dark transition flex items-center justify-center shadow-md"><i class="fa-solid fa-microphone text-lg"></i></button>
           <input id="ai-input" type="text" class="flex-1 px-4 py-3 border border-coffee-light rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white" placeholder="说话或输入…回车发送" autocomplete="off">
