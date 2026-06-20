@@ -1771,7 +1771,7 @@
     <div class="bg-white rounded-lg card-shadow w-full max-w-2xl max-h-[80vh] flex flex-col">
       <div class="flex justify-between items-center p-4 border-b border-coffee-light/30">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-search text-coffee-main"></i>选择商品</h2>
-        <button onclick="document.getElementById('product-select-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="document.getElementById('product-select-modal').classList.add('hidden'); _selectedProducts = [];" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="p-4 border-b border-coffee-light/30">
         <div class="relative">
@@ -1779,11 +1779,22 @@
           <input id="product-search-input" type="text" class="w-full pl-10 pr-4 py-2.5 border border-coffee-light rounded-lg focus:outline-none focus:border-coffee-main" placeholder="搜索商品名称...">
         </div>
       </div>
+      <!-- 已选商品（购物车） -->
+      <div id="selected-products-cart" class="hidden p-4 bg-coffee-cream/30 border-b border-coffee-light/30">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-bold text-coffee-dark">已选商品</span>
+          <span class="text-xs text-gray-500">共 <span id="selected-count">0</span> 件</span>
+        </div>
+        <div id="selected-products-list" class="flex flex-wrap gap-2">
+          <!-- 已选商品标签 -->
+        </div>
+      </div>
       <div id="product-select-list" class="flex-1 overflow-y-auto p-4 space-y-2">
         <!-- 商品列表由 JS 动态生成 -->
       </div>
-      <div class="p-4 border-t border-coffee-light/30 flex justify-end">
-        <button onclick="document.getElementById('product-select-modal').classList.add('hidden')" class="py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+      <div class="p-4 border-t border-coffee-light/30 flex justify-end gap-2">
+        <button onclick="document.getElementById('product-select-modal').classList.add('hidden'); _selectedProducts = [];" class="py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+        <button id="confirm-products-btn" onclick="confirmSelectedProducts()" class="py-2.5 px-6 rounded-md bg-coffee-main text-white btn-hover text-sm shadow-md">确认</button>
       </div>
     </div>
   </div>
@@ -2882,7 +2893,7 @@
       if (expiringEl) expiringEl.textContent = expiringCount;
     }
 
-    // 库存搜索功能：按条形码或商品名查找（窄卡片版）
+    // 库存搜索功能：按原料名称搜索（窄卡片版）
     function searchInventoryInQuickCard(keyword) {
       const resultEl = document.getElementById('quick-inventory-result');
       if (!resultEl) return;
@@ -2892,32 +2903,64 @@
       const inventory = getInventoryData();
 
       if (keyword === '') {
-        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">扫码查找</p>`;
+        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">搜原料</p>`;
         return;
       }
 
-      let matchedGoods = goods.filter(g =>
-        (String(g.barcode || '')).toLowerCase() === keyword ||
-        (g.name || '').toLowerCase().includes(keyword)
-      );
-      if (matchedGoods.length === 0) {
-        matchedGoods = goods.filter(g =>
-          (String(g.barcode || '')).toLowerCase().includes(keyword)
-        );
-      }
+      // 按原料名称搜索：找到包含该原料的库存记录
+      const matchedInventory = inventory.filter(item => {
+        if (!item.materials || !Array.isArray(item.materials)) return false;
+        return item.materials.some(m => (m.name || '').toLowerCase().includes(keyword));
+      });
 
-      if (matchedGoods.length === 0) {
+      // 同时按商品名称/条码搜索作为补充
+      const matchedGoods = goods.filter(g =>
+        (g.name || '').toLowerCase().includes(keyword) ||
+        (String(g.barcode || '')).toLowerCase().includes(keyword)
+      );
+
+      // 合并结果（去重）
+      const goodsIds = new Set();
+      const results = [];
+
+      matchedInventory.forEach(item => {
+        if (!goodsIds.has(item.goodsId)) {
+          goodsIds.add(item.goodsId);
+          const g = goods.find(x => x.id === item.goodsId);
+          if (g) {
+            results.push({ ...g, inventoryItem: item });
+          }
+        }
+      });
+
+      matchedGoods.forEach(g => {
+        if (!goodsIds.has(g.id)) {
+          goodsIds.add(g.id);
+          const item = inventory.find(i => i.goodsId === g.id);
+          results.push({ ...g, inventoryItem: item });
+        }
+      });
+
+      if (results.length === 0) {
         resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">未找到</p>`;
         return;
       }
 
-      resultEl.innerHTML = matchedGoods.map(g => {
-        const inv = inventory.find(i => i.goodsId === g.id);
+      resultEl.innerHTML = results.map(g => {
+        const inv = g.inventoryItem;
         const qty = inv ? (inv.qty || 0) : (g.stock || 0);
+        // 显示匹配到的原料名称
+        let materialNames = '';
+        if (inv && inv.materials && Array.isArray(inv.materials)) {
+          const matchedMaterials = inv.materials.filter(m => (m.name || '').toLowerCase().includes(keyword));
+          if (matchedMaterials.length > 0) {
+            materialNames = matchedMaterials.map(m => m.name).join(', ');
+          }
+        }
         return `
           <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
             <p onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" class="text-xs font-bold text-coffee-dark truncate cursor-pointer hover:opacity-70">${escapeHtml(g.name || '商品')}</p>
-            <p onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" class="text-xs text-gray-500 truncate cursor-pointer hover:opacity-70">库存: ${qty}</p>
+            <p class="text-xs text-gray-500 truncate">库存: ${qty}${materialNames ? ' · ' + materialNames : ''}</p>
             <button onclick="openReplaceModal(${g.id})" class="w-full mt-1 py-1 rounded-md bg-yellow-500 text-white text-xs">
               <i class="fa-solid fa-recycle mr-0.5"></i>替换
             </button>
@@ -4902,12 +4945,17 @@
     });
 
     // 打开商品选择弹窗
+    // 已选商品数组（购物车模式）
+    let _selectedProducts = [];
+
     function openProductSelectModal() {
+      _selectedProducts = [];
       document.getElementById('product-select-modal').classList.remove('hidden');
+      document.getElementById('selected-products-cart').classList.add('hidden');
       renderProductSelectList('');
     }
 
-    // 渲染商品选择列表（从实际商品数据读取）
+    // 渲染商品选择列表（支持多选）
     function renderProductSelectList(searchText) {
       const goods = GOODS_DATA || getGoodsData();
       const filtered = goods.filter(g => {
@@ -4920,24 +4968,79 @@
         listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-search text-3xl mb-2"></i><p>未找到匹配的商品</p></div>';
         return;
       }
-      listEl.innerHTML = filtered.map(g => `
-        <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg hover:bg-coffee-cream cursor-pointer transition-colors" onclick="selectProduct(${g.id}, '${escapeHtml(g.name)}')">
-          <div class="flex items-center gap-3">
-            ${g.img ? `<img src="${g.img}" class="w-12 h-12 rounded-lg object-cover" alt="${g.name}">` : `<div class="w-12 h-12 rounded-lg bg-coffee-main text-white flex items-center justify-center text-lg font-bold">${g.name.charAt(0)}</div>`}
-            <div>
-              <p class="font-bold text-coffee-dark">${escapeHtml(g.name)}</p>
-              <p class="text-xs text-gray-500">分类：${g.cate || '未分类'} · 价格：¥${(g.price).toFixed(2)} · 条码：${g.barcode || '无'}</p>
+      listEl.innerHTML = filtered.map(g => {
+        const isSelected = _selectedProducts.some(p => p.id === g.id);
+        return `
+          <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg hover:bg-coffee-cream cursor-pointer transition-colors" onclick="toggleProductSelection(${g.id}, '${escapeHtml(g.name)}', '${escapeHtml(g.barcode || '')}', ${g.stock || 0})">
+            <div class="flex items-center gap-3">
+              <div class="w-5 h-5 rounded border-2 ${isSelected ? 'border-coffee-main bg-coffee-main' : 'border-gray-300'} flex items-center justify-center">
+                ${isSelected ? '<i class="fa-solid fa-check text-white text-xs"></i>' : ''}
+              </div>
+              ${g.img ? `<img src="${g.img}" class="w-12 h-12 rounded-lg object-cover" alt="${g.name}">` : `<div class="w-12 h-12 rounded-lg bg-coffee-main text-white flex items-center justify-center text-lg font-bold">${g.name.charAt(0)}</div>`}
+              <div>
+                <p class="font-bold text-coffee-dark">${escapeHtml(g.name)}</p>
+                <p class="text-xs text-gray-500">分类：${g.cate || '未分类'} · 价格：¥${(g.price).toFixed(2)} · 条码：${g.barcode || '无'}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <p class="text-xs text-gray-500">现有库存</p>
+                <p class="font-bold text-coffee-main">${g.stock || 0}</p>
+              </div>
+              <button onclick="event.stopPropagation(); toggleProductSelection(${g.id}, '${escapeHtml(g.name)}', '${escapeHtml(g.barcode || '')}', ${g.stock || 0})" class="py-2 px-4 rounded-lg ${isSelected ? 'bg-gray-200 text-gray-700' : 'bg-coffee-main text-white'} text-sm btn-hover">
+                ${isSelected ? '移除' : '<i class="fa-solid fa-plus"></i>添加'}
+              </button>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="text-right">
-              <p class="text-xs text-gray-500">现有库存</p>
-              <p class="font-bold text-coffee-main">${g.stock || 0}</p>
-            </div>
-            <button class="py-2 px-4 rounded-lg bg-coffee-main text-white text-sm btn-hover"><i class="fa-solid fa-check"></i></button>
-          </div>
-        </div>
+        `;
+      }).join('');
+    }
+
+    // 切换商品选中状态
+    function toggleProductSelection(id, name, barcode, stock) {
+      const index = _selectedProducts.findIndex(p => p.id === id);
+      if (index >= 0) {
+        _selectedProducts.splice(index, 1);
+      } else {
+        _selectedProducts.push({ id, name, barcode, stock });
+      }
+      updateSelectedProductsCart();
+      renderProductSelectList(document.getElementById('product-search-input').value);
+    }
+
+    // 更新已选商品购物车显示
+    function updateSelectedProductsCart() {
+      const cartEl = document.getElementById('selected-products-cart');
+      const listEl = document.getElementById('selected-products-list');
+      const countEl = document.getElementById('selected-count');
+      if (!cartEl || !listEl || !countEl) return;
+
+      if (_selectedProducts.length === 0) {
+        cartEl.classList.add('hidden');
+        return;
+      }
+      cartEl.classList.remove('hidden');
+      countEl.textContent = _selectedProducts.length;
+      listEl.innerHTML = _selectedProducts.map(p => `
+        <span class="inline-flex items-center gap-1 bg-coffee-main text-white text-xs px-2 py-1 rounded-full">
+          ${escapeHtml(p.name)}
+          <button onclick="_selectedProducts = _selectedProducts.filter(x => x.id !== ${p.id}); updateSelectedProductsCart(); renderProductSelectList(document.getElementById('product-search-input').value);" class="hover:text-gray-200"><i class="fa-solid fa-xmark text-xs"></i></button>
+        </span>
       `).join('');
+    }
+
+    // 确认选择商品
+    function confirmSelectedProducts() {
+      if (_selectedProducts.length === 0) {
+        alert('请先选择商品');
+        return;
+      }
+      // 将第一个选中的商品填入编辑表单
+      const first = _selectedProducts[0];
+      document.getElementById('edit-inventory-product-id').value = first.id;
+      document.getElementById('edit-inventory-product-name').value = first.name;
+      document.getElementById('product-select-modal').classList.add('hidden');
+      _selectedProducts = [];
     }
 
     // HTML转义函数
@@ -4945,13 +5048,6 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
-    }
-
-    // 选择商品
-    function selectProduct(id, name) {
-      document.getElementById('edit-inventory-product-id').value = id;
-      document.getElementById('edit-inventory-product-name').value = name;
-      document.getElementById('product-select-modal').classList.add('hidden');
     }
 
     // 商品搜索
@@ -5179,7 +5275,7 @@
       row.innerHTML = `
         <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-name" placeholder="原料名称" value="${name}">
         <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-code" placeholder="原料编码" value="${code}">
-        <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="用量" value="${qty}">
+        <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="数量" value="${qty}">
         <button onclick="removeRawMaterialRow(this)" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
       `;
       listEl.appendChild(row);
