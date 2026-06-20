@@ -9764,11 +9764,45 @@
       }
 
       // ========== 6) 语音识别 ==========
+      // 检测是否为安全上下文（HTTPS / localhost）
+      function checkSecureContext() {
+        if (window.isSecureContext) return true;
+        const proto = location.protocol.toLowerCase();
+        const host = location.hostname.toLowerCase();
+        return proto === 'https:' || host === 'localhost' || host === '127.0.0.1';
+      }
+
       function startVoice() {
         if (!isSpeechSupported()) {
-          addAIMsg('⚠️ 当前浏览器不支持语音识别<br>建议使用 Chrome / Edge 浏览器。可直接在输入框打字使用文字点单功能。');
+          addAIMsg('⚠️ 当前浏览器不支持语音识别<br>建议使用 <strong>Chrome / Edge</strong> 浏览器。<br>您可以直接在输入框打字使用文字点单功能。');
           return;
         }
+        if (!checkSecureContext()) {
+          addAIMsg('⚠️ 语音识别需要安全连接<br><strong>当前环境：</strong>' + location.hostname + '<br><strong>解决方法：</strong><br>1. 在您自己的电脑上运行本系统（localhost 或 127.0.0.1）<br>2. 或使用 HTTPS 协议访问<br><strong>当前可用：</strong>您可以直接在输入框打字使用文字点单功能。');
+          return;
+        }
+        // 先获取麦克风权限，再启动语音识别
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+          // 权限获取成功，启动识别
+          initSpeechRecognition(stream);
+        }).catch(function (err) {
+          console.warn('[AI] 麦克风权限获取失败:', err);
+          let msg = '';
+          if (err.name === 'NotAllowedError') {
+            msg = '⚠️ 麦克风权限被拒绝<br><strong>请按以下步骤操作：</strong><br>1. 点击浏览器地址栏左侧的 🔒 图标<br>2. 在「麦克风」选项中选择「允许」<br>3. 刷新页面后重试';
+          } else if (err.name === 'NotFoundError') {
+            msg = '⚠️ 未检测到麦克风设备<br>请检查是否连接了麦克风，或使用文字点单功能。';
+          } else if (err.name === 'NotReadableError') {
+            msg = '⚠️ 麦克风被其他应用占用<br>请关闭其他使用麦克风的程序后重试。';
+          } else {
+            msg = '⚠️ 无法访问麦克风<br>错误：' + (err.message || err.name);
+          }
+          addAIMsg(msg);
+          setListeningUI(false);
+        });
+      }
+
+      function initSpeechRecognition(stream) {
         try { if (recognition) trySilentStop(recognition); } catch (e) {}
 
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -9803,17 +9837,28 @@
 
         recognition.onerror = function (e) {
           console.warn('[AI] 语音错误:', e.error);
+          let msg = '';
           if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addAIMsg('⚠️ 请允许使用麦克风<br>点地址栏左侧 🔒 图标 → 允许麦克风');
+            msg = '⚠️ 语音识别权限被拒绝<br>请允许麦克风权限后重试。';
           } else if (e.error === 'audio-capture') {
-            addAIMsg('⚠️ 未检测到可用麦克风设备');
+            msg = '⚠️ 未检测到可用麦克风设备';
+          } else if (e.error === 'network') {
+            msg = '⚠️ 网络连接异常<br>语音识别需要联网，请检查网络。';
+          } else if (e.error === 'no-speech') {
+            msg = '未检测到语音，请再说一次。';
+          } else if (e.error === 'aborted') {
+            msg = '语音识别已停止';
           } else {
-            addAIMsg('⚠️ 语音识别中断');
+            msg = '⚠️ 语音识别异常: ' + e.error;
           }
+          addAIMsg(msg);
           if (!settings.continuous) setListeningUI(false);
         };
 
         recognition.onend = function () {
+          // 停止状态条闪烁
+          const sb = document.getElementById('ai-status-bar');
+          if (sb) sb.classList.add('hidden');
           if (settings.continuous) { try { recognition.start(); } catch (err) {} }
           else { setListeningUI(false); }
         };
@@ -9821,8 +9866,10 @@
         try {
           recognition.start();
           setListeningUI(true);
+          addAIMsg('🎙️ 已开始聆听，请说话...');
         } catch (err) {
           console.warn('[AI] 麦克风启动失败', err);
+          addAIMsg('⚠️ 启动语音识别失败: ' + (err.message || '未知错误'));
           setListeningUI(false);
         }
       }
