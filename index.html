@@ -10563,371 +10563,339 @@
         });
       }
 
-      // ========== 原有的本地规则解析保留为 fallback（在函数内部保留了完整逻辑） ==========
-      function legacyHandleInput(text, goods, cart, isEnglish) {
-        // 1. 取消/清空/减少 的关键字（在 AI 后端未启用时仍能响应）
-        const isRemoval = /去掉|删除|不要这个|不要那|减去|减|拿走|移除|去|去这个|remove|delete/i.test(text);
-        const isClearAll = /全部|全部清空|全部不要|全部去掉|清空|重来|重新|都不要|全部取消|clear all|reset all/i.test(text);
+      // ==========================================================================
+      // 本地智能解析（无后端 / 后端失败时使用）
+      // 思路：先抽"槽位"（商品+数量、备注），再判"意图"，最后生成自然回复
+      // 与后端 Python 版 local_parse 保持一致
+      // ==========================================================================
 
-        if (isClearAll || (text.length <= 6 && /^(取消|清空|重来|重新|都不要)$/.test(text))) {
-          clearCartSafe();
-          const msg = isEnglish ? 'Cart cleared.' : '好的，已清空购物车';
-          addAIMsg(msg); speak(msg); return;
-        }
+      function _normalize(str) {
+        if (!str) return '';
+        return String(str).toLowerCase().replace(/\s+/g, ' ').trim();
+      }
 
-        if (isRemoval) {
-          const target = parseRemoveTarget(text);
-          if (target && target.type === 'item') {
-            target.ids.forEach(function (id) { removeGoodsById(id); });
-            const updated = getCartSummary();
-            const msg = isEnglish
-              ? 'Removed ' + target.names.join(', ') + '. ' + (updated.items.length > 0 ? 'Current cart: ' + updated.items.map(function (g) { return g.name; }).join(', ') : 'Cart is empty') + '.'
-              : '好的，已为您去掉' + target.names.join('、') + '。' + (updated.items.length > 0 ? '当前购物车还有' + updated.items.map(function (g) { return g.name; }).join('、') + '。' : '购物车已空。');
-            addAIMsg(msg);
-            speak(msg);
-            return;
-          }
-          if (target && target.type === 'cate') {
-            target.ids.forEach(function (id) { removeGoodsById(id); });
-            const updated = getCartSummary();
-            const msg = isEnglish
-              ? 'Removed all ' + target.names.join(', ') + '. ' + (updated.items.length > 0 ? 'Current cart: ' + updated.items.map(function (g) { return g.name; }).join(', ') : 'Cart is empty') + '.'
-              : '好的，已为您去掉所有' + target.names.join('、') + '。' + (updated.items.length > 0 ? '当前购物车还有' + updated.items.map(function (g) { return g.name; }).join('、') + '。' : '购物车已空。');
-            addAIMsg(msg);
-            speak(msg);
-            return;
-          }
-          if (target && target.type === 'empty') {
-            const msg = isEnglish ? 'Your cart is empty. Please tell me what you want to order.' : '购物车还没有商品哦，请先告诉我您想点什么。';
-            addAIMsg(msg);
-            speak(msg);
-            return;
-          }
-          if (cart.items.length > 0) {
-            const msg = isEnglish
-              ? 'Which item do you want to remove? Current cart: ' + cart.items.map(function (g) { return g.name; }).join(', ') + '. Please tell me which one.'
-              : '要去掉哪一个呢？当前购物车有：' + cart.items.map(function (g) { return g.name; }).join('、') + '。请告诉我具体要去掉哪一个。';
-            addAIMsg(msg);
-            speak(msg);
-            return;
+      function _extractQuantity(text) {
+        // 找出文本里的数量词：支持阿拉伯数字 + 中文数字
+        var out = [];
+        if (!text) return out;
+        // 阿拉伯数字（1-999），可带量词
+        var arabic = text.match(/(\d{1,3})(?:\s*(?:杯|份|个|件|碗|瓶|罐))?/g);
+        if (arabic) {
+          for (var i = 0; i < arabic.length; i++) {
+            var mm = arabic[i].match(/\d+/);
+            if (mm) out.push({ word: arabic[i], num: parseInt(mm[0], 10) });
           }
         }
-
-        // ========== 2. 支付成功（店员核实）==========
-        if (/支付成功|已支付|付款成功|paid|payment (success|done)/i.test(text)) {
-          if (cart.items.length === 0) {
-            addAIMsg('当前没有需要支付的订单。');
-            speak('当前没有需要支付的订单。');
-            return;
+        // 中文数字（逐个字扫描，遇到数字就累加）
+        var cnMap = { '零': 0, '一': 1, '二': 2, '两': 2, '俩': 2, '三': 3, '四': 4,
+                      '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+                      '二十': 20, '三十': 30, '一百': 100 };
+        // 先处理"二十/三十/一百"
+        var tmpText = text;
+        var multiChar = ['二十', '三十', '一百'];
+        for (var mc = 0; mc < multiChar.length; mc++) {
+          var idx = -1;
+          while ((idx = tmpText.indexOf(multiChar[mc])) >= 0) {
+            out.push({ word: multiChar[mc], num: cnMap[multiChar[mc]] });
+            tmpText = tmpText.substring(0, idx) + '###' + tmpText.substring(idx + multiChar[mc].length);
           }
-          // 手动模式：弹出店员核实弹窗
-          if (settings.paymentMode === 'manual') {
-            const payModal = document.getElementById('pay-qrcode-modal');
-            if (payModal) {
-              payModal.classList.remove('hidden');
-              const payTitle = document.getElementById('pay-modal-title');
-              if (payTitle) payTitle.textContent = '订单已支付，请店员核实';
-              // 自动提交订单逻辑
-            }
-            const msg = '已收到您的订单！已通知店员核实您的支付，核实完成后为您准备商品。';
-            addAIMsg(msg);
-            speak(msg);
+        }
+        // 再处理单个中文数字
+        for (var ci = 0; ci < text.length; ci++) {
+          var ch = text[ci];
+          if (cnMap[ch] !== undefined) out.push({ word: ch, num: cnMap[ch] });
+        }
+        return out;
+      }
+
+      function _matchGoodsSmart(text, goods, cartItems) {
+        // 在文本中找所有命中的商品，并在附近找数量
+        var hits = {}; // id -> {id, name, qty}
+        var tn = _normalize(text);
+        var i, j, g, nameN, pos, qty, candidates;
+        for (i = 0; i < goods.length; i++) {
+          g = goods[i];
+          if (!g.name) continue;
+          nameN = _normalize(g.name);
+          // 1) 全名命中
+          var foundHere = false;
+          if (nameN.length > 0 && tn.indexOf(nameN) >= 0) {
+            pos = tn.indexOf(nameN);
+            foundHere = true;
           } else {
-            // 直接扫码模式：已在确认支付时完成
-            addAIMsg('订单已支付，正在为您准备商品！');
-            speak('订单已支付，正在为您准备商品');
-          }
-          return;
-        }
-
-        // ========== 2b. 确认/结账 ==========
-        if (text.length <= 20 && /^(确认|结账|买单|支付|付款|就是这样|是的|对|好的|下单|confirm|checkout|done|ok|yes|确认支付)$/.test(text)) {
-          if (cart.items.length === 0) {
-            const msg = isEnglish ? 'You have not selected any items yet.' : '您还没有选择商品哦';
-            addAIMsg(msg);
-            speak(msg);
-            return;
-          }
-          const names = cart.items.map(function (g) { return g.name + '×' + g.count; });
-          if (settings.paymentMode === 'direct') {
-            // 直接扫码模式：提示出示付款码
-            const msg = '已确认：' + names.join('、') + '，合计¥' + cart.total.toFixed(2) + '。请出示付款码，我来为您扫码支付。';
-            addAIMsg(msg);
-            speak('请出示付款码');
-            // 自动打开支付弹窗
-            if (typeof openCheckoutModal === 'function') {
-              setTimeout(openCheckoutModal, 1400);
-            } else {
-              const pModal = document.getElementById('pay-qrcode-modal');
-              if (pModal) pModal.classList.remove('hidden');
-            }
-          } else {
-            // 手动模式：提示用户自己扫码
-            const msg = '已确认：' + names.join('、') + '，合计¥' + cart.total.toFixed(2) + '。请在屏幕上扫描付款码完成支付，支付成功后请说「支付成功」。';
-            addAIMsg(msg);
-            speak('请扫描付款码完成支付，支付成功后请说支付成功');
-            // 自动打开支付二维码弹窗
-            const pModal = document.getElementById('pay-qrcode-modal');
-            if (pModal) setTimeout(function () { pModal.classList.remove('hidden'); }, 1400);
-          }
-          return;
-        }
-
-        // ========== 3. 智能问答：价格询问 ==========
-        const priceMatch = text.match(/(.*)(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price)/i);
-        if (priceMatch) {
-          const queryPart = priceMatch[1] || text;
-          let matched = null;
-          for (let gi = 0; gi < goods.length; gi++) {
-            const g = goods[gi];
-            if (!g.name) continue;
-            if (queryPart.indexOf(g.name) >= 0) { matched = g; break; }
-          }
-          if (!matched) {
-            const partsCandidates = [];
-            for (let gi = 0; gi < goods.length; gi++) {
-              const g = goods[gi];
-              const parts = (g.name || '').match(/[\u4e00-\u9fa5A-Za-z]+/g) || [];
-              for (let pi = 0; pi < parts.length; pi++) {
-                const p = parts[pi];
-                if (p.length >= 2 && queryPart.indexOf(p) >= 0) { partsCandidates.push(g); break; }
-              }
-            }
-            if (partsCandidates.length > 0) matched = partsCandidates[0];
-          }
-          if (matched) {
-            const msg = isEnglish
-              ? matched.name + ' costs ¥' + matched.price + '. Would you like to order it?'
-              : matched.name + '的价格是¥' + matched.price + '。需要帮您下单吗？';
-            addAIMsg(msg);
-            speak(msg);
-            return;
-          }
-        }
-
-        // ========== 4. 智能问答：热/冷推荐（先于通用推荐） ==========
-        if (/喝冷的|喝热的|冷的还是热的|热的还是冷的|推荐冷|推荐热|冷饮|热饮|cold|hot|冰饮还是热饮|要热还是要冰/i.test(text)) {
-          const season = getSeasonRecommendation();
-          const recNames = season.recommend.map(function (g) { return g.name; }).join(isEnglish ? ', ' : '、');
-          const recText = season.isHot
-            ? (isEnglish ? 'We recommend cold drinks: ' + recNames : '我们推荐冷饮：' + recNames)
-            : (isEnglish ? 'We recommend hot drinks: ' + recNames : '我们推荐热饮：' + recNames);
-          const msg = (isEnglish ? (season.isHot ? 'It\'s hot today, cold drinks are refreshing.' : 'It\'s cool today, warm up with a hot drink.') : season.tip) + '。' + recText;
-          addAIMsg(msg);
-          speak(msg);
-          return;
-        }
-
-        // ========== 5. 智能问答：分类查询 + 推荐 + 甜度建议（统一配置表驱动） ==========
-        // 分类查询配置表：统一处理3个分类的商品查询
-        const cateQueries = [
-          { cate: 'dessert', pattern: /有什么甜品|有什么小食|有什么点心|有什么蛋糕|什么甜品|什么小食|什么蛋糕|dessert/i, label: '甜品', ask: '要不要帮您加点呢？', filter: function (g) { return g.cate === 'dessert'; } },
-          { cate: 'coffee', pattern: /有什么咖啡|什么咖啡|有什么拿铁|咖啡有哪些|coffee/i, label: '咖啡', ask: '您喜欢甜一点的还是淡一点的呢？', filter: function (g) { return g.cate === 'latte' || g.cate === 'espresso'; } },
-          { cate: 'drink', pattern: /有什么饮品|有什么果汁|有什么饮料|juice|drink/i, label: '饮品', ask: '需要帮您下单吗？', filter: function (g) { return g.cate === 'drink'; } }
-        ];
-        for (let ci = 0; ci < cateQueries.length; ci++) {
-          const q = cateQueries[ci];
-          if (q.pattern.test(text)) {
-            const list = goods.filter(q.filter);
-            const names = list.map(function (g) { return g.name; });
-            speakWithFallback('我们的' + q.label + '有：' + names.join('、') + '。' + q.ask);
-            return;
-          }
-        }
-
-        // 甜度/冰量建议配置表
-        const tipQueries = [
-          { pattern: /多少糖|甜度|糖度|糖度推荐|甜度推荐|sweet/i, text: '我们支持：无糖、少少糖、少糖、全糖。拿铁类建议少糖，焦糖玛奇朵建议无糖哦。您想要哪种？' },
-          { pattern: /多少冰|冰度|冰量|加冰|ice/i, text: '我们支持：去冰、少冰、多冰。夏天建议少冰，冬天建议去冰或热饮。您想要哪种？' }
-        ];
-        for (let ti = 0; ti < tipQueries.length; ti++) {
-          const t = tipQueries[ti];
-          if (t.pattern.test(text)) { speakWithFallback(t.text); return; }
-        }
-
-        // 推荐请求配置表：冷热/分类/招牌
-        const recRules = [
-          { pattern: /冷|冰|冷饮|cold/i, prefix: '天气热了，推荐您喝冷饮：', filter: function (g) { return g.cate === 'drink' || g.cate === 'latte'; }, limit: 3 },
-          { pattern: /热|温|hot|warm/i, prefix: '天气凉了，推荐您喝热饮：', filter: function (g) { return g.cate === 'espresso' || g.cate === 'latte'; }, limit: 3 },
-          { pattern: /甜品|小食|蛋糕|点心|dessert/i, prefix: '推荐以下甜品：', filter: function (g) { return g.cate === 'dessert'; }, limit: 5 },
-          { pattern: /咖啡|coffee/i, prefix: '推荐以下咖啡：', filter: function (g) { return g.cate === 'latte' || g.cate === 'espresso'; }, limit: 4 },
-          { pattern: /推荐|招牌|热门|什么好|好喝|suggest|recommend|best|popular|喝点什么|吃点什么/i, prefix: '我们的招牌热门商品是：', filter: null, limit: 3 }
-        ];
-        for (let ri = 0; ri < recRules.length; ri++) {
-          const rule = recRules[ri];
-          if (rule.pattern.test(text)) {
-            const list = rule.filter ? goods.filter(rule.filter).slice(0, rule.limit) : getHotGoods(rule.limit);
-            const names = list.map(function (g) { return g.name; });
-            speakWithFallback(rule.prefix + names.join('、') + '。请问您想尝试哪一个？');
-            return;
-          }
-        }
-
-        // 口味偏好问答
-        if (/喜欢甜|要甜|甜点|sweet|sugar/i.test(text) && text.length <= 12) {
-          const names = recommendByTaste('sweet').map(function (g) { return g.name; });
-          speakWithFallback('好的，喜欢甜的！推荐您：' + names.join('、') + '。需要帮您下单吗？');
-          return;
-        }
-        if (/喜欢淡|喜欢苦|不要甜|清淡|light|bitter/i.test(text) && text.length <= 12) {
-          const names = recommendByTaste('light').map(function (g) { return g.name; });
-          speakWithFallback('好的，喜欢清淡的！推荐您：' + names.join('、') + '。需要帮您下单吗？');
-          return;
-        }
-        if (/口味|甜度|味道|推荐什么|taste/i.test(text)) {
-          speakWithFallback('请问您喜欢甜一点的还是清淡一点的呢？甜的推荐焦糖玛奇朵、提拉米苏；清淡的推荐美式咖啡、意式浓缩。');
-          return;
-        }
-
-        // ========== 6. 问候 ==========
-        if (text.length <= 10 && /你好|您好|在吗|哈喽|嗨|你好啊|hello|hi|hey/i.test(text)) {
-          const season = getSeasonRecommendation();
-          speakWithFallback('你好！' + season.tip + '，请告诉我您想点什么，比如一杯拿铁。');
-          return;
-        }
-
-        // ========== 7. 商品识别：精确匹配 → 关键词部分匹配 ==========
-        const found = [];
-        const addedIds = {};
-        goods.forEach(function (g) {
-          if (!g.name) return;
-          if (text.indexOf(g.name) >= 0) {
-            const around = text.substring(Math.max(0, text.indexOf(g.name) - 5), text.indexOf(g.name) + g.name.length + 5);
-            let qty = parseChineseNumber(around) || 1;
-            if (qty > 99) qty = 1;
-            found.push({ g: g, qty: qty });
-            addedIds[g.id] = true;
-          }
-        });
-        if (found.length === 0) {
-          const candidates = [];
-          goods.forEach(function (g) {
-            if (!g.name) return;
-            if (g.name.length >= 2) candidates.push({ word: g.name, g: g, priority: 3 });
-            const parts = (g.name.match(/[\u4e00-\u9fa5A-Za-z]+/g) || []);
-            const seen = {};
-            parts.forEach(function (p) {
-              if (p.length < 2) return;
-              if (!seen[p]) { seen[p] = true; candidates.push({ word: p, g: g, priority: 2 }); }
-              for (let len = Math.min(p.length - 1, 4); len >= 2; len--) {
-                for (let i = 0; i + len <= p.length; i++) {
-                  const sub = p.substring(i, i + len);
-                  if (!seen[sub]) { seen[sub] = true; candidates.push({ word: sub, g: g, priority: 1 }); }
+            // 2) 生成 >=2 字连续子词，只要有一个命中则算
+            for (var si = 0; si < nameN.length && !foundHere; si++) {
+              for (var sj = si + 2; sj <= nameN.length && !foundHere; sj++) {
+                var sub = nameN.substring(si, sj);
+                if (sub.length >= 2 && tn.indexOf(sub) >= 0) {
+                  foundHere = true;
+                  pos = tn.indexOf(sub);
                 }
               }
-            });
-          });
-          candidates.sort(function (a, b) {
-            if (a.priority !== b.priority) return b.priority - a.priority;
-            return b.word.length - a.word.length;
-          });
-          for (let ci = 0; ci < candidates.length; ci++) {
-            const c = candidates[ci];
-            if (addedIds[c.g.id]) continue;
-            if (text.indexOf(c.word) < 0) continue;
-            const around = text.substring(Math.max(0, text.indexOf(c.word) - 5), text.indexOf(c.word) + c.word.length + 5);
-            let qty = parseChineseNumber(around) || 1;
-            if (qty > 99) qty = 1;
-            found.push({ g: c.g, qty: qty });
-            addedIds[c.g.id] = true;
-            break;
-          }
-        }
-
-        // ========== 8. 商品识别成功：加入购物车并处理备注 ==========
-        if (found.length > 0) {
-          const names = [];
-          found.forEach(function (f) {
-            const res = addGoodsById(f.g.id, f.qty);
-            names.push((res ? res.name : f.g.name) + '×' + f.qty);
-          });
-          const foundRemarks = parseRemarks(text);
-          if (foundRemarks.length > 0) {
-            const remarkInput = document.getElementById('order-remark');
-            if (remarkInput) remarkInput.value = foundRemarks.join(' ');
-          }
-          const updatedCart = getCartSummary();
-          const remarkMsg = foundRemarks.length > 0 ? '，备注：' + foundRemarks.join(' ') : '';
-          speakWithFallback('已添加：' + names.join('、') + remarkMsg + '，当前合计¥' + updatedCart.total.toFixed(2) + '。说确认下单');
-          return;
-        }
-
-        // ========== 9. 英文模式：英文商品名称识别 ==========
-        const englishGoods = [
-          { en: 'espresso', id: 1 },
-          { en: 'americano', id: 2 },
-          { en: 'latte', id: 3 },
-          { en: 'cappuccino', id: 4 },
-          { en: 'coconut latte', id: 5 },
-          { en: 'tiramisu', id: 6 },
-          { en: 'orange juice', id: 8 },
-          { en: 'sparkling water', id: 9 },
-          { en: 'caramel macchiato', id: 10 }
-        ];
-        const lowerText = text.toLowerCase();
-        for (let i = 0; i < englishGoods.length; i++) {
-          const eg = englishGoods[i];
-          if (lowerText.indexOf(eg.en) >= 0) {
-            const g = goods.find(function (x) { return x.id === eg.id; });
-            if (g) {
-              addGoodsById(g.id, 1);
-              const updated = getCartSummary();
-              speakWithFallback('Added: ' + g.name + ', total ¥' + updated.total.toFixed(2) + '. Say confirm to checkout.');
-              return;
             }
           }
-        }
-        if (/hello|hi|hey/i.test(text)) {
-          speakWithFallback('Hello! Welcome to Kora Zola. What would you like to order?');
-          return;
-        }
-        if (/recommend|suggest|best|popular/i.test(text)) {
-          const hotGoods = getHotGoods(3);
-          const names = hotGoods.map(function (g) { return g.name; });
-          speakWithFallback('Our most popular items are: ' + names.join(', ') + '. Which one would you like to try?');
-          return;
-        }
-
-        // ========== 10. 纯备注指令识别（只说备注不新增商品）==========
-        const pureRemarks = parseRemarks(text);
-        if (pureRemarks.length > 0) {
-          const remarkInput = document.getElementById('order-remark');
-          if (remarkInput) remarkInput.value = pureRemarks.join(' ');
-          if (cart.items.length > 0) {
-            speakWithFallback('好的，已为您把备注改为' + pureRemarks.join(' ') + '。需要修改什么请继续说。');
+          if (!foundHere) continue;
+          // 在命中位置前后找数量
+          qty = 1;
+          var windowStart = Math.max(0, pos - 12);
+          var windowEnd = Math.min(tn.length, pos + 12);
+          var window = tn.substring(windowStart, windowEnd);
+          var nums = _extractQuantity(window);
+          if (nums.length > 0) {
+            // 选距离命中点最近的数量
+            var best = nums[0];
+            var bestDist = Math.abs((pos - windowStart) - 0);
+            for (var ni = 0; ni < nums.length; ni++) {
+              var d = Math.abs((pos - windowStart) - 0);
+              if (d < bestDist) { best = nums[ni]; bestDist = d; }
+            }
+            qty = best.num;
+          }
+          if (/各(一|1)|每样|每个|每杯/.test(window)) qty = 1;
+          if (hits[g.id]) {
+            hits[g.id].qty = Math.max(hits[g.id].qty, qty);
           } else {
-            speakWithFallback('已记录备注' + pureRemarks.join(' ') + '，请先告诉我您想点什么饮品。');
+            hits[g.id] = { id: g.id, name: g.name, qty: qty };
           }
-          return;
+        }
+        // 上下文："再来一份 / 再加一个" → 默认加购物车里第一项
+        if (Object.keys(hits).length === 0 &&
+            /(再来一份|再来一杯|再加一份|再加一个|同样的|还是这个|还是老样子|再来|再要|再加|一样的|续杯)/.test(tn)) {
+          if (cartItems && cartItems.length > 0) {
+            var first = cartItems[0];
+            hits[first.id] = { id: first.id, name: first.name, qty: 1 };
+          }
+        }
+        var arr = [];
+        for (var key in hits) { if (hits.hasOwnProperty(key)) arr.push(hits[key]); }
+        return arr;
+      }
+
+      function _extractRemarksSmart(text) {
+        // 糖度、冰量、打包、规格等关键词识别
+        var tn = _normalize(text);
+        var found = [];
+        var pats = [
+          // 糖度
+          /(无糖|不要糖|不加糖|去糖|零糖|0糖|低糖|少少糖|三分糖|半糖|少糖|多糖|全糖|加甜|甜一点|不要甜|不甜|很甜)/,
+          // 冰量/温度
+          /(去冰|少冰|少少冰|冰多一点|冰多|多冰|正常冰|冰|加冰|热|热的|热饮|常温|温|不冰)/,
+          // 打包/堂食
+          /(打包|外带|带走|外卖|带走喝|拿回家|堂食|店内|在这喝|在这吃|店里喝|店里)/,
+          // 规格
+          /(大杯|中杯|小杯|大份|小份|加大|超大|大一点|小一点)/,
+          // 配料/口味修饰
+          /(加奶|加浓|加倍浓缩|脱脂|燕麦奶|豆奶|换奶|淡奶|不要奶|不要奶泡|去奶泡)/,
+          // 忌口/咖啡因
+          /(不要咖啡|不要咖啡因|低因|脱因)/
+        ];
+        for (var pi = 0; pi < pats.length; pi++) {
+          var m = tn.match(pats[pi]);
+          if (m && m[1] && found.indexOf(m[1]) === -1) found.push(m[1]);
+        }
+        return found;
+      }
+
+      function _classifyIntent(text, items, remarks, cartItems) {
+        var tn = _normalize(text);
+        var hasRemark = remarks && remarks.length > 0;
+        var hasCart = cartItems && cartItems.length > 0;
+        var hasItems = items && items.length > 0;
+
+        // 1) 取消/清空
+        if (/(取消订单|全部取消|全部不要|清空|重来|重新点|重新下单|不要了|算了|不用了|退掉|cancel all|clear all)/.test(tn)) return 'cancel';
+
+        // 2) 确认/结账（纯确认词 + 无明确要加的新商品）
+        if (/(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)/.test(tn) && !hasItems) return 'confirm';
+
+        // 3) 删除/去掉
+        // - 如果"不要"后跟着的是备注词（冰、糖等）而非商品，不要走 remove
+        if (/(去掉|不要|删除|移除|退|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)/.test(tn)) {
+          if (hasItems) return 'remove';
+          // 没说商品名但购物车有东西 → 还要区分是否只是"不要冰/不要糖"这种备注
+          if (hasCart && !(hasRemark && !hasItems)) return 'remove';
         }
 
-        // ========== 11. 识别不确定时的二次确认 ==========
-        const fuzzyMatches = [];
-        goods.forEach(function (g) {
-          const name = g.name;
-          if (name.length >= 2) {
-            const firstChar = name.charAt(0);
-            const lastChar = name.charAt(name.length - 1);
-            if (text.indexOf(firstChar) >= 0 && text.indexOf(lastChar) >= 0) {
-              fuzzyMatches.push(g);
+        // 4) 价格询问
+        if (/(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份)/.test(tn)) return 'price';
+
+        // 5) 菜单/有什么（先于推荐）
+        if (/(有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的)|菜单|有啥|有什么|还有啥|有哪些)/.test(tn)) return 'menu';
+
+        // 6) 推荐请求
+        if (/(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|suggest|recommend|popular|不知道点什么|给点建议|给建议)/.test(tn)) return 'recommend';
+
+        // 7) 加购商品（有明确商品命中）
+        if (hasItems) return 'order';
+
+        // 8) 纯备注（只有备注词）
+        if (hasRemark && !hasItems) return 'remark';
+
+        // 9) 问候
+        if (text.length <= 12 && /(你好|您好|在吗|哈喽|嗨|你好啊|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀)/.test(tn)) return 'chat';
+
+        return 'unknown';
+      }
+
+      function _generateReply(intent, items, remarks, text, goods, cartItems) {
+        var tn = _normalize(text);
+        var cartTotal = 0, cartCount = 0;
+        for (var ci = 0; ci < (cartItems || []).length; ci++) {
+          cartTotal += (cartItems[ci].price || 0) * (cartItems[ci].count || 1);
+          cartCount += (cartItems[ci].count || 1);
+        }
+        var extra = 0;
+        if (intent === 'order') {
+          for (var ii = 0; ii < items.length; ii++) {
+            var g = null;
+            for (var gi = 0; gi < goods.length; gi++) {
+              if (goods[gi].id === items[ii].id) { g = goods[gi]; break; }
             }
-            for (let ci = 0; ci < name.length - 1; ci++) {
-              const sub = name.substring(ci, ci + 2);
-              if (sub.length >= 2 && text.indexOf(sub) >= 0 && fuzzyMatches.indexOf(g) === -1) {
-                fuzzyMatches.push(g);
-                break;
+            if (g) extra += (g.price || 0) * (items[ii].qty || 1);
+          }
+        }
+        var totalAfter = cartTotal + extra;
+
+        if (intent === 'cancel') {
+          if (cartItems && cartItems.length > 0)
+            return '已为您清空购物车（共 ' + cartCount + ' 件商品，合计¥' + cartTotal.toFixed(2) + '）。您可以重新开始点单。';
+          return '购物车已经是空的啦。您可以直接告诉我想点什么，例如"来一杯拿铁"。';
+        }
+        if (intent === 'confirm') {
+          if (!cartItems || cartItems.length === 0) return '购物车里还没有商品哦。您可以先告诉我想点的商品，再说"确认下单"。';
+          var namesC = cartItems.map(function (g) { return g.name + '×' + (g.count || 1); }).join('、');
+          return '好的，已确认您的订单：' + namesC + '，合计¥' + cartTotal.toFixed(2) + '。请扫码完成支付。';
+        }
+        if (intent === 'remove') {
+          if (items && items.length > 0) {
+            var nm = items.map(function (x) { return x.name; }).join('、');
+            return '好的，已为您从购物车中移除：' + nm + '。';
+          }
+          if (cartItems && cartItems.length > 0) {
+            var cur = cartItems.map(function (g) { return g.name + '×' + (g.count || 1); }).join('、');
+            return '当前购物车里有：' + cur + '。请问您想去掉哪一个？';
+          }
+          return '购物车里现在没有商品，无法删除哦。您可以先告诉我想点什么。';
+        }
+        if (intent === 'price') {
+          if (items && items.length > 0) {
+            var lines = [];
+            for (var pi = 0; pi < items.length; pi++) {
+              var gd = null;
+              for (var gj = 0; gj < goods.length; gj++) {
+                if (goods[gj].id === items[pi].id) { gd = goods[gj]; break; }
               }
+              if (gd) lines.push(gd.name + ' ¥' + gd.price);
+            }
+            return lines.join('；') + '。需要直接帮您加入购物车吗？说"确认下单"就可以支付啦。';
+          }
+          return '请问您想了解哪个商品的价格？可以直接说"拿铁多少钱"。';
+        }
+        if (intent === 'menu') {
+          var groups = {};
+          for (var mi = 0; mi < goods.length; mi++) {
+            var key = goods[mi].cate || '其他';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(goods[mi].name);
+          }
+          var labels = { espresso: '咖啡类', latte: '拿铁/奶咖类', dessert: '甜品小食', drink: '非咖饮品' };
+          var parts = [];
+          for (var k in groups) {
+            if (groups.hasOwnProperty(k)) {
+              var label = labels[k] || k;
+              if (groups[k].length > 0) parts.push(label + '有：' + groups[k].slice(0, 6).join('、'));
             }
           }
-        });
-        if (fuzzyMatches.length > 0 && fuzzyMatches.length <= 3) {
-          const names = fuzzyMatches.map(function (g) { return g.name; });
-          speakWithFallback('您是不是要点：' + names.join('、') + '中的一款？请告诉我具体是哪一个。');
-          return;
+          if (parts.length === 0) return '我们有咖啡、甜品和饮品，您可以直接说商品名，例如"来杯拿铁"。';
+          return '好的，我们目前提供的品类如下——' + parts.join('；') + '。您想点哪一款？';
         }
+        if (intent === 'recommend') {
+          var coffee = goods.filter(function (g) { return g.cate === 'latte' || g.cate === 'espresso'; });
+          var desserts = goods.filter(function (g) { return g.cate === 'dessert'; });
+          var drinks = goods.filter(function (g) { return g.cate === 'drink'; });
+          var picks = [];
+          if (coffee.length > 0) picks.push(coffee[Math.floor(coffee.length / 2)]);
+          if (desserts.length > 0) picks.push(desserts[0]);
+          if (drinks.length > 0) picks.push(drinks[0]);
+          if (picks.length === 0) return '我们的招牌有拿铁咖啡、焦糖玛奇朵、提拉米苏、美式咖啡，您想尝试哪一款？';
+          var pn = picks.map(function (g) { return g.name + '(¥' + g.price + ')'; }).join('、');
+          return '推荐您尝试：' + pn + '。您可以直接告诉我要哪个，例如"来一杯拿铁，两份提拉米苏"。';
+        }
+        if (intent === 'order') {
+          if (!items || items.length === 0) return '好的，不过我还没听清具体是哪个商品哦。可以再说一次商品名，例如"美式咖啡一杯"。';
+          var on = items.map(function (x) { return x.name + '×' + x.qty; }).join('、');
+          var rp = '';
+          if (remarks && remarks.length > 0) rp = '，备注：' + remarks.join(' ');
+          var after = totalAfter > 0 ? '本次加入后合计¥' + totalAfter.toFixed(2) : '合计 ¥0';
+          // 根据文本长度/内容选不同语气（让回复不那么死板）
+          var variants = [
+            '好的，已为您下单：' + on + rp + '。' + after + '。还需要其他商品吗？',
+            '收到，已经为您加入：' + on + rp + '。' + after + '。可以继续点或说"确认下单"。',
+            '没问题～' + on + '已记录' + rp + '。' + after + '。还要点别的吗？'
+          ];
+          var idx = (text.length + 0) % variants.length;
+          return variants[idx];
+        }
+        if (intent === 'remark') {
+          if (remarks && remarks.length > 0) {
+            if (cartItems && cartItems.length > 0) return '好的，已记录备注：' + remarks.join(' ') + '。我会附在您当前订单上。';
+            return '好的，备注已记录：' + remarks.join(' ') + '。不过您还没有选商品哦，可以直接告诉我您想点什么。';
+          }
+          return '好的。';
+        }
+        if (intent === 'chat') return '你好！欢迎来到 Kora Zola。请问想点什么呢？可以直接说商品名，比如"一杯拿铁，少糖"。';
 
-        // ========== 12. 完全无法理解时 ==========
-        speakWithFallback('抱歉没听清楚，请直接说商品名，例如一杯拿铁或两份提拉米苏。');
+        // unknown：尝试给出可能商品的反向提示
+        var possible = [];
+        for (var ugi = 0; ugi < goods.length; ugi++) {
+          var gn = _normalize(goods[ugi].name || '');
+          if (!gn) continue;
+          var matchedP = false;
+          for (var ui = 0; ui < gn.length && !matchedP; ui++) {
+            for (var uj = ui + 2; uj <= gn.length && !matchedP; uj++) {
+              var sub = gn.substring(ui, uj);
+              if (sub.length >= 2 && tn.indexOf(sub) >= 0) { matchedP = true; }
+            }
+          }
+          if (matchedP && possible.indexOf(goods[ugi]) < 0) possible.push(goods[ugi]);
+        }
+        if (possible.length > 0) {
+          var cn = possible.slice(0, 3).map(function (g) { return g.name; }).join('、');
+          var more = possible.length > 3 ? '等' : '';
+          return '您是不是想点：' + cn + more + '？请告诉我具体是哪一个，或者直接说商品全名+数量，例如"拿铁一杯"。';
+        }
+        // 最后：给一个友好引导
+        var catExamples = [];
+        var seen = {};
+        for (var ei = 0; ei < goods.length; ei++) {
+          var kk = goods[ei].cate || '其他';
+          if (!seen[kk] && goods[ei].name) {
+            seen[kk] = true;
+            catExamples.push(goods[ei].name);
+            if (catExamples.length >= 4) break;
+          }
+        }
+        return '抱歉我没能准确理解。您可以直接告诉我：商品名 + 数量，例如"来一杯拿铁"、"两份提拉米苏"。目前有' + catExamples.join('、') + '等可选。';
+      }
+
+      function smartLocalParse(text, goods, cartItems) {
+        // 主入口：返回与后端一致的 schema
+        var t = _normalize(text);
+        if (!t) return { intent: 'unknown', items: [], remarks: [], reply: '请告诉我您想点什么。', openCheckout: false };
+        var items = _matchGoodsSmart(text, goods || [], cartItems || []);
+        var remarks = _extractRemarksSmart(text);
+        var hasRemarkOnly = remarks.length > 0 && items.length === 0;
+        var intent = _classifyIntent(text, items, remarks, cartItems || []);
+        var reply = _generateReply(intent, items, remarks, text, goods || [], cartItems || []);
+        var openCheckout = (intent === 'confirm' && cartItems && cartItems.length > 0);
+        return { intent: intent, items: items, remarks: remarks, reply: reply, openCheckout: openCheckout };
+      }
+
+      // ========== 原有的本地规则解析保留为 fallback（在函数内部保留了完整逻辑） ==========
+      function legacyHandleInput(text, goods, cart, isEnglish) {
+        // 直接使用新版"智能本地解析"，然后把结果应用到 UI 上
+        var result = smartLocalParse(text, goods || [], cart.items || []);
+        applyAiResult(result, text);
       }
 
       // ========== 6) 语音识别 ==========
