@@ -180,40 +180,46 @@
 
   <!-- 主内容区（带左右快捷卡片） -->
   <main class="flex-1 w-full px-4 py-6">
-    <div class="flex gap-4 items-start justify-between">
+    <div class="flex gap-4 items-stretch justify-between">
 
       <!-- 左侧：库存盘点快捷卡片（细长条样式） -->
       <aside id="quick-inventory-card" class="hidden flex-shrink-0">
-        <div class="bg-white rounded-lg card-shadow p-3 w-24 btn-hover text-center cursor-pointer" onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" title="点击进入库存盘点">
+        <div class="bg-white rounded-lg card-shadow p-3 w-16 h-full btn-hover text-center cursor-pointer flex flex-col" onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" title="点击进入库存盘点">
           <!-- 图标 -->
           <div class="flex justify-center mb-2">
-            <div class="w-10 h-10 rounded-full bg-coffee-main/10 flex items-center justify-center">
-              <i class="fa-solid fa-clipboard-list text-coffee-main text-lg"></i>
+            <div class="w-9 h-9 rounded-full bg-coffee-main/10 flex items-center justify-center">
+              <i class="fa-solid fa-clipboard-list text-coffee-main"></i>
             </div>
           </div>
           <!-- 标题 -->
           <p class="text-xs font-bold text-coffee-dark mb-2">库存</p>
           <!-- 分割线 -->
-          <div class="border-t border-coffee-light/30 my-2"></div>
-          <!-- 商品总数 -->
+          <div class="border-t border-coffee-light/30 my-1"></div>
+          <!-- 商品种类 -->
           <div class="mb-2">
-            <p class="text-xs text-gray-500">商品</p>
-            <p id="quick-inventory-count" class="text-sm font-bold text-coffee-dark">0</p>
+            <p class="text-xs text-gray-500">种类</p>
+            <p id="quick-inventory-count" class="text-base font-bold text-coffee-dark">0</p>
           </div>
           <!-- 库存数量 -->
           <div class="mb-2">
             <p class="text-xs text-gray-500">总量</p>
-            <p id="quick-inventory-qty" class="text-sm font-bold text-coffee-dark">0</p>
+            <p id="quick-inventory-qty" class="text-base font-bold text-coffee-dark">0</p>
           </div>
           <!-- 即将到期 -->
-          <div class="mb-2 bg-orange-50 rounded-md p-1.5" id="quick-inventory-expiring-box">
+          <div class="mb-2 bg-orange-50 rounded-md p-2" id="quick-inventory-expiring-box">
             <i class="fa-solid fa-triangle-exclamation text-orange-600 text-xs"></i>
-            <p id="quick-inventory-expiring" class="text-xs font-bold text-orange-700 mt-0.5">0</p>
+            <p class="text-xs text-orange-600 mt-1">即将到期</p>
+            <p id="quick-inventory-expiring" class="text-base font-bold text-orange-700 mt-0.5">0</p>
           </div>
           <!-- 库存不足 -->
-          <div class="mb-2 bg-red-50 rounded-md p-1.5" id="quick-inventory-low-box">
+          <div class="mb-2 bg-red-50 rounded-md p-2" id="quick-inventory-low-box">
             <i class="fa-solid fa-circle-exclamation text-red-600 text-xs"></i>
-            <p id="quick-inventory-low" class="text-xs font-bold text-red-700 mt-0.5">0</p>
+            <p class="text-xs text-red-600 mt-1">库存不足</p>
+            <p id="quick-inventory-low" class="text-base font-bold text-red-700 mt-0.5">0</p>
+          </div>
+          <!-- 底部提示 -->
+          <div class="flex-1 flex items-end justify-center">
+            <p class="text-xs text-gray-400">点击查看</p>
           </div>
         </div>
       </aside>
@@ -234,36 +240,42 @@
 
       <!-- 右侧：员工管理快捷卡片（细长条样式） -->
       <aside id="quick-employee-card" class="hidden flex-shrink-0">
-        <div class="bg-white rounded-lg card-shadow p-3 w-24 btn-hover text-center cursor-pointer" onclick="document.getElementById('employee-manage-modal').classList.remove('hidden');" title="点击进入员工管理">
+        <div class="bg-white rounded-lg card-shadow p-3 w-16 h-full btn-hover text-center cursor-pointer flex flex-col" onclick="document.getElementById('employee-manage-modal').classList.remove('hidden');" title="点击进入员工管理">
           <!-- 图标 -->
           <div class="flex justify-center mb-2">
-            <div class="w-10 h-10 rounded-full bg-coffee-main/10 flex items-center justify-center">
-              <i class="fa-solid fa-user-clock text-coffee-main text-lg"></i>
+            <div class="w-9 h-9 rounded-full bg-coffee-main/10 flex items-center justify-center">
+              <i class="fa-solid fa-user-clock text-coffee-main"></i>
             </div>
           </div>
           <!-- 标题 -->
           <p class="text-xs font-bold text-coffee-dark mb-2">员工</p>
           <!-- 分割线 -->
-          <div class="border-t border-coffee-light/30 my-2"></div>
+          <div class="border-t border-coffee-light/30 my-1"></div>
           <!-- 员工总数 -->
           <div class="mb-2">
             <p class="text-xs text-gray-500">总数</p>
-            <p id="quick-employee-count" class="text-sm font-bold text-coffee-dark">0</p>
+            <p id="quick-employee-count" class="text-base font-bold text-coffee-dark">0</p>
           </div>
           <!-- 工作中 -->
-          <div class="mb-2 bg-green-50 rounded-md p-1.5">
+          <div class="mb-2 bg-green-50 rounded-md p-2">
             <i class="fa-solid fa-circle-play text-green-600 text-xs"></i>
-            <p id="quick-employee-working" class="text-xs font-bold text-green-700 mt-0.5">0</p>
+            <p class="text-xs text-green-600 mt-1">工作中</p>
+            <p id="quick-employee-working" class="text-base font-bold text-green-700 mt-0.5">0</p>
           </div>
           <!-- 已下班 -->
           <div class="mb-2">
             <p class="text-xs text-gray-500">已下班</p>
-            <p id="quick-employee-off" class="text-sm font-bold text-gray-600">0</p>
+            <p id="quick-employee-off" class="text-base font-bold text-gray-600">0</p>
           </div>
           <!-- 今日考勤 -->
-          <div class="mb-2 bg-blue-50 rounded-md p-1.5">
+          <div class="mb-2 bg-blue-50 rounded-md p-2">
             <i class="fa-solid fa-calendar-day text-blue-600 text-xs"></i>
-            <p id="quick-employee-today" class="text-xs font-bold text-blue-700 mt-0.5">0</p>
+            <p class="text-xs text-blue-600 mt-1">今日打卡</p>
+            <p id="quick-employee-today" class="text-base font-bold text-blue-700 mt-0.5">0</p>
+          </div>
+          <!-- 底部提示 -->
+          <div class="flex-1 flex items-end justify-center">
+            <p class="text-xs text-gray-400">点击查看</p>
           </div>
         </div>
       </aside>
