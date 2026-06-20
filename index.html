@@ -799,15 +799,36 @@
               </select>
             </div>
 
-            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-2">
               <div>
-                <p class="text-coffee-dark text-sm font-medium">自动连续识别</p>
-                <p class="text-xs text-gray-500">打开弹窗后自动开启麦克风，持续识别</p>
+                <p class="text-coffee-dark text-sm font-medium">唤醒词识别</p>
+                <p class="text-xs text-gray-500">必须说出唤醒词后才开始识别内容</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="ai-toggle-continuous" class="sr-only peer">
+                <input type="checkbox" id="ai-toggle-wake-word" class="sr-only peer">
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
               </label>
+            </div>
+
+            <div id="ai-wake-word-list-wrap" class="mb-3 mt-2 pl-4 border-l-2 border-coffee-main/30">
+              <label class="text-xs text-gray-500 block mb-2">唤醒词（每行一个）</label>
+              <textarea id="ai-wake-words" rows="3" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white resize-none" placeholder="小K小K&#10;你好&#10;点单"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">辅助唤醒</p>
+                <p class="text-xs text-gray-500">识别到点单相关词自动唤醒</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-auto-wake" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div id="ai-auto-wake-word-list-wrap" class="mt-2 pl-4 border-l-2 border-coffee-main/30">
+              <label class="text-xs text-gray-500 block mb-2">辅助唤醒词（每行一个）</label>
+              <textarea id="ai-auto-wake-words" rows="2" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white resize-none" placeholder="要杯&#10;点单&#10;有人吗"></textarea>
             </div>
           </div>
 
@@ -861,44 +882,7 @@
             </div>
           </div>
 
-          <!-- 5. 唤醒词设置 -->
-          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
-            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-bell text-coffee-main"></i>唤醒词识别</p>
-
-            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-3">
-              <div>
-                <p class="text-coffee-dark text-sm font-medium">启用唤醒词唤醒</p>
-                <p class="text-xs text-gray-500">必须说出唤醒词后才开始识别点单内容</p>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="ai-toggle-wake-word" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
-              </label>
-            </div>
-
-            <div class="mb-3">
-              <label class="text-xs text-gray-500 block mb-2">唤醒词列表（每行一个）</label>
-              <textarea id="ai-wake-words" rows="3" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white resize-none" placeholder="小K小K&#10;你好&#10;点单"></textarea>
-            </div>
-
-            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-3">
-              <div>
-                <p class="text-coffee-dark text-sm font-medium">辅助唤醒</p>
-                <p class="text-xs text-gray-500">识别到点单相关词自动唤醒</p>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="ai-toggle-auto-wake" class="sr-only peer">
-                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
-              </label>
-            </div>
-
-            <div>
-              <label class="text-xs text-gray-500 block mb-2">辅助唤醒词（每行一个）</label>
-              <textarea id="ai-auto-wake-words" rows="2" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white resize-none" placeholder="要杯&#10;点单&#10;有人吗"></textarea>
-            </div>
-          </div>
-
-          <!-- 6. 语音识别增强 -->
+          <!-- 5. 语音识别增强 -->
           <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
             <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-coffee-main"></i>语音识别增强</p>
 
@@ -10105,19 +10089,27 @@
       // ========== 5) 输入处理 ==========
       // 备注关键词配置表（支持同音词/模糊匹配）
       const REMARK_KEYWORDS = [
-        { canonical: '少冰', synonyms: ['少冰', '烧冰', '小冰', '上冰', '扫冰', '稍冰', '邵冰'], group: 'ice' },
-        { canonical: '去冰', synonyms: ['去冰', '娶冰', '曲冰', '去兵', '趣冰', '渠冰'], group: 'ice' },
-        { canonical: '多冰', synonyms: ['多冰', '朵冰', '夺冰', '躲冰'], group: 'ice' },
-        { canonical: '冰', synonyms: ['冰', '兵', '饼', '炳', '病'], group: 'ice_generic' },
-        { canonical: '无糖', synonyms: ['无糖', '五常', '无妨', '五堂', '无汤'], group: 'sweet' },
-        { canonical: '少糖', synonyms: ['少糖', '扫堂', '少堂', '小糖'], group: 'sweet' },
-        { canonical: '少少糖', synonyms: ['少少糖', '小小糖'], group: 'sweet' },
-        { canonical: '全糖', synonyms: ['全糖', '全堂'], group: 'sweet' },
-        { canonical: '不加糖', synonyms: ['不加糖', '不加堂', '不加汤'], group: 'sweet_generic' },
-        { canonical: '常温', synonyms: ['常温', '长温', '尝闻', '常闻'], group: 'temp' },
-        { canonical: '热', synonyms: ['热'], group: 'temp' },
-        { canonical: '温', synonyms: ['温', '问', '闻'], group: 'temp' },
-        { canonical: '凉', synonyms: ['凉', '两', '亮'], group: 'temp' }
+        { canonical: '少冰', synonyms: ['少冰', '烧冰', '小冰', '上冰', '扫冰', '稍冰', '邵冰', '哨兵', '烧饼', '少兵', '邵兵', '少饼', '烧饼', '烧病', '扫兵', '哨兵的', '哨兵啊', '哨兵吧', '扫冰啊', '扫冰吧', '少冰吧', '少冰啊', '小冰吧'], group: 'ice' },
+        { canonical: '去冰', synonyms: ['去冰', '娶冰', '曲冰', '去兵', '趣冰', '渠冰', '取冰', '娶兵', '曲兵', '缺冰', '去丙', '去柄', '去冰吧', '去冰啊', '去冰的', '取冰啊', '取冰吧'], group: 'ice' },
+        { canonical: '多冰', synonyms: ['多冰', '朵冰', '夺冰', '躲冰', '多柄', '多饼', '夺冰啊', '多冰吧', '多冰的', '多冰啦'], group: 'ice' },
+        { canonical: '加冰', synonyms: ['加冰', '嘉宾', '加病', '加饼', '加兵', '加冰啊', '加冰吧', '加冰的', '加个冰', '加点冰', '加一点冰', '多加冰'], group: 'ice' },
+        { canonical: '冰', synonyms: ['冰', '兵', '饼', '炳', '病', '丙', '柄', '并', '屏'], group: 'ice_generic' },
+        { canonical: '无糖', synonyms: ['无糖', '五常', '无妨', '五堂', '无汤', '五唐', '五塘', '吴塘', '无塘', '无汤啊', '无糖吧', '无糖的', '无糖哦', '不要糖', '不甜', '不甜的'], group: 'sweet' },
+        { canonical: '少糖', synonyms: ['少糖', '扫堂', '少堂', '小糖', '扫糖', '勺糖', '绍堂', '少糖啊', '少糖吧', '少糖的', '少糖哦', '一点糖', '少甜', '少甜点'], group: 'sweet' },
+        { canonical: '少少糖', synonyms: ['少少糖', '小小糖', '一勺糖', '两勺糖'], group: 'sweet' },
+        { canonical: '全糖', synonyms: ['全糖', '全堂', '全汤', '全糖的', '全糖吧', '全糖啊', '要甜的', '甜的'], group: 'sweet' },
+        { canonical: '不加糖', synonyms: ['不加糖', '不加堂', '不加汤', '不加甜', '不加糖啊', '不加糖吧', '不要糖啊', '不要糖吧'], group: 'sweet_generic' },
+        { canonical: '常温', synonyms: ['常温', '长温', '尝闻', '常闻', '长吻', '常稳', '常温的', '常温啊', '常温吧', '常温哦', '不要冰的', '不要冷的'], group: 'temp' },
+        { canonical: '热', synonyms: ['热', '惹', '热乎', '热的', '热的啊', '热的吧', '热饮', '热一下', '加热', '加热的', '热的哦'], group: 'temp' },
+        { canonical: '温', synonyms: ['温', '问', '闻', '吻', '闷', '温的', '温一下', '温的吧', '温的哦', '温饮'], group: 'temp' },
+        { canonical: '凉', synonyms: ['凉', '两', '亮', '量', '良', '凉的', '凉的啊', '凉吧', '凉饮', '凉一点'], group: 'temp' },
+        { canonical: '打包', synonyms: ['打包', '大宝', '大包', '打宝', '打保', '打包啊', '打包吧', '打包的', '带走', '带走啊', '带走吧', '外带', '外带啊', '外带吧', '带走吧', '带走哦'], group: 'takeout' },
+        { canonical: '店用', synonyms: ['店用', '点用', '电用', '店用啊', '店用吧', '店用的', '堂食', '堂食啊', '堂食吧', '在这喝', '在这吃', '在店里喝'], group: 'takeout' },
+        { canonical: '大杯', synonyms: ['大杯', '大辈', '大被', '大碑', '大杯啊', '大杯吧', '大杯的', '大一点', '换大杯', '大杯哦', '大', '换大', '加大'], group: 'size' },
+        { canonical: '中杯', synonyms: ['中杯', '中被', '中碑', '中杯啊', '中杯吧', '中杯的', '中杯哦', '中'], group: 'size' },
+        { canonical: '小杯', synonyms: ['小杯', '小被', '小辈', '小碑', '小杯啊', '小杯吧', '小杯的', '小杯哦', '小一点', '换小杯', '小', '换小', '加小'], group: 'size' },
+        { canonical: '加一份', synonyms: ['加一份', '加一分', '加一份啊', '加一份吧', '再加一份', '再要一份', '再要一份啊', '再来一份', '再来一份啊', '再来一个', '再加', '再加一个', '再加一份'], group: 'extra' },
+        { canonical: '不加料', synonyms: ['不加料', '不加聊', '不加料', '不要加', '不要加东西', '不要加料啊', '不要加料吧', '不要加了', '不要加别的'], group: 'extra' }
       ];
       function parseRemarks(text) {
         const found = [];
@@ -11231,13 +11223,21 @@
         if (ww) ww.addEventListener('input', function () { settings.wakeWords = ww.value; });
 
         const wwT = document.getElementById('ai-toggle-wake-word');
-        if (wwT) wwT.addEventListener('change', function () { settings.wakeWordEnabled = !!wwT.checked; });
+        if (wwT) wwT.addEventListener('change', function () {
+          settings.wakeWordEnabled = !!wwT.checked;
+          const wrap = document.getElementById('ai-wake-word-list-wrap');
+          if (wrap) wrap.style.display = settings.wakeWordEnabled ? '' : 'none';
+        });
 
         const aw = document.getElementById('ai-auto-wake-words');
         if (aw) aw.addEventListener('input', function () { settings.autoWakeWords = aw.value; });
 
         const awT = document.getElementById('ai-toggle-auto-wake');
-        if (awT) awT.addEventListener('change', function () { settings.autoWakeEnabled = !!awT.checked; });
+        if (awT) awT.addEventListener('change', function () {
+          settings.autoWakeEnabled = !!awT.checked;
+          const wrap = document.getElementById('ai-auto-wake-word-list-wrap');
+          if (wrap) wrap.style.display = settings.autoWakeEnabled ? '' : 'none';
+        });
 
         const nf = document.getElementById('ai-toggle-noise-filter');
         if (nf) nf.addEventListener('change', function () { settings.noiseFilter = !!nf.checked; });
@@ -11349,15 +11349,20 @@
             el.classList.remove('border-coffee-main'); el.classList.add('border-gray-200');
           }
         });
-        var vCont = document.getElementById('ai-toggle-continuous'); if (vCont) vCont.checked = !!settings.continuous;
         var vTts = document.getElementById('ai-toggle-tts'); if (vTts) vTts.checked = !!settings.tts;
         var vRate = document.getElementById('ai-tts-rate'); var vRateV = document.getElementById('ai-tts-rate-val');
         if (vRate) vRate.value = settings.ttsRate || 1; if (vRateV) vRateV.textContent = (settings.ttsRate || 1).toFixed(1);
         var vPitch = document.getElementById('ai-tts-pitch'); var vPitchV = document.getElementById('ai-tts-pitch-val');
         if (vPitch) vPitch.value = settings.ttsPitch || 1; if (vPitchV) vPitchV.textContent = (settings.ttsPitch || 1).toFixed(1);
         var vWake = document.getElementById('ai-toggle-wake-word'); if (vWake) vWake.checked = !!settings.wakeWordEnabled;
+        // 条件显示唤醒词列表
+        var wakeWrap = document.getElementById('ai-wake-word-list-wrap');
+        if (wakeWrap) wakeWrap.style.display = settings.wakeWordEnabled ? '' : 'none';
         var vWw = document.getElementById('ai-wake-words'); if (vWw) vWw.value = settings.wakeWords || '';
         var vAutoWake = document.getElementById('ai-toggle-auto-wake'); if (vAutoWake) vAutoWake.checked = !!settings.autoWakeEnabled;
+        // 条件显示辅助唤醒词列表
+        var autoWakeWrap = document.getElementById('ai-auto-wake-word-list-wrap');
+        if (autoWakeWrap) autoWakeWrap.style.display = settings.autoWakeEnabled ? '' : 'none';
         var vAw = document.getElementById('ai-auto-wake-words'); if (vAw) vAw.value = settings.autoWakeWords || '';
         var vNoise = document.getElementById('ai-toggle-noise-filter'); if (vNoise) vNoise.checked = !!settings.noiseFilter;
         // 支付模式
@@ -11433,7 +11438,7 @@
 
   <!-- AI 对话弹窗 -->
   <div id="ai-assistant-modal" class="fixed inset-0 z-[9999] hidden pointer-events-none flex justify-start items-end p-4">
-    <div class="pointer-events-auto ml-auto w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden border border-coffee-main/30">
+    <div class="pointer-events-auto w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden border border-coffee-main/30">
       <div class="bg-gradient-to-r from-coffee-dark to-coffee-main text-white p-4 flex items-center justify-between">
         <div class="flex items-center gap-2"><i class="fa-solid fa-robot text-xl"></i><h3 class="font-bold text-base">AI 助手</h3></div>
         <button id="ai-close-btn" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center"><i class="fa-solid fa-xmark text-sm"></i></button>
