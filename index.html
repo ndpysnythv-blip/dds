@@ -357,12 +357,25 @@
     </div>
   </main>
 
+  <!-- 实时字幕区域 -->
+  <div id="ai-live-caption" class="fixed bottom-24 left-0 right-0 text-center px-4 hidden z-40">
+    <span class="inline-block bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+      正在聆听…
+    </span>
+  </div>
+
   <!-- 底部付款栏 -->
   <div class="bottom-pay-bar">
     <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="text-center sm:text-left">
-        <p class="text-coffee-dark font-medium text-sm">选择商品后完成付款</p>
-        <p class="text-coffee-main font-bold mt-1">扫描收款码完成支付</p>
+      <div class="flex items-center gap-3 text-center sm:text-left">
+        <!-- AI 语音助手按钮 -->
+        <button id="ai-assistant-fab" class="ai-voice-btn flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform" title="点击开始语音点单" aria-label="AI语音助手">
+          <i class="fa-solid fa-microphone"></i>
+        </button>
+        <div>
+          <p class="text-coffee-dark font-medium text-sm">选择商品后完成付款</p>
+          <p class="text-coffee-main font-bold mt-1">扫描收款码完成支付</p>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <i class="fa-solid fa-hand-pointer text-2xl text-coffee-light"></i>
@@ -9600,51 +9613,7 @@
           return;
         }
         fab.classList.remove('hidden');
-
-        // 基础样式（不依赖 Tailwind 确保跨环境稳定）
-        fab.style.cssText = [
-          'position: fixed',
-          'z-index: 9998',
-          'background: linear-gradient(to bottom right, #6F4E37, #8B5A2B)',
-          'color: #fff',
-          'border: none',
-          'outline: none',
-          'cursor: pointer',
-          'box-shadow: 0 8px 24px rgba(111,78,55,0.35)',
-          'transition: transform 0.2s ease',
-          'display: flex',
-          'align-items: center',
-          'justify-content: center'
-        ].join('; ') + ';';
-
-        const size = settings.buttonSize || 56;
-        const margin = settings.buttonMargin || 24;
-
-        if (settings.style === 'pill') {
-          fab.style.borderRadius = '999px';
-          fab.style.width = 'auto';
-          fab.style.height = Math.max(40, Math.round(size * 0.7)) + 'px';
-          fab.style.padding = '0 18px';
-          fab.style.bottom = (margin + 8) + 'px';
-          fab.style.right = margin + 'px';
-          fab.innerHTML = '<span style="font-weight:700;font-size:14px;">AI 助手</span>';
-        } else if (settings.style === 'icon') {
-          fab.style.borderRadius = '50%';
-          fab.style.width = size + 'px';
-          fab.style.height = size + 'px';
-          fab.style.bottom = (margin + 8) + 'px';
-          fab.style.right = margin + 'px';
-          fab.innerHTML = '<i class="fa-solid fa-microphone-lines" style="font-size:' + Math.round(size * 0.38) + 'px;"></i>';
-        } else { // circle
-          fab.style.borderRadius = '50%';
-          fab.style.width = size + 'px';
-          fab.style.height = size + 'px';
-          fab.style.bottom = (margin + 8) + 'px';
-          fab.style.right = margin + 'px';
-          fab.style.fontWeight = '700';
-          fab.style.fontSize = Math.round(size * 0.32) + 'px';
-          fab.innerHTML = 'AI';
-        }
+        fab.style.display = 'flex';
       }
 
       function updateCartPreview() {
@@ -9809,7 +9778,7 @@
         recognition = new SR();
         recognition.lang = settings.lang || 'zh-CN';
         recognition.interimResults = true;
-        recognition.continuous = !!settings.continuous;
+        recognition.continuous = true;
         recognition.maxAlternatives = 1;
 
         let lastFinalText = '';
@@ -9820,14 +9789,26 @@
             if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
             else interimText += e.results[i][0].transcript;
           }
-          // 实时字幕显示（弹窗内顶部状态条）
+          // 更新实时字幕区域（底部付款栏上方）
+          const liveCaption = document.getElementById('ai-live-caption');
+          if (liveCaption) {
+            liveCaption.classList.remove('hidden');
+            if (interimText) {
+              liveCaption.textContent = '🎤 ' + interimText;
+              liveCaption.style.opacity = '0.7';
+            } else if (finalText) {
+              liveCaption.textContent = '🎤 ' + finalText;
+              liveCaption.style.opacity = '1';
+            }
+          }
+          // 更新弹窗内状态条
           const sb = document.getElementById('ai-status-bar');
           const sm = document.getElementById('ai-status-msg');
           if (sb && sm) {
             sb.classList.remove('hidden');
             sm.textContent = '🎙️ ' + (interimText || finalText || '聆听中…');
           }
-          // 处理 final
+          // 处理 final：自动识别并语音回复
           if (finalText && finalText.trim() && finalText !== lastFinalText) {
             lastFinalText = finalText;
             addUserMsg(finalText.trim());
@@ -9852,11 +9833,12 @@
             msg = '⚠️ 语音识别异常: ' + e.error;
           }
           addAIMsg(msg);
-          if (!settings.continuous) setListeningUI(false);
+          speakWithFallback(msg.replace(/<[^>]*>/g, ''));
         };
 
         recognition.onend = function () {
-          // 停止状态条闪烁
+          const liveCaption = document.getElementById('ai-live-caption');
+          if (liveCaption) liveCaption.classList.add('hidden');
           const sb = document.getElementById('ai-status-bar');
           if (sb) sb.classList.add('hidden');
           if (settings.continuous) { try { recognition.start(); } catch (err) {} }
@@ -9866,10 +9848,9 @@
         try {
           recognition.start();
           setListeningUI(true);
-          addAIMsg('🎙️ 已开始聆听，请说话...');
         } catch (err) {
           console.warn('[AI] 麦克风启动失败', err);
-          addAIMsg('⚠️ 启动语音识别失败: ' + (err.message || '未知错误'));
+          speakWithFallback('启动语音识别失败: ' + (err.message || '未知错误'));
           setListeningUI(false);
         }
       }
@@ -9884,24 +9865,37 @@
       function toggleVoice() {
         const fab = document.getElementById('ai-assistant-fab');
         const isOn = fab && fab.classList.contains('listening');
-        if (isOn) stopVoice(); else startVoice();
+        if (isOn) {
+          stopVoice();
+          speakWithFallback('语音点单已结束。');
+        } else {
+          startVoice();
+          speakWithFallback('你好！我是AI助手，请告诉我您想点什么。');
+        }
       }
 
       function setListeningUI(on) {
         const fab = document.getElementById('ai-assistant-fab');
         const voiceBtn = document.getElementById('ai-voice-btn');
-        if (fab) fab.classList.toggle('listening', on);
+        if (fab) {
+          fab.classList.toggle('listening', on);
+          const i = fab.querySelector('i');
+          if (i) {
+            i.className = on ? 'fa-solid fa-circle-stop text-lg animate-pulse' : 'fa-solid fa-microphone';
+            fab.style.background = on ? 'linear-gradient(to bottom right, #dc2626, #b91c1c)' : 'linear-gradient(to bottom right, #6F4E37, #8B5A2B)';
+          }
+        }
         if (voiceBtn) {
           const i = voiceBtn.querySelector('i');
           if (i) i.className = on ? 'fa-solid fa-stop text-lg' : 'fa-solid fa-microphone text-lg';
           voiceBtn.classList.toggle('bg-red-600', on);
           voiceBtn.classList.toggle('bg-coffee-main', !on);
         }
-        const sb = document.getElementById('ai-status-bar');
-        const sm = document.getElementById('ai-status-msg');
-        if (sb && sm) {
-          if (on) { sb.classList.remove('hidden'); sm.textContent = '🎙️ 正在聆听…请说话'; }
-          else { sb.classList.add('hidden'); sm.textContent = ''; }
+        // 更新实时字幕区域
+        const sb = document.getElementById('ai-live-caption');
+        if (sb) {
+          sb.classList.toggle('hidden', !on);
+          if (on) sb.textContent = '🎙️ 正在聆听…';
         }
       }
 
@@ -9957,7 +9951,12 @@
       // ========== 9) 绑定事件 ==========
       function bindEvents() {
         const fab = document.getElementById('ai-assistant-fab');
-        if (fab) fab.addEventListener('click', function () { openChat(); });
+        if (fab) fab.addEventListener('click', function () {
+          // 点击直接开始/停止语音对话（像打电话一样）
+          toggleVoice();
+          // 同时打开弹窗显示字幕
+          openChat();
+        });
 
         const closeBtn = document.getElementById('ai-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', closeChat);
@@ -10162,9 +10161,6 @@
     <div id="native-print-time" class="time"></div>
     <div id="native-print-footer" class="footer">请凭此票取餐 谢谢惠顾</div>
   </div>
-
-  <!-- ======== AI 助手：悬浮按钮（圆形 + AI 两字） ========= -->
-  <button id="ai-assistant-fab" class="hidden fixed z-[9998] rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-2xl hover:scale-105 ring-4 ring-coffee-main/20 transition-transform flex items-center justify-center" style="bottom:120px;right:24px;width:56px;height:56px;font-weight:bold;font-size:18px;" title="AI 助手">AI</button>
 
   <!-- AI 对话弹窗 -->
   <div id="ai-assistant-modal" class="fixed inset-0 z-[9999] hidden pointer-events-none p-4 sm:p-6" style="display:none;">
