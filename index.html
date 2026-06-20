@@ -112,10 +112,16 @@
 
       /* ============ AI助手专属样式 ============ */
       @keyframes fabPulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(111, 78, 55, 0.6); }
-        50% { box-shadow: 0 0 0 18px rgba(111, 78, 55, 0); }
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        50% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
       }
-      .animate-fab-pulse { animation: fabPulse 2.2s ease-in-out infinite; }
+      .animate-fab-pulse { animation: fabPulse 1.5s ease-in-out infinite; }
+
+      @keyframes fabPulseIdle {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(111, 78, 55, 0.4); }
+        50% { box-shadow: 0 0 0 12px rgba(111, 78, 55, 0); }
+      }
+      .animate-fab-idle { animation: fabPulseIdle 2.5s ease-in-out infinite; }
 
       @keyframes slideUp {
         from { transform: translateY(40px); opacity: 0; }
@@ -139,6 +145,25 @@
       .ai-typing-dot:nth-child(2) { animation-delay: 0.15s; }
       .ai-typing-dot:nth-child(3) { animation-delay: 0.3s; }
 
+      @keyframes waveformBar {
+        0%, 100% { transform: scaleY(0.3); }
+        50% { transform: scaleY(1); }
+      }
+      .ai-wave-bar {
+        display: inline-block;
+        width: 3px;
+        height: 18px;
+        background: #8B5A2B;
+        margin: 0 1px;
+        border-radius: 2px;
+        transform-origin: center;
+        animation: waveformBar 1s infinite;
+      }
+      .ai-wave-bar:nth-child(2) { animation-delay: 0.1s; }
+      .ai-wave-bar:nth-child(3) { animation-delay: 0.2s; }
+      .ai-wave-bar:nth-child(4) { animation-delay: 0.3s; }
+      .ai-wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
       #ai-messages::-webkit-scrollbar {
         width: 4px;
       }
@@ -149,6 +174,138 @@
 
       #ai-assistant-modal:not(.hidden) {
         display: flex;
+      }
+
+      /* 拖拽手柄 */
+      .ai-drag-handle { cursor: grab; user-select: none; }
+      .ai-drag-handle:active { cursor: grabbing; }
+
+      /* 屏幕底部实时字幕 */
+      #ai-live-caption {
+        position: fixed;
+        left: 50%;
+        bottom: 30px;
+        transform: translateX(-50%);
+        z-index: 9997;
+        max-width: 80vw;
+        pointer-events: none;
+      }
+      #ai-live-caption .caption-inner {
+        background: rgba(0, 0, 0, 0.78);
+        color: #fff;
+        padding: 14px 28px;
+        border-radius: 16px;
+        font-size: 18px;
+        line-height: 1.5;
+        text-align: center;
+        backdrop-filter: blur(8px);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        min-height: 24px;
+      }
+      #ai-live-caption .caption-prefix {
+        display: inline-block;
+        margin-right: 10px;
+        font-weight: bold;
+        color: #fbbf24;
+      }
+      #ai-live-caption .caption-interim {
+        color: rgba(255, 255, 255, 0.6);
+        font-style: italic;
+      }
+      #ai-live-caption .caption-model {
+        display: block;
+        margin-top: 6px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.45);
+        letter-spacing: 1px;
+      }
+
+      /* 增强的悬浮按钮 - 带文字状态 */
+      #ai-assistant-fab {
+        min-width: 160px;
+        width: auto;
+        height: 56px;
+        border-radius: 28px;
+        padding: 0 20px;
+        flex-direction: row;
+        gap: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        transition: all 0.3s ease;
+      }
+      #ai-assistant-fab.listening {
+        background: linear-gradient(to bottom right, #dc2626, #991b1b) !important;
+        min-width: 200px;
+      }
+      #ai-assistant-fab.loading {
+        background: linear-gradient(to bottom right, #7c3aed, #4c1d95) !important;
+      }
+      #ai-assistant-fab .fab-status {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        line-height: 1.2;
+        color: #fff;
+        text-align: left;
+      }
+      #ai-assistant-fab .fab-status .title {
+        font-size: 14px;
+        white-space: nowrap;
+        font-weight: bold;
+      }
+      #ai-assistant-fab .fab-status .sub {
+        font-size: 10px;
+        opacity: 0.9;
+        white-space: nowrap;
+      }
+      #ai-assistant-fab .fab-icon-wrap {
+        position: relative;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      /* 模型选择按钮行 */
+      .ai-model-row {
+        display: flex;
+        gap: 6px;
+        padding: 8px 12px;
+        background: rgba(139, 90, 43, 0.06);
+        border-bottom: 1px solid rgba(139, 90, 43, 0.15);
+      }
+      .ai-model-btn {
+        flex: 1;
+        padding: 6px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        border: 1px solid rgba(139, 90, 43, 0.3);
+        background: #fff;
+        color: #6F4E37;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .ai-model-btn.active {
+        background: #8B5A2B;
+        color: #fff;
+        border-color: #8B5A2B;
+      }
+      .ai-model-btn .dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        margin-right: 4px;
+        vertical-align: middle;
+        opacity: 0.7;
       }
 
       /* 订单溯源详情水印 */
@@ -9872,38 +10029,69 @@
     <div id="native-print-footer" class="footer">请凭此票取餐 谢谢惠顾</div>
   </div>
 
-  <!-- ======== AI语音助手：悬浮按钮 + 对话弹窗 ======== -->
-  <button id="ai-assistant-fab" class="fixed bottom-28 right-6 z-[9998] w-16 h-16 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center ring-4 ring-coffee-main/20 animate-fab-pulse" title="点击或说「小咖」唤醒我">
-    <i class="fa-solid fa-microphone-lines text-2xl"></i>
+  <!-- ======== AI语音助手：悬浮按钮 + 实时字幕 + 对话弹窗 ======== -->
+  <!-- 屏幕底部实时字幕（始终显示，供店员/顾客看到识别结果） -->
+  <div id="ai-live-caption" class="hidden">
+    <div class="caption-inner">
+      <span class="caption-prefix">🎙️ 识别中</span>
+      <span id="ai-caption-final">—</span>
+      <span id="ai-caption-interim" class="caption-interim"></span>
+      <span class="caption-model" id="ai-caption-model">浏览器语音识别 · zh-CN</span>
+    </div>
+  </div>
+
+  <!-- 悬浮按钮（带文字状态，一眼能看出当前是「停止」还是「聆听中」） -->
+  <button id="ai-assistant-fab" class="fixed bottom-28 right-6 z-[9998] bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-2xl hover:scale-105 ring-4 ring-coffee-main/20 animate-fab-idle" title="点击开启语音识别">
+    <span class="fab-icon-wrap">
+      <i id="ai-fab-icon" class="fa-solid fa-microphone-lines text-lg"></i>
+    </span>
+    <span class="fab-status">
+      <span class="title" id="ai-fab-title">点击说话</span>
+      <span class="sub" id="ai-fab-sub">中文 / English</span>
+    </span>
   </button>
 
-  <div id="ai-assistant-modal" class="fixed inset-0 z-[9999] hidden items-end justify-end pointer-events-none p-4 sm:p-6">
-    <div id="ai-assistant-panel" class="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-coffee-main/30 animate-slide-up">
-      <!-- 头部 -->
-      <div class="bg-gradient-to-r from-coffee-dark to-coffee-main text-white p-4 flex items-center justify-between">
+  <!-- 对话弹窗（可拖拽） -->
+  <div id="ai-assistant-modal" class="fixed inset-0 z-[9999] hidden pointer-events-none p-4 sm:p-6" style="justify-content: flex-end; align-items: flex-end;">
+    <div id="ai-assistant-panel" class="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-coffee-main/30 animate-slide-up" style="position: relative;">
+      <!-- 头部（拖拽手柄区域） -->
+      <div class="ai-drag-handle bg-gradient-to-r from-coffee-dark to-coffee-main text-white p-4 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
             <i class="fa-solid fa-robot text-xl"></i>
           </div>
           <div>
             <h3 class="font-bold text-lg">小咖 AI 助手</h3>
-            <p class="text-xs text-coffee-white/80 flex items-center gap-1">
-              <span id="ai-status-dot" class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-              <span id="ai-status-text">在线 · 说「小咖」即可唤醒</span>
+            <p class="text-xs text-white/80 flex items-center gap-1">
+              <span id="ai-status-dot" class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+              <span id="ai-status-text">待启动 · 点击按钮开始</span>
             </p>
           </div>
         </div>
         <div class="flex gap-1">
-          <button id="ai-wake-toggle" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center" title="开启/关闭语音监听">
-            <i class="fa-solid fa-ear-listen"></i>
+          <button id="ai-lang-toggle" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center" title="切换识别语言">
+            <i class="fa-solid fa-language"></i>
           </button>
-          <button id="ai-minimize-btn" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center" title="最小化">
-            <i class="fa-solid fa-window-minimize"></i>
+          <button id="ai-tts-toggle" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center" title="开启/关闭语音回复">
+            <i class="fa-solid fa-volume-high"></i>
           </button>
           <button id="ai-close-btn" class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center" title="关闭">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
+      </div>
+
+      <!-- 模型选择行 -->
+      <div class="ai-model-row">
+        <button class="ai-model-btn active" data-model="browser" title="浏览器内置的语音识别（质量最好，不同浏览器将语音发送到不同服务器）">
+          <span class="dot"></span>浏览器识别
+        </button>
+        <button class="ai-model-btn" data-model="vosk-cn" title="Vosk 中文小模型（完全本地，WASM 运行，40MB 一次性下载）">
+          <span class="dot"></span>本地中文
+        </button>
+        <button class="ai-model-btn" data-model="vosk-en" title="Vosk 英文小模型（完全本地，WASM 运行）">
+          <span class="dot"></span>本地 English
+        </button>
       </div>
 
       <!-- 订单预览条 -->
@@ -9915,43 +10103,51 @@
       </div>
 
       <!-- 消息区 -->
-      <div id="ai-messages" class="h-80 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-coffee-white to-white scroll-smooth">
+      <div id="ai-messages" class="h-72 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-coffee-white to-white scroll-smooth">
         <div class="flex items-start gap-2">
           <div class="w-8 h-8 rounded-full bg-coffee-main/20 flex items-center justify-center flex-shrink-0">
             <i class="fa-solid fa-robot text-coffee-main text-sm"></i>
           </div>
           <div class="flex-1">
-            <div class="bg-coffee-cream rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-coffee-dark max-w-[85%] inline-block">
+            <div class="bg-coffee-cream rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-coffee-dark max-w-[85%] inline-block leading-relaxed">
               你好呀！我是小咖 ☕<br>
-              想点什么直接跟我说就行，比如：<br>
-              <span class="text-coffee-main">「来一杯拿铁和一份提拉米苏」</span><br>
-              说完订单后说「确认」我帮你开单，支付时由收银员扫码完成。
+              👉 点击右下角大按钮立即开始语音识别<br>
+              👉 识别的文字会显示在屏幕底部大黑框<br>
+              👉 可以说「来一杯拿铁和一份提拉米苏」<br>
+              👉 说「确认」开单，「取消」清空，「结账」付款
             </div>
-            <p class="text-xs text-gray-400 mt-1">刚刚</p>
+            <p class="text-xs text-gray-400 mt-1">刚刚 · 完全本地运行</p>
           </div>
         </div>
       </div>
 
-      <!-- 语音指示条 -->
-      <div id="ai-voice-indicator" class="hidden bg-coffee-main/10 px-4 py-2 text-xs text-coffee-dark flex items-center gap-2">
-        <i class="fa-solid fa-microphone text-coffee-main animate-bounce"></i>
-        <span id="ai-voice-interim">正在聆听...</span>
+      <!-- 波形动画（聆听中显示） -->
+      <div id="ai-wave-indicator" class="hidden py-2 flex justify-center items-center gap-0 bg-red-50 border-y border-red-200">
+        <span class="text-red-600 text-xs mr-2 font-semibold flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block"></span>
+          实时聆听中
+        </span>
+        <span class="ai-wave-bar"></span>
+        <span class="ai-wave-bar"></span>
+        <span class="ai-wave-bar"></span>
+        <span class="ai-wave-bar"></span>
+        <span class="ai-wave-bar"></span>
       </div>
 
       <!-- 输入区 -->
       <div class="p-3 border-t border-coffee-main/20 bg-coffee-white/40">
         <div class="flex gap-2 items-center">
-          <button id="ai-voice-btn" class="flex-shrink-0 w-11 h-11 rounded-full bg-coffee-main text-white hover:bg-coffee-dark transition flex items-center justify-center shadow-md">
-            <i class="fa-solid fa-microphone text-lg"></i>
+          <button id="ai-voice-btn" class="flex-shrink-0 w-11 h-11 rounded-full bg-coffee-main text-white hover:bg-coffee-dark transition flex items-center justify-center shadow-md" title="点击开始/停止语音识别">
+            <i id="ai-voice-btn-icon" class="fa-solid fa-microphone text-lg"></i>
           </button>
-          <input id="ai-input" type="text" class="flex-1 px-4 py-2 border border-coffee-main/30 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white" placeholder="直接输入也可以哦…回车发送">
+          <input id="ai-input" type="text" class="flex-1 px-4 py-2 border border-coffee-main/30 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white" placeholder="也可以直接打字…回车发送">
           <button id="ai-send-btn" class="flex-shrink-0 w-11 h-11 rounded-full bg-green-500 text-white hover:bg-green-600 transition flex items-center justify-center shadow-md">
             <i class="fa-solid fa-paper-plane text-sm"></i>
           </button>
         </div>
         <div class="flex items-center justify-between mt-2 text-xs text-gray-500 px-1">
-          <span>💡 唤醒词：「小咖」「你好小咖」</span>
-          <span id="ai-wake-status">监听中</span>
+          <span>💡 快捷键：按住 Ctrl 说话</span>
+          <span id="ai-wake-status">点击按钮开始</span>
         </div>
       </div>
     </div>
