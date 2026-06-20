@@ -4462,7 +4462,7 @@
       return inventory;
     }
 
-    // 渲染库存列表（增强版：显示原料溯源）
+    // 渲染库存列表（增强版：显示原料溯源，即将到期按1小时阈值）
     function renderInventoryList() {
       syncGoodsToInventory();
       const inventory = getInventoryData();
@@ -4474,6 +4474,7 @@
       const now = new Date();
       let expiringCount = 0;
       let totalQty = 0;
+      const oneHourMs = 3600 * 1000; // 1小时提醒阈值
       if (inventory.length === 0) {
         listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-boxes-packing text-3xl mb-2"></i><p>暂无库存数据</p><p class="text-xs mt-2">点击上方"添加库存"按钮开始管理</p></div>';
       } else {
@@ -4488,55 +4489,40 @@
             const shelfLifeMs = unit === 'hour' ? item.shelfLife * 3600 * 1000 : item.shelfLife * 24 * 3600 * 1000;
             const expiry = new Date(produce.getTime() + shelfLifeMs);
             const diffMs = expiry - now;
-            // 根据单位智能显示（小时单位显示小时，天单位显示天）
+            // 根据剩余时间智能显示
             if (diffMs < 0) {
-              if (unit === 'hour') {
-                const hours = Math.ceil(Math.abs(diffMs) / 3600000);
-                expiryText = `已过期 ${hours} 小时`;
+              // 已过期 - 更细粒度显示
+              const absMs = Math.abs(diffMs);
+              const absHours = Math.floor(absMs / 3600000);
+              const absMins = Math.floor((absMs % 3600000) / 60000);
+              if (absHours > 24) {
+                expiryText = `已过期 ${Math.floor(absHours / 24)} 天`;
+              } else if (absHours > 0) {
+                expiryText = `已过期 ${absHours}小时${absMins}分`;
               } else {
-                const days = Math.ceil(Math.abs(diffMs) / (24 * 3600 * 1000));
-                expiryText = `已过期 ${days} 天`;
+                expiryText = `已过期 ${absMins} 分钟`;
               }
               expiryClass = 'text-red-600 font-bold';
               expiryIcon = 'fa-triangle-exclamation';
               expiringCount++;
+            } else if (diffMs <= oneHourMs) {
+              // 1小时内到期 - 紧急
+              const mins = Math.ceil(diffMs / 60000);
+              expiryText = mins > 60 ? `${Math.floor(mins/60)}小时${mins%60}分后到期` : `${mins} 分钟后到期`;
+              expiryClass = 'text-orange-500 font-bold';
+              expiryIcon = 'fa-bell';
+              expiringCount++;
             } else {
-              // 判断是否即将到期（小于7天或小于168小时）
-              const sevenDaysMs = 7 * 24 * 3600 * 1000;
-              const threeDaysMs = 3 * 24 * 3600 * 1000;
+              // 正常显示剩余时间（超过1小时）
               if (unit === 'hour') {
                 const hoursLeft = Math.ceil(diffMs / 3600000);
-                if (diffMs <= threeDaysMs) {
-                  expiryText = `${hoursLeft} 小时后到期`;
-                  expiryClass = 'text-orange-500 font-bold';
-                  expiryIcon = 'fa-bell';
-                  expiringCount++;
-                } else if (diffMs <= sevenDaysMs) {
-                  expiryText = `${hoursLeft} 小时后到期`;
-                  expiryClass = 'text-yellow-600';
-                  expiryIcon = 'fa-calendar-days';
-                } else {
-                  expiryText = `${hoursLeft} 小时`;
-                  expiryClass = 'text-green-600';
-                  expiryIcon = 'fa-check-circle';
-                }
+                expiryText = `${hoursLeft} 小时`;
               } else {
                 const daysLeft = Math.ceil(diffMs / (24 * 3600 * 1000));
-                if (daysLeft <= 3) {
-                  expiryText = `${daysLeft} 天后到期`;
-                  expiryClass = 'text-orange-500 font-bold';
-                  expiryIcon = 'fa-bell';
-                  expiringCount++;
-                } else if (daysLeft <= 7) {
-                  expiryText = `${daysLeft} 天后到期`;
-                  expiryClass = 'text-yellow-600';
-                  expiryIcon = 'fa-calendar-days';
-                } else {
-                  expiryText = `${daysLeft} 天`;
-                  expiryClass = 'text-green-600';
-                  expiryIcon = 'fa-check-circle';
-                }
+                expiryText = `${daysLeft} 天`;
               }
+              expiryClass = 'text-green-600';
+              expiryIcon = 'fa-check-circle';
             }
           }
           const hasMaterials = item.materials && item.materials.length > 0;
@@ -4801,11 +4787,12 @@
       }).join('');
     }
 
-    // ========== 到期提醒检测（支持保质期单位） ==========
+    // ========== 到期提醒检测（剩余1小时时提醒） ==========
     function checkExpiringItems() {
       const inventory = getInventoryData();
       const now = new Date();
       const expiring = [];
+      const oneHourMs = 3600 * 1000; // 1小时 = 3600000毫秒
       inventory.forEach(item => {
         if (!item.produceDate || !item.shelfLife) return;
         const produce = new Date(item.produceDate);
@@ -4813,21 +4800,40 @@
         const shelfLifeMs = unit === 'hour' ? item.shelfLife * 3600 * 1000 : item.shelfLife * 24 * 3600 * 1000;
         const expiry = new Date(produce.getTime() + shelfLifeMs);
         const diffMs = expiry - now;
-        const sevenDaysMs = 7 * 24 * 3600 * 1000;
-        if (diffMs <= sevenDaysMs) {
-          // 根据单位显示
+        // 剩余1小时或以下时触发提醒
+        if (diffMs <= oneHourMs) {
+          // 根据剩余时间智能显示
           let displayText = '';
-          if (unit === 'hour') {
-            const hours = Math.ceil(diffMs / 3600000);
-            displayText = hours < 0 ? `已过期 ${Math.abs(hours)} 小时` : `${hours} 小时后到期`;
+          if (diffMs < 0) {
+            // 已过期 - 根据总保质期单位选择合适的显示
+            if (unit === 'hour') {
+              const hours = Math.ceil(Math.abs(diffMs) / 3600000);
+              displayText = `已过期 ${hours} 小时`;
+            } else {
+              const mins = Math.ceil(Math.abs(diffMs) / 60000);
+              if (mins > 60) {
+                const hours = Math.floor(mins / 60);
+                const m = mins % 60;
+                displayText = `已过期 ${hours}小时${m}分`;
+              } else {
+                displayText = `已过期 ${mins} 分钟`;
+              }
+            }
           } else {
-            const days = Math.ceil(diffMs / (24 * 3600 * 1000));
-            displayText = days < 0 ? `已过期 ${Math.abs(days)} 天` : `${days} 天后到期`;
+            const mins = Math.ceil(diffMs / 60000);
+            if (mins > 60) {
+              const hours = Math.floor(mins / 60);
+              const m = mins % 60;
+              displayText = `${hours}小时${m}分后到期`;
+            } else {
+              displayText = `${mins} 分钟后到期`;
+            }
           }
           expiring.push({
             ...item,
-            daysLeft: Math.ceil(diffMs / (24 * 3600 * 1000)),
-            expiryDate: expiry.toISOString().slice(0, 10),
+            hoursLeft: Math.ceil(diffMs / 3600000),
+            minsLeft: Math.ceil(diffMs / 60000),
+            expiryDate: expiry.toISOString().slice(0, 16).replace('T', ' '),
             displayText: displayText
           });
         }
@@ -4841,14 +4847,15 @@
       const contentEl = document.getElementById('expiry-alert-content');
       if (!contentEl) return;
       contentEl.innerHTML = expiring.map(item => {
-        const isExpired = item.daysLeft < 0;
-        const colorClass = isExpired ? 'bg-red-100 border-red-300' : (item.daysLeft <= 3 ? 'bg-orange-100 border-orange-300' : 'bg-yellow-100 border-yellow-300');
-        const textClass = isExpired ? 'text-red-600' : (item.daysLeft <= 3 ? 'text-orange-600' : 'text-yellow-700');
+        const isExpired = item.hoursLeft < 0;
+        const isCritical = item.minsLeft < 30 && !isExpired; // 30分钟内 - 紧急
+        const colorClass = isExpired ? 'bg-red-100 border-red-300' : (isCritical ? 'bg-orange-100 border-orange-300' : 'bg-yellow-100 border-yellow-300');
+        const textClass = isExpired ? 'text-red-600' : (isCritical ? 'text-orange-600' : 'text-yellow-700');
         return `<div class="p-3 border-2 ${colorClass} rounded-lg">
           <div class="flex items-center justify-between">
             <div>
               <p class="font-bold text-coffee-dark">${item.productName}</p>
-              <p class="text-xs text-gray-500">过期日期：${item.expiryDate}</p>
+              <p class="text-xs text-gray-500">过期时间：${item.expiryDate}</p>
             </div>
             <p class="text-sm ${textClass} font-bold">${item.displayText}</p>
           </div>
