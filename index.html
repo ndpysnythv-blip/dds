@@ -770,6 +770,19 @@
                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
               </label>
             </div>
+
+            <div class="p-3 bg-white rounded-lg mt-2">
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <p class="text-coffee-dark text-sm font-medium">自动清空购物车</p>
+                  <p class="text-xs text-gray-500">长时间未操作后自动清空已添加商品</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <input type="number" id="ai-auto-clear-minutes" class="flex-1 px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main" value="5" min="1" max="60">
+                <span class="text-sm text-gray-500">分钟</span>
+              </div>
+            </div>
           </div>
 
           <!-- 6. 调试 / 测试区域 -->
@@ -3915,6 +3928,16 @@
 
       // 初始化备注快捷按钮
       initRemarkButtons();
+      
+      // 自动填充订单备注（从商品中提取备注）
+      const remarkInput = document.getElementById('order-remark');
+      const notesFromGoods = [];
+      Object.values(currentGoods).forEach(goods => {
+        if (goods.note) notesFromGoods.push(goods.note);
+      });
+      if (notesFromGoods.length > 0 && !remarkInput.value) {
+        remarkInput.value = notesFromGoods.join('、');
+      }
       
       // 聚焦输入框
       if (Object.keys(currentGoods).length > 0) {
@@ -9467,6 +9490,7 @@
           lang: 'zh-CN', continuous: false, autoSend: true,
           tts: true, ttsRate: 1.0, ttsPitch: 1.0,
           autoCheckout: true, autoCloseAfterCheckout: true,
+          autoClearMinutes: 5,
         };
       }
       function saveSettings() {
@@ -9533,6 +9557,7 @@
         if (typeof window.__SET_CURRENT_GOODS__ === 'function') window.__SET_CURRENT_GOODS__(ref);
         if (typeof updateBottomAmount === 'function') updateBottomAmount();
         else if (typeof window.__UPDATE_BOTTOM_AMOUNT__ === 'function') window.__UPDATE_BOTTOM_AMOUNT__();
+        updateCartActivity();
         return g;
       }
 
@@ -9552,6 +9577,66 @@
           total += (g.price || 0) * (g.count || 0);
         });
         return { count: count, total: total, items: items };
+      }
+
+      function extractNotes(text) {
+        const notePatterns = [
+          /(少冰|正常冰|多冰|去冰|冰少|冰多|不加冰|全冰)/gi,
+          /(无糖|少糖|正常糖|多糖|半糖|三分糖|五分糖|七分糖|甜度|糖度)/gi,
+          /(常温|热的|温热|冰的|凉的|冷的)/gi,
+          /(打包|带走|堂食|在这吃)/gi,
+          /(不要.*|不加.*|少放.*|多放.*)/gi
+        ];
+        const notes = [];
+        notePatterns.forEach(function(pattern) {
+          const matches = text.match(pattern);
+          if (matches) notes.push(...matches);
+        });
+        return notes.length > 0 ? notes.join('、') : null;
+      }
+
+      function addNotesToCart(notes) {
+        const ref = getCurrentGoodsRef();
+        Object.keys(ref).forEach(function(id) {
+          if (ref[id]) {
+            ref[id].note = notes;
+          }
+        });
+        if (typeof window.__SET_CURRENT_GOODS__ === 'function') window.__SET_CURRENT_GOODS__(ref);
+      }
+
+      function isDrink(goods) {
+        if (!goods) return false;
+        const drinkKeywords = ['咖啡', '拿铁', '美式', '摩卡', '卡布', '奶茶', '茶', '果汁', '橙汁', '气泡', '水', '饮品'];
+        const name = goods.name || '';
+        return drinkKeywords.some(function(kw) { return name.indexOf(kw) >= 0; });
+      }
+
+      function isNoteText(text) {
+        const noteKeywords = ['冰', '糖', '常温', '热', '凉', '冷', '打包', '带走', '堂食', '备注'];
+        return noteKeywords.some(function(kw) { return text.indexOf(kw) >= 0; });
+      }
+
+      let cartLastActivityTime = Date.now();
+      let cartAutoClearTimer = null;
+
+      function startCartAutoClear() {
+        const minutes = settings.autoClearMinutes || 5;
+        const interval = minutes * 60 * 1000;
+        if (cartAutoClearTimer) clearInterval(cartAutoClearTimer);
+        cartAutoClearTimer = setInterval(function() {
+          const now = Date.now();
+          const cart = getCartSummary();
+          if (cart.items.length > 0 && (now - cartLastActivityTime) > interval) {
+            clearCartSafe();
+            addAIMsg('⏰ 购物车已超时自动清空');
+            speakWithFallback('购物车已超时自动清空');
+          }
+        }, 60000);
+      }
+
+      function updateCartActivity() {
+        cartLastActivityTime = Date.now();
       }
 
       function parseChineseNumber(text) {
@@ -9647,6 +9732,13 @@
           return;
         }
 
+        // 取消下单（明确的取消命令）
+        if (text.length <= 20 && /取消下单|取消订单|不要了|算了|不用了|cancel order/i.test(text)) {
+          clearCartSafe();
+          speakWithFallback('好的，已取消下单');
+          return;
+        }
+
         // 确认/结账
         if (text.length <= 16 && /确认|结账|买单|支付|付款|好的|对了|完成|没错|就是这样|是的|对|结账|下单|confirm|checkout|done|ok|yes/i.test(text)) {
           const cart = getCartSummary();
@@ -9659,6 +9751,9 @@
           }
           return;
         }
+
+        // 备注识别：提取用户说的备注信息
+        const notes = extractNotes(text);
 
         // 商品识别：优先精确匹配商品名；若无匹配再以最长关键词在前的顺序做部分匹配
         const goods = getGoodsDataSafe();
@@ -9721,7 +9816,26 @@
             names.push((res ? res.name : f.g.name) + '×' + f.qty);
           });
           const cart = getCartSummary();
-          speakWithFallback('已添加：' + names.join('、') + '，当前合计¥' + cart.total.toFixed(2) + '。说确认下单');
+          // 添加备注到购物车
+          if (notes) {
+            addNotesToCart(notes);
+            speakWithFallback('已添加：' + names.join('、') + '，备注：' + notes + '，当前合计¥' + cart.total.toFixed(2) + '。请说确认下单');
+          } else {
+            speakWithFallback('已添加：' + names.join('、') + '，当前合计¥' + cart.total.toFixed(2) + '。请说确认下单');
+            // 智能询问：如果是饮品且没有备注，询问糖度冰量偏好
+            if (isDrink(found[0].g)) {
+              setTimeout(function() {
+                speakWithFallback('请问需要什么糖度和冰量呢？例如正常糖正常冰，或者少冰无糖。');
+              }, 1500);
+            }
+          }
+          return;
+        }
+
+        // 单独设置备注（用户回答糖度冰量）
+        if (isNoteText(text) && getCartSummary().items.length > 0) {
+          addNotesToCart(text);
+          speakWithFallback('好的，已添加备注：' + text + '。请说确认下单');
           return;
         }
 
@@ -10099,6 +10213,12 @@
         const aC2 = document.getElementById('ai-toggle-auto-close');
         if (aC2) aC2.addEventListener('change', function () { settings.autoCloseAfterCheckout = !!aC2.checked; });
 
+        const aCM = document.getElementById('ai-auto-clear-minutes');
+        if (aCM) aCM.addEventListener('change', function () { 
+          settings.autoClearMinutes = parseInt(aCM.value) || 5; 
+          startCartAutoClear(); 
+        });
+
         // 测试按钮
         const testMic = document.getElementById('ai-test-mic');
         if (testMic) testMic.addEventListener('click', function () { openChat(); setTimeout(startVoice, 200); });
@@ -10159,6 +10279,7 @@
         if (vPitch) vPitch.value = settings.ttsPitch || 1; if (vPitchV) vPitchV.textContent = (settings.ttsPitch || 1).toFixed(1);
         var vAutoCk = document.getElementById('ai-toggle-auto-checkout'); if (vAutoCk) vAutoCk.checked = !!settings.autoCheckout;
         var vAutoClose = document.getElementById('ai-toggle-auto-close'); if (vAutoClose) vAutoClose.checked = !!settings.autoCloseAfterCheckout;
+        var vAutoClear = document.getElementById('ai-auto-clear-minutes'); if (vAutoClear) vAutoClear.value = settings.autoClearMinutes || 5;
         var vNotice = document.getElementById('ai-compat-notice');
         var vText = document.getElementById('ai-compat-text');
         if (vNotice && vText) {
@@ -10184,6 +10305,7 @@
             window.speechSynthesis.onvoiceschanged = function () { /* lazy load */ };
           } catch (e) {}
         }
+        startCartAutoClear();
       }
 
       if (document.readyState === 'complete' || document.readyState === 'interactive') {
