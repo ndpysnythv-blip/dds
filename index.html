@@ -9502,17 +9502,90 @@
           }
         } catch (e) {}
         return [
-          { id: 1, name: '经典意式浓缩', price: 18 },
-          { id: 2, name: '美式咖啡', price: 22 },
-          { id: 3, name: '拿铁咖啡', price: 28 },
-          { id: 4, name: '卡布奇诺', price: 30 },
-          { id: 5, name: '生椰拿铁', price: 32 },
-          { id: 6, name: '提拉米苏', price: 26 },
-          { id: 7, name: '蔓越莓司康', price: 16 },
-          { id: 8, name: '鲜榨橙汁', price: 20 },
-          { id: 9, name: '气泡水', price: 18 },
-          { id: 10, name: '焦糖玛奇朵', price: 35 }
+          { id: 1, name: '经典意式浓缩', price: 18, cate: 'espresso' },
+          { id: 2, name: '美式咖啡', price: 22, cate: 'espresso' },
+          { id: 3, name: '拿铁咖啡', price: 28, cate: 'latte' },
+          { id: 4, name: '卡布奇诺', price: 30, cate: 'latte' },
+          { id: 5, name: '生椰拿铁', price: 32, cate: 'latte' },
+          { id: 6, name: '提拉米苏', price: 26, cate: 'dessert' },
+          { id: 7, name: '蔓越莓司康', price: 16, cate: 'dessert' },
+          { id: 8, name: '鲜榨橙汁', price: 20, cate: 'drink' },
+          { id: 9, name: '气泡水', price: 18, cate: 'drink' },
+          { id: 10, name: '焦糖玛奇朵', price: 35, cate: 'latte' }
         ];
+      }
+
+      // 获取订单数据（用于统计销量）
+      function getOrderStats() {
+        const stats = {};
+        try {
+          const paid = localStorage.getItem('customerPaidOrders');
+          if (paid) {
+            const orders = JSON.parse(paid);
+            orders.forEach(function (order) {
+              if (order.goods) {
+                Object.values(order.goods).forEach(function (g) {
+                  if (g.id && g.count) {
+                    stats[g.id] = (stats[g.id] || 0) + (g.count || 0);
+                  }
+                });
+              }
+            });
+          }
+        } catch (e) {}
+        return stats;
+      }
+
+      // 根据销量获取热门商品
+      function getHotGoods(limit) {
+        const goods = getGoodsDataSafe();
+        const stats = getOrderStats();
+        const ranked = goods.map(function (g) {
+          return { ...g, sales: stats[g.id] || Math.floor(Math.random() * 20) + 5 };
+        });
+        ranked.sort(function (a, b) { return b.sales - a.sales; });
+        return ranked.slice(0, limit || 3);
+      }
+
+      // 获取季节推荐
+      function getSeasonRecommendation() {
+        const month = new Date().getMonth() + 1;
+        const isHot = month >= 5 && month <= 10;
+        const goods = getGoodsDataSafe();
+        const hotDrinks = goods.filter(function (g) {
+          const name = g.name || '';
+          return name.includes('拿铁') || name.includes('冰') || name.includes('气泡') || name.includes('橙汁');
+        });
+        const warmDrinks = goods.filter(function (g) {
+          const name = g.name || '';
+          return name.includes('意式') || name.includes('美式') || name.includes('卡布') || name.includes('焦糖');
+        });
+        return {
+          isHot: isHot,
+          season: isHot ? '夏天' : '冬天',
+          recommend: isHot ? hotDrinks.slice(0, 3) : warmDrinks.slice(0, 3),
+          tip: isHot ? '天气炎热，推荐冰饮' : '天气凉爽，推荐热饮'
+        };
+      }
+
+      // 用户偏好状态
+      let userPreference = {
+        taste: null,
+        tempPref: null
+      };
+
+      // 根据口味推荐商品
+      function recommendByTaste(taste) {
+        const goods = getGoodsDataSafe();
+        const sweetGoods = goods.filter(function (g) {
+          const name = g.name || '';
+          return name.includes('焦糖') || name.includes('玛奇朵') || name.includes('提拉米苏') || name.includes('生椰');
+        });
+        const lightGoods = goods.filter(function (g) {
+          const name = g.name || '';
+          return name.includes('美式') || name.includes('意式') || name.includes('黑咖') || name.includes('气泡');
+        });
+        return taste === 'sweet' ? sweetGoods.slice(0, 3) : lightGoods.slice(0, 3);
       }
 
       function getCurrentGoodsRef() {
@@ -9744,7 +9817,76 @@
 
         // 问候
         if (text.length <= 10 && /你好|您好|在吗|哈喽|嗨|你好啊|hello|hi|hey/i.test(text)) {
-          speakWithFallback('你好！请告诉我您想点什么，比如一杯拿铁。');
+          const season = getSeasonRecommendation();
+          speakWithFallback('你好！' + season.tip + '，请告诉我您想点什么，比如一杯拿铁。');
+          return;
+        }
+
+        // 推荐请求：推荐喝什么、招牌是什么
+        if (/推荐|招牌|热门|什么好|好喝|suggest|recommend|best|popular/i.test(text)) {
+          const hotGoods = getHotGoods(3);
+          const names = hotGoods.map(function (g) { return g.name + '(¥' + g.price + ')'; });
+          speakWithFallback('我们的招牌热门商品是：' + names.join('、') + '。请问您想尝试哪一个？');
+          return;
+        }
+
+        // 口味偏好询问：喜欢甜的还是清淡的
+        if (/甜|淡|苦|口味|味道|偏好|taste|sweet|bitter|light/i.test(text)) {
+          speakWithFallback('为了更好地推荐，请问您喜欢甜一点的还是清淡一点的呢？');
+          return;
+        }
+
+        // 口味选择：用户回答喜欢甜的/清淡的
+        if (/甜|甜一点|甜点|sweet/i.test(text)) {
+          userPreference.taste = 'sweet';
+          const rec = recommendByTaste('sweet');
+          const names = rec.map(function (g) { return g.name + '(¥' + g.price + ')'; });
+          speakWithFallback('好的，喜欢甜的！推荐您：' + names.join('、') + '。需要帮您下单吗？');
+          return;
+        }
+        if (/淡|清淡|苦|美式|light|bitter/i.test(text)) {
+          userPreference.taste = 'light';
+          const rec = recommendByTaste('light');
+          const names = rec.map(function (g) { return g.name + '(¥' + g.price + ')'; });
+          speakWithFallback('好的，喜欢清淡的！推荐您：' + names.join('、') + '。需要帮您下单吗？');
+          return;
+        }
+
+        // 英文模式：英文商品名称识别
+        const englishGoods = [
+          { en: 'espresso', id: 1 },
+          { en: 'americano', id: 2 },
+          { en: 'latte', id: 3 },
+          { en: 'cappuccino', id: 4 },
+          { en: 'coconut latte', id: 5 },
+          { en: 'tiramisu', id: 6 },
+          { en: 'orange juice', id: 8 },
+          { en: 'sparkling water', id: 9 },
+          { en: 'caramel macchiato', id: 10 }
+        ];
+        const lowerText = text.toLowerCase();
+        for (let i = 0; i < englishGoods.length; i++) {
+          const eg = englishGoods[i];
+          if (lowerText.indexOf(eg.en) >= 0) {
+            const g = getGoodsDataSafe().find(function (x) { return x.id === eg.id; });
+            if (g) {
+              addGoodsById(g.id, 1);
+              const cart = getCartSummary();
+              speakWithFallback('Added: ' + g.name + ', total ¥' + cart.total.toFixed(2) + '. Say confirm to checkout.');
+              return;
+            }
+          }
+        }
+
+        // 英文问候和推荐
+        if (/hello|hi|hey/i.test(text)) {
+          speakWithFallback('Hello! Welcome to Kora Zola. What would you like to order?');
+          return;
+        }
+        if (/recommend|suggest|best|popular/i.test(text)) {
+          const hotGoods = getHotGoods(3);
+          const names = hotGoods.map(function (g) { return g.name + '(¥' + g.price + ')'; });
+          speakWithFallback('Our most popular items are: ' + names.join(', ') + '. Which one would you like to try?');
           return;
         }
 
