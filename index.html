@@ -742,7 +742,7 @@
           <div class="p-4 bg-coffee-cream/60 rounded-xl border-2 border-coffee-main/30">
             <div class="flex items-center justify-between mb-2">
               <div>
-                <p class="text-coffee-dark font-bold text-base">🧠 启用 AI 助手</p>
+                <p class="text-coffee-dark font-bold text-base">启用 AI 助手</p>
                 <p class="text-sm text-gray-500 mt-1">打开后右下角出现圆形悬浮按钮，支持语音与文字点单</p>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
@@ -778,17 +778,6 @@
                 <input type="radio" name="ai-style" value="icon" class="sr-only">
               </label>
             </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="text-xs text-gray-500 block mb-1">大小 (像素)</label>
-                <input type="number" id="ai-btn-size" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main" value="56" min="36" max="120">
-              </div>
-              <div>
-                <label class="text-xs text-gray-500 block mb-1">边距 (像素)</label>
-                <input type="number" id="ai-btn-margin" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main" value="24" min="0" max="200">
-              </div>
-            </div>
-          </div>
 
           <!-- 3. 语音识别 -->
           <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
@@ -797,6 +786,7 @@
             <div class="mb-3">
               <label class="text-xs text-gray-500 block mb-1">识别语言</label>
               <select id="ai-lang" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white">
+                <option value="auto">自动检测（中英混合）</option>
                 <option value="zh-CN">中文（普通话）</option>
                 <option value="zh-HK">粤语</option>
                 <option value="en-US">English (US)</option>
@@ -856,9 +846,96 @@
                 <p class="text-xs text-center text-gray-500 mt-1"><span id="ai-tts-pitch-val">1.0</span></p>
               </div>
             </div>
+
+            <div class="mt-3">
+              <label class="text-xs text-gray-500 block mb-2">音色选择</label>
+              <div class="grid grid-cols-3 gap-2">
+                <label class="flex flex-col items-center p-2 border-2 border-coffee-main bg-white rounded-lg cursor-pointer ai-voice-label" data-voice="male">
+                  <i class="fa-solid fa-male text-coffee-main text-lg mb-1"></i>
+                  <span class="text-xs text-coffee-dark font-medium">男生</span>
+                  <input type="radio" name="ai-voice" value="male" class="sr-only" checked>
+                </label>
+                <label class="flex flex-col items-center p-2 border-2 border-gray-200 bg-white rounded-lg cursor-pointer ai-voice-label" data-voice="female">
+                  <i class="fa-solid fa-female text-pink-500 text-lg mb-1"></i>
+                  <span class="text-xs text-coffee-dark font-medium">女生</span>
+                  <input type="radio" name="ai-voice" value="female" class="sr-only">
+                </label>
+                <label class="flex flex-col items-center p-2 border-2 border-gray-200 bg-white rounded-lg cursor-pointer ai-voice-label" data-voice="child">
+                  <i class="fa-solid fa-baby text-blue-500 text-lg mb-1"></i>
+                  <span class="text-xs text-coffee-dark font-medium">儿童</span>
+                  <input type="radio" name="ai-voice" value="child" class="sr-only">
+                </label>
+              </div>
+            </div>
           </div>
 
-          <!-- 5. 下单交互 -->
+          <!-- 5. 唤醒词设置 -->
+          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-bell text-coffee-main"></i>唤醒词识别</p>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-3">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">启用唤醒词唤醒</p>
+                <p class="text-xs text-gray-500">必须说出唤醒词后才开始识别点单内容</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-wake-word" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div class="mb-3">
+              <label class="text-xs text-gray-500 block mb-2">唤醒词列表（每行一个）</label>
+              <textarea id="ai-wake-words" rows="3" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white resize-none" placeholder="小K小K&#10;你好&#10;点单"></textarea>
+              <p class="text-xs text-gray-400 mt-1">默认：小K小K、你好、点单</p>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-3">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">辅助唤醒</p>
+                <p class="text-xs text-gray-500">识别到点单相关词自动唤醒</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-auto-wake" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div class="mb-2">
+              <label class="text-xs text-gray-500 block mb-2">辅助唤醒词（每行一个）</label>
+              <textarea id="ai-auto-wake-words" rows="2" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white resize-none" placeholder="要杯&#10;点单&#10;有人吗"></textarea>
+              <p class="text-xs text-gray-400 mt-1">默认：要杯、点单、有人吗、你好、来点、想喝</p>
+            </div>
+          </div>
+
+          <!-- 6. 语音识别增强 -->
+          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-coffee-main"></i>语音识别增强</p>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-2">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">环境噪音过滤</p>
+                <p class="text-xs text-gray-500">自动排除背景音乐等环境噪音，只识别用户语音</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-noise-filter" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">人声优先识别</p>
+                <p class="text-xs text-gray-500">优先识别靠近麦克风的人声，过滤远处噪音</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-voice-priority" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 7. 下单交互 -->
           <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
             <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-mug-hot text-coffee-main"></i>下单行为</p>
 
@@ -9783,8 +9860,11 @@
         } catch (e) {}
         return {
           enabled: true, style: 'circle', buttonSize: 56, buttonMargin: 24,
-          lang: 'zh-CN', continuous: false, autoSend: true,
-          tts: true, ttsRate: 1.0, ttsPitch: 1.0,
+          lang: 'auto', continuous: false, autoSend: true,
+          tts: true, ttsRate: 1.0, ttsPitch: 1.0, voice: 'male',
+          wakeWordEnabled: false, wakeWords: '小K小K\n你好\n点单',
+          autoWakeEnabled: false, autoWakeWords: '要杯\n点单\n有人吗\n你好\n来点\n想喝',
+          noiseFilter: true, voicePriority: true,
           autoCheckout: true, autoCloseAfterCheckout: true,
         };
       }
@@ -10311,6 +10391,8 @@
         if (!text) return;
         const goods = getGoodsDataSafe();
         const cart = getCartSummary();
+        const detectedLang = detectLanguage(text);
+        const isEnglish = detectedLang === 'en-US';
 
         // ========== 1. 取消/删除/减少 指令（区分全部清空和单个删除） ==========
         // 包含取消/去掉/删除/不要 等关键词，但需进一步判断是全部还是部分
@@ -10319,7 +10401,9 @@
 
         if (isClearAll || (text.length <= 6 && /^(取消|清空|重来|重新|都不要)$/.test(text))) {
           clearCartSafe();
-          speakWithFallback('好的，已清空购物车');
+          const msg = isEnglish ? 'Cart cleared.' : '好的，已清空购物车';
+          addAIMsg(msg);
+          speak(msg);
           return;
         }
 
@@ -10328,31 +10412,53 @@
           if (target && target.type === 'item') {
             target.ids.forEach(function (id) { removeGoodsById(id); });
             const updated = getCartSummary();
-            speakWithFallback('好的，已为您去掉' + target.names.join('、') + '。' + (updated.items.length > 0 ? '当前购物车还有' + updated.items.map(function (g) { return g.name; }).join('、') + '。' : '购物车已空。'));
+            const msg = isEnglish
+              ? 'Removed ' + target.names.join(', ') + '. ' + (updated.items.length > 0 ? 'Current cart: ' + updated.items.map(function (g) { return g.name; }).join(', ') : 'Cart is empty') + '.'
+              : '好的，已为您去掉' + target.names.join('、') + '。' + (updated.items.length > 0 ? '当前购物车还有' + updated.items.map(function (g) { return g.name; }).join('、') + '。' : '购物车已空。');
+            addAIMsg(msg);
+            speak(msg);
             return;
           }
           if (target && target.type === 'cate') {
             target.ids.forEach(function (id) { removeGoodsById(id); });
             const updated = getCartSummary();
-            speakWithFallback('好的，已为您去掉所有' + target.names.join('、') + '。' + (updated.items.length > 0 ? '当前购物车还有' + updated.items.map(function (g) { return g.name; }).join('、') + '。' : '购物车已空。'));
+            const msg = isEnglish
+              ? 'Removed all ' + target.names.join(', ') + '. ' + (updated.items.length > 0 ? 'Current cart: ' + updated.items.map(function (g) { return g.name; }).join(', ') : 'Cart is empty') + '.'
+              : '好的，已为您去掉所有' + target.names.join('、') + '。' + (updated.items.length > 0 ? '当前购物车还有' + updated.items.map(function (g) { return g.name; }).join('、') + '。' : '购物车已空。');
+            addAIMsg(msg);
+            speak(msg);
             return;
           }
           if (target && target.type === 'empty') {
-            speakWithFallback('购物车还没有商品哦，请先告诉我您想点什么。');
+            const msg = isEnglish ? 'Your cart is empty. Please tell me what you want to order.' : '购物车还没有商品哦，请先告诉我您想点什么。';
+            addAIMsg(msg);
+            speak(msg);
             return;
           }
-          // 识别不到具体目标时提示
           if (cart.items.length > 0) {
-            speakWithFallback('要去掉哪一个呢？当前购物车有：' + cart.items.map(function (g) { return g.name; }).join('、') + '。请告诉我具体要去掉哪一个。');
+            const msg = isEnglish
+              ? 'Which item do you want to remove? Current cart: ' + cart.items.map(function (g) { return g.name; }).join(', ') + '. Please tell me which one.'
+              : '要去掉哪一个呢？当前购物车有：' + cart.items.map(function (g) { return g.name; }).join('、') + '。请告诉我具体要去掉哪一个。';
+            addAIMsg(msg);
+            speak(msg);
             return;
           }
         }
 
         // ========== 2. 确认/结账 ==========
         if (text.length <= 20 && /^(确认|结账|买单|支付|付款|就是这样|是的|对|好的|下单|confirm|checkout|done|ok|yes)$/.test(text)) {
-          if (cart.items.length === 0) { speakWithFallback('您还没有选择商品哦'); return; }
+          if (cart.items.length === 0) {
+            const msg = isEnglish ? 'You have not selected any items yet.' : '您还没有选择商品哦';
+            addAIMsg(msg);
+            speak(msg);
+            return;
+          }
           const names = cart.items.map(function (g) { return g.name + '×' + g.count; });
-          speakWithFallback('已确认：' + names.join('、') + '，合计¥' + cart.total.toFixed(2) + '。请收银员扫码完成支付');
+          const msg = isEnglish
+            ? 'Confirmed: ' + names.join(', ') + '. Total ¥' + cart.total.toFixed(2) + '. Please ask the cashier to scan to complete payment.'
+            : '已确认：' + names.join('、') + '，合计¥' + cart.total.toFixed(2) + '。请收银员扫码完成支付';
+          addAIMsg(msg);
+          speak(msg);
           if (settings.autoCheckout) {
             setTimeout(function () { if (typeof openCheckoutModal === 'function') openCheckoutModal(); }, 1400);
             if (settings.autoCloseAfterCheckout) setTimeout(closeChat, 1800);
@@ -10363,7 +10469,6 @@
         // ========== 3. 智能问答：价格询问 ==========
         const priceMatch = text.match(/(.*)(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price)/i);
         if (priceMatch) {
-          // 在前面的部分中寻找商品名
           const queryPart = priceMatch[1] || text;
           let matched = null;
           for (let gi = 0; gi < goods.length; gi++) {
@@ -10384,7 +10489,11 @@
             if (partsCandidates.length > 0) matched = partsCandidates[0];
           }
           if (matched) {
-            speakWithFallback(matched.name + '的价格是¥' + matched.price + '。需要帮您下单吗？');
+            const msg = isEnglish
+              ? matched.name + ' costs ¥' + matched.price + '. Would you like to order it?'
+              : matched.name + '的价格是¥' + matched.price + '。需要帮您下单吗？';
+            addAIMsg(msg);
+            speak(msg);
             return;
           }
         }
@@ -10392,9 +10501,13 @@
         // ========== 4. 智能问答：热/冷推荐（先于通用推荐） ==========
         if (/喝冷的|喝热的|冷的还是热的|热的还是冷的|推荐冷|推荐热|冷饮|热饮|cold|hot|冰饮还是热饮|要热还是要冰/i.test(text)) {
           const season = getSeasonRecommendation();
-          const recNames = season.recommend.map(function (g) { return g.name; }).join('、');
-          const recText = season.isHot ? '我们推荐冷饮：' + recNames : '我们推荐热饮：' + recNames;
-          speakWithFallback(season.tip + '。' + recText);
+          const recNames = season.recommend.map(function (g) { return g.name; }).join(isEnglish ? ', ' : '、');
+          const recText = season.isHot
+            ? (isEnglish ? 'We recommend cold drinks: ' + recNames : '我们推荐冷饮：' + recNames)
+            : (isEnglish ? 'We recommend hot drinks: ' + recNames : '我们推荐热饮：' + recNames);
+          const msg = (isEnglish ? (season.isHot ? 'It\'s hot today, cold drinks are refreshing.' : 'It\'s cool today, warm up with a hot drink.') : season.tip) + '。' + recText;
+          addAIMsg(msg);
+          speak(msg);
           return;
         }
 
@@ -10649,23 +10762,48 @@
         });
       }
 
+      let isWokenUp = false;
+      let wakeWordPatterns = [];
+      let autoWakePatterns = [];
+
+      function updateWakeWordPatterns() {
+        wakeWordPatterns = (settings.wakeWords || '').split('\n').map(function (w) { return w.trim(); }).filter(function (w) { return w.length > 0; });
+        autoWakePatterns = (settings.autoWakeWords || '').split('\n').map(function (w) { return w.trim(); }).filter(function (w) { return w.length > 0; });
+      }
+
       function initSpeechRecognition(stream) {
         try { if (recognition) trySilentStop(recognition); } catch (e) {}
+        updateWakeWordPatterns();
 
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SR();
-        recognition.lang = settings.lang || 'zh-CN';
+        if (settings.lang === 'auto') {
+          recognition.lang = 'zh-CN';
+        } else {
+          recognition.lang = settings.lang || 'zh-CN';
+        }
         recognition.interimResults = true;
         recognition.continuous = true;
         recognition.maxAlternatives = 1;
 
-        // 用集合记录已处理过的 resultIndex，避免重复处理导致内容累积
+        if (settings.noiseFilter && stream && stream.getAudioTracks && stream.getAudioTracks().length > 0) {
+          const track = stream.getAudioTracks()[0];
+          if (track.applyConstraints) {
+            try {
+              track.applyConstraints({
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              });
+            } catch (e) { console.warn('[AI] 音频约束设置失败:', e); }
+          }
+        }
+
         const processedIndices = new Set();
 
         recognition.onresult = function (e) {
           let currentFinalText = '';
           let interimText = '';
-          // 只收集本次触发中新增的（未处理过的）result，避免和之前内容合并
           for (let i = 0; i < e.results.length; i++) {
             if (e.results[i].isFinal) {
               if (!processedIndices.has(i)) {
@@ -10676,11 +10814,10 @@
               interimText += e.results[i][0].transcript;
             }
           }
-          // 当 results 被重置（浏览器重新识别）时，清空已处理记录
           if (e.results.length < processedIndices.size) {
             processedIndices.clear();
           }
-          // 更新实时字幕区域（底部付款栏上方）— 移除话筒图标，简洁显示
+
           const liveCaption = document.getElementById('ai-live-caption');
           if (liveCaption) {
             liveCaption.classList.remove('hidden');
@@ -10692,16 +10829,50 @@
               liveCaption.style.opacity = '1';
             }
           }
-          // 更新弹窗内状态条 — 移除话筒图标，简洁显示
+
           const sb = document.getElementById('ai-status-bar');
           const sm = document.getElementById('ai-status-msg');
           if (sb && sm) {
             sb.classList.remove('hidden');
-            sm.textContent = interimText || currentFinalText || '聆听中…';
+            if (!isWokenUp && settings.wakeWordEnabled) {
+              sm.textContent = '请说唤醒词...';
+            } else {
+              sm.textContent = interimText || currentFinalText || '聆听中…';
+            }
           }
-          // 处理 final：仅处理本次新增的识别内容，避免累加重复
+
           if (currentFinalText && currentFinalText.trim()) {
             const cleanText = currentFinalText.trim();
+
+            if (settings.wakeWordEnabled && !isWokenUp) {
+              let matchedWake = false;
+              for (let i = 0; i < wakeWordPatterns.length; i++) {
+                if (cleanText.indexOf(wakeWordPatterns[i]) >= 0) {
+                  matchedWake = true;
+                  break;
+                }
+              }
+              if (matchedWake) {
+                isWokenUp = true;
+                addAIMsg('已唤醒！请开始点单。');
+                speak('已唤醒，请开始点单');
+                return;
+              }
+              if (settings.autoWakeEnabled) {
+                for (let i = 0; i < autoWakePatterns.length; i++) {
+                  if (cleanText.indexOf(autoWakePatterns[i]) >= 0) {
+                    isWokenUp = true;
+                    addAIMsg('检测到点单意图，已唤醒！');
+                    speak('已唤醒，请开始点单');
+                    addUserMsg(cleanText);
+                    handleInput(cleanText);
+                    return;
+                  }
+                }
+              }
+              return;
+            }
+
             addUserMsg(cleanText);
             handleInput(cleanText);
           }
@@ -10812,27 +10983,61 @@
       }
 
       // ========== 8) TTS ==========
-      function speak(text) {
+      function speak(text, forceLang) {
         if (!isTTSSupported() || !settings.tts) return;
         try {
           window.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g, ''));
-          u.lang = settings.lang || 'zh-CN';
+          const targetLang = forceLang || detectLanguage(text);
+          u.lang = targetLang;
           u.rate = settings.ttsRate || 1;
           u.pitch = settings.ttsPitch || 1;
           u.volume = 1;
           const voices = window.speechSynthesis.getVoices();
           if (voices && voices.length > 0) {
-            if (settings.lang && settings.lang.indexOf('zh') >= 0) {
-              const zh = voices.find(function (v) { return /zh|cmn|chinese|CN|China/i.test(v.lang + v.name); });
-              if (zh) u.voice = zh;
+            let targetVoice = null;
+            const voiceType = settings.voice || 'male';
+            if (targetLang.indexOf('zh') >= 0) {
+              if (voiceType === 'female') {
+                targetVoice = voices.find(function (v) { return /zh-CN/i.test(v.lang) && /female/i.test(v.name); }) ||
+                              voices.find(function (v) { return /zh-CN/i.test(v.lang) && /Xiaoxiao/i.test(v.name); }) ||
+                              voices.find(function (v) { return /zh-CN/i.test(v.lang); });
+              } else if (voiceType === 'child') {
+                targetVoice = voices.find(function (v) { return /zh-CN/i.test(v.lang) && /child/i.test(v.name); }) ||
+                              voices.find(function (v) { return /zh-CN/i.test(v.lang) && /Xiaoyi/i.test(v.name); }) ||
+                              voices.find(function (v) { return /zh-CN/i.test(v.lang); });
+              } else {
+                targetVoice = voices.find(function (v) { return /zh-CN/i.test(v.lang) && /male/i.test(v.name); }) ||
+                              voices.find(function (v) { return /zh-CN/i.test(v.lang) && /Zhiwei/i.test(v.name); }) ||
+                              voices.find(function (v) { return /zh-CN/i.test(v.lang); });
+              }
             } else {
-              const en = voices.find(function (v) { return /^en|english|English/i.test(v.lang); });
-              if (en) u.voice = en;
+              if (voiceType === 'female') {
+                targetVoice = voices.find(function (v) { return /^en/i.test(v.lang) && /female/i.test(v.name); }) ||
+                              voices.find(function (v) { return /^en/i.test(v.lang) && /Samantha/i.test(v.name); }) ||
+                              voices.find(function (v) { return /^en/i.test(v.lang); });
+              } else if (voiceType === 'child') {
+                targetVoice = voices.find(function (v) { return /^en/i.test(v.lang) && /child/i.test(v.name); }) ||
+                              voices.find(function (v) { return /^en/i.test(v.lang); });
+              } else {
+                targetVoice = voices.find(function (v) { return /^en/i.test(v.lang) && /male/i.test(v.name); }) ||
+                              voices.find(function (v) { return /^en/i.test(v.lang) && /Alex/i.test(v.name); }) ||
+                              voices.find(function (v) { return /^en/i.test(v.lang); });
+              }
             }
+            if (targetVoice) u.voice = targetVoice;
           }
           window.speechSynthesis.speak(u);
         } catch (e) { console.warn('[AI] TTS 错误:', e); }
+
+      }
+
+      function detectLanguage(text) {
+        const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+        const englishWords = (text.match(/[a-zA-Z]+/g) || []).length;
+        if (chineseChars > englishWords) return 'zh-CN';
+        if (englishWords > chineseChars) return 'en-US';
+        return settings.lang === 'auto' ? 'zh-CN' : (settings.lang || 'zh-CN');
       }
 
       function speakWithFallback(text) { addAIMsg(text); speak(text); }
@@ -10997,18 +11202,30 @@
           r.addEventListener('change', function () { settings.style = r.value; renderFAB(); });
         });
 
-        const si = document.getElementById('ai-btn-size');
-        if (si) si.addEventListener('change', function () {
-          settings.buttonSize = parseInt(si.value) || 56; renderFAB();
-        });
-
-        const mi = document.getElementById('ai-btn-margin');
-        if (mi) mi.addEventListener('change', function () {
-          settings.buttonMargin = parseInt(mi.value) || 24; renderFAB();
-        });
-
         const ls = document.getElementById('ai-lang');
         if (ls) ls.addEventListener('change', function () { settings.lang = ls.value; });
+
+        document.querySelectorAll('input[name="ai-voice"]').forEach(function (r) {
+          r.addEventListener('change', function () { settings.voice = r.value; });
+        });
+
+        const ww = document.getElementById('ai-wake-words');
+        if (ww) ww.addEventListener('input', function () { settings.wakeWords = ww.value; });
+
+        const wwT = document.getElementById('ai-toggle-wake-word');
+        if (wwT) wwT.addEventListener('change', function () { settings.wakeWordEnabled = !!wwT.checked; });
+
+        const aw = document.getElementById('ai-auto-wake-words');
+        if (aw) aw.addEventListener('input', function () { settings.autoWakeWords = aw.value; });
+
+        const awT = document.getElementById('ai-toggle-auto-wake');
+        if (awT) awT.addEventListener('change', function () { settings.autoWakeEnabled = !!awT.checked; });
+
+        const nf = document.getElementById('ai-toggle-noise-filter');
+        if (nf) nf.addEventListener('change', function () { settings.noiseFilter = !!nf.checked; });
+
+        const vp = document.getElementById('ai-toggle-voice-priority');
+        if (vp) vp.addEventListener('change', function () { settings.voicePriority = !!vp.checked; });
 
         const ct = document.getElementById('ai-toggle-continuous');
         if (ct) ct.addEventListener('change', function () { settings.continuous = !!ct.checked; });
@@ -11087,9 +11304,10 @@
         document.querySelectorAll('input[name="ai-style"]').forEach(function (r) {
           r.checked = r.value === (settings.style || 'circle');
         });
-        var vSize = document.getElementById('ai-btn-size'); if (vSize) vSize.value = settings.buttonSize || 56;
-        var vMarg = document.getElementById('ai-btn-margin'); if (vMarg) vMarg.value = settings.buttonMargin || 24;
-        var vLang = document.getElementById('ai-lang'); if (vLang) vLang.value = settings.lang || 'zh-CN';
+        var vLang = document.getElementById('ai-lang'); if (vLang) vLang.value = settings.lang || 'auto';
+        document.querySelectorAll('input[name="ai-voice"]').forEach(function (r) {
+          r.checked = r.value === (settings.voice || 'male');
+        });
         var vCont = document.getElementById('ai-toggle-continuous'); if (vCont) vCont.checked = !!settings.continuous;
         var vAutoSend = document.getElementById('ai-toggle-auto-send'); if (vAutoSend) vAutoSend.checked = !!settings.autoSend;
         var vTts = document.getElementById('ai-toggle-tts'); if (vTts) vTts.checked = !!settings.tts;
@@ -11097,6 +11315,12 @@
         if (vRate) vRate.value = settings.ttsRate || 1; if (vRateV) vRateV.textContent = (settings.ttsRate || 1).toFixed(1);
         var vPitch = document.getElementById('ai-tts-pitch'); var vPitchV = document.getElementById('ai-tts-pitch-val');
         if (vPitch) vPitch.value = settings.ttsPitch || 1; if (vPitchV) vPitchV.textContent = (settings.ttsPitch || 1).toFixed(1);
+        var vWake = document.getElementById('ai-toggle-wake-word'); if (vWake) vWake.checked = !!settings.wakeWordEnabled;
+        var vWw = document.getElementById('ai-wake-words'); if (vWw) vWw.value = settings.wakeWords || '';
+        var vAutoWake = document.getElementById('ai-toggle-auto-wake'); if (vAutoWake) vAutoWake.checked = !!settings.autoWakeEnabled;
+        var vAw = document.getElementById('ai-auto-wake-words'); if (vAw) vAw.value = settings.autoWakeWords || '';
+        var vNoise = document.getElementById('ai-toggle-noise-filter'); if (vNoise) vNoise.checked = !!settings.noiseFilter;
+        var vVoiceP = document.getElementById('ai-toggle-voice-priority'); if (vVoiceP) vVoiceP.checked = !!settings.voicePriority;
         var vAutoCk = document.getElementById('ai-toggle-auto-checkout'); if (vAutoCk) vAutoCk.checked = !!settings.autoCheckout;
         var vAutoClose = document.getElementById('ai-toggle-auto-close'); if (vAutoClose) vAutoClose.checked = !!settings.autoCloseAfterCheckout;
         var vNotice = document.getElementById('ai-compat-notice');
