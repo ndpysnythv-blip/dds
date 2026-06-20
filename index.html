@@ -51,6 +51,22 @@
       .count-btn { @apply transition-all duration-200 hover:bg-coffee-main hover:text-white; }
       .close-btn { @apply w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors; }
       .undo-btn { @apply px-3 py-1.5 rounded-md bg-coffee-cream text-coffee-dark text-xs btn-hover flex items-center gap-1; }
+
+      /* 开关按钮样式 */
+      .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; cursor: pointer; }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-slider {
+        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #D1D5DB; border-radius: 13px; transition: 0.3s;
+      }
+      .toggle-slider:before {
+        position: absolute; content: ""; height: 20px; width: 20px;
+        left: 3px; bottom: 3px; background-color: white; border-radius: 50%;
+        transition: 0.3s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+      .toggle-switch input:checked + .toggle-slider { background-color: #6F4E37; }
+      .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+
       /* 提高取餐面板z-index，避免被底部栏遮挡，添加折叠后点击光标 */
       .pickup-panel { @apply transition-all duration-300 w-80 bg-white rounded-lg card-shadow p-4 fixed right-4 bottom-4 z-50 cursor-default; }
       .pickup-panel.collapsed {
@@ -93,6 +109,30 @@
         to { opacity: 1; transform: translate(-50%, 0); }
       }
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+      /* 订单溯源详情水印 */
+      .log-watermark {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+        border-radius: 8px;
+      }
+      .log-watermark span {
+        position: absolute;
+        font-size: 18px;
+        color: rgba(111, 78, 55, 0.08);
+        transform: rotate(-25deg);
+        white-space: nowrap;
+        font-family: monospace;
+        letter-spacing: 2px;
+      }
+      /* 确保日志内容在水印之上 */
+      .log-detail-inner { position: relative; z-index: 1; }
     }
   </style>
   <style>
@@ -162,17 +202,88 @@
 
   <!-- 顶部叫号圆形弹窗（已移除，只保留下方长方形弹窗） -->
 
-  <!-- 主内容区 -->
-  <main class="flex-1 container mx-auto px-4 py-6">
-    <div class="bg-white rounded-lg card-shadow p-2 flex gap-2 overflow-x-auto scrollbar-hide mb-4">
-      <button class="category-btn active px-4 py-2 rounded-md bg-coffee-main text-white" data-cate="all">全部</button>
-      <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="espresso">意式咖啡</button>
-      <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="latte">拿铁系列</button>
-      <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="dessert">甜点小食</button>
-      <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="drink">非咖饮品</button>
-    </div>
-    <div class="bg-white rounded-lg card-shadow p-4 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-hide">
-      <div id="goods-list" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+  <!-- 主内容区（带左右快捷卡片） -->
+  <main class="flex-1 w-full px-4 py-6">
+    <div class="flex gap-4 items-stretch justify-between">
+
+      <!-- 左侧：库存盘点快捷卡片（细长条样式） -->
+      <aside id="quick-inventory-card" class="hidden flex-shrink-0">
+        <div class="bg-white rounded-lg card-shadow p-3 w-24 h-full flex flex-col" title="库存快速盘点">
+          <!-- 图标标题 -->
+          <div class="flex flex-col items-center mb-2">
+            <div class="w-9 h-9 rounded-full bg-coffee-main/10 flex items-center justify-center mb-1">
+              <i class="fa-solid fa-clipboard-list text-coffee-main"></i>
+            </div>
+            <p class="text-xs font-bold text-coffee-dark">库存</p>
+          </div>
+          <!-- 分割线 -->
+          <div class="border-t border-coffee-light/30 my-1"></div>
+          <!-- 库存总数 -->
+          <div class="mb-2 text-center">
+            <p class="text-xs text-gray-500">总数</p>
+            <p id="quick-inventory-count" class="text-xl font-bold text-coffee-dark">0</p>
+          </div>
+          <!-- 搜索框 -->
+          <div class="mb-2">
+            <input id="quick-inventory-search" type="text" class="w-full px-2 py-1.5 text-xs border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="扫码">
+          </div>
+          <!-- 搜索结果 -->
+          <div id="quick-inventory-result" class="flex-1 overflow-y-auto scrollbar-hide">
+            <p class="text-xs text-gray-400 text-center py-2">扫码查找</p>
+          </div>
+          <!-- 快过期提示（底部） -->
+          <div id="quick-inventory-expiring-box" class="mt-2 bg-orange-50 rounded-md p-2">
+            <div class="flex items-center justify-center gap-1">
+              <i class="fa-solid fa-triangle-exclamation text-orange-600 text-xs"></i>
+              <span class="text-xs text-orange-600">快过期</span>
+            </div>
+            <p id="quick-inventory-expiring" class="text-center text-base font-bold text-orange-700 mt-0.5">0</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 中间：商品点单区域 -->
+      <div class="flex-1 min-w-0">
+        <div class="bg-white rounded-lg card-shadow p-2 flex gap-2 overflow-x-auto scrollbar-hide mb-4">
+          <button class="category-btn active px-4 py-2 rounded-md bg-coffee-main text-white" data-cate="all">全部</button>
+          <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="espresso">意式咖啡</button>
+          <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="latte">拿铁系列</button>
+          <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="dessert">甜点小食</button>
+          <button class="category-btn px-4 py-2 rounded-md bg-coffee-cream text-coffee-dark" data-cate="drink">非咖饮品</button>
+        </div>
+        <div class="bg-white rounded-lg card-shadow p-4 overflow-y-auto max-h-[calc(100vh-220px)] scrollbar-hide">
+          <div id="goods-list" class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+        </div>
+      </div>
+
+      <!-- 右侧：员工管理快捷卡片（细长条样式） -->
+      <aside id="quick-employee-card" class="hidden flex-shrink-0">
+        <div class="bg-white rounded-lg card-shadow p-3 w-24 h-full flex flex-col" title="员工快速打卡">
+          <!-- 图标标题 -->
+          <div class="flex flex-col items-center mb-2">
+            <div class="w-9 h-9 rounded-full bg-coffee-main/10 flex items-center justify-center mb-1">
+              <i class="fa-solid fa-user-clock text-coffee-main"></i>
+            </div>
+            <p class="text-xs font-bold text-coffee-dark">员工</p>
+          </div>
+          <!-- 分割线 -->
+          <div class="border-t border-coffee-light/30 my-1"></div>
+          <!-- 工作中人数 -->
+          <div class="mb-2 text-center">
+            <p class="text-xs text-green-600">工作中</p>
+            <p id="quick-employee-working" class="text-xl font-bold text-green-700">0</p>
+          </div>
+          <!-- 搜索框 -->
+          <div class="mb-2">
+            <input id="quick-employee-search" type="text" class="w-full px-2 py-1.5 text-xs border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="搜工号">
+          </div>
+          <!-- 搜索结果 -->
+          <div id="quick-employee-result" class="flex-1 overflow-y-auto scrollbar-hide">
+            <p class="text-xs text-gray-400 text-center py-2">搜索打卡</p>
+          </div>
+        </div>
+      </aside>
+
     </div>
   </main>
 
@@ -404,12 +515,77 @@
         <button id="to-print-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-print"></i>打印设置
         </button>
-        <button id="to-store-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
-          <i class="fa-solid fa-store"></i>门店设置
-        </button>
         <button id="to-api-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-server"></i>后台设置
         </button>
+        <button id="to-store-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-store"></i>门店设置
+        </button>
+        <button id="to-log-viewer" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-book"></i>日志记录
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 日志记录弹窗 -->
+  <div id="log-viewer-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-4xl p-6 my-8">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-book text-coffee-main"></i>日志记录 · 超强溯源</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- 日志类型选择 -->
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <button onclick="switchLogTab('inventory')" class="log-tab-btn py-3 rounded-lg bg-coffee-cream text-coffee-dark text-sm font-medium btn-hover border-2 border-coffee-main" data-tab="inventory">
+          <i class="fa-solid fa-warehouse mr-1"></i>库存操作记录
+        </button>
+        <button onclick="switchLogTab('employee')" class="log-tab-btn py-3 rounded-lg bg-coffee-cream/50 text-coffee-dark text-sm font-medium btn-hover border-2 border-transparent" data-tab="employee">
+          <i class="fa-solid fa-user-clock mr-1"></i>员工操作记录
+        </button>
+        <button onclick="switchLogTab('order')" class="log-tab-btn py-3 rounded-lg bg-coffee-cream/50 text-coffee-dark text-sm font-medium btn-hover border-2 border-transparent" data-tab="order">
+          <i class="fa-solid fa-receipt mr-1"></i>商品操作记录
+        </button>
+      </div>
+
+      <!-- 搜索区 -->
+      <div class="mb-4">
+        <div id="log-search-box">
+          <div class="flex gap-2">
+            <input id="log-search-input" type="text" class="flex-1 px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main text-sm" placeholder="请输入搜索关键词...">
+            <button onclick="requestLogSearch()" class="px-4 py-2 rounded-md bg-coffee-main text-white text-sm btn-hover shadow-md">
+              <i class="fa-solid fa-magnifying-glass mr-1"></i>申请搜索
+            </button>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">
+            <i class="fa-solid fa-circle-info mr-1"></i>为节省内存空间，日志数据仅在申请后进行后台索引与整理，可能需要数秒到数分钟才能完成查询。
+          </p>
+        </div>
+
+        <!-- 搜索中状态 -->
+        <div id="log-searching" class="hidden text-center py-8">
+          <div class="inline-block w-10 h-10 border-4 border-coffee-main/20 border-t-coffee-main rounded-full animate-spin mb-3"></div>
+          <p class="text-sm text-coffee-dark font-medium">超强溯源模块正在处理...</p>
+          <p id="log-search-progress" class="text-xs text-gray-500 mt-1">正在索引库存数据... 0%</p>
+        </div>
+      </div>
+
+      <!-- 日志列表 -->
+      <div id="log-result-list" class="space-y-2">
+        <p class="text-center text-gray-400 text-sm py-8">点击上方"申请搜索"按钮查询日志</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 订单日志详情弹窗 -->
+  <div id="log-order-detail-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-[60] hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-2xl p-6 my-8 relative overflow-hidden">
+      <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-search text-coffee-main"></i>订单溯源详情</h2>
+        <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div id="log-order-detail-content" class="space-y-3">
       </div>
     </div>
   </div>
@@ -1363,6 +1539,46 @@
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-store text-coffee-main"></i>门店设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
+
+      <!-- 快捷卡片开关区域 -->
+      <div class="mb-5 p-4 bg-coffee-cream/30 rounded-lg">
+        <h3 class="text-sm font-bold text-coffee-dark mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-coffee-main"></i>快捷操作卡片
+        </h3>
+        <div class="space-y-3">
+          <!-- 库存盘点快捷卡片开关 -->
+          <div class="flex items-center justify-between bg-white p-3 rounded-md">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-list text-coffee-main"></i>
+              <div>
+                <p class="text-sm font-medium text-coffee-dark">库存盘点快捷卡</p>
+                <p class="text-xs text-gray-500">点单页左侧显示库存卡片</p>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-quick-inventory">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <!-- 员工管理快捷卡片开关 -->
+          <div class="flex items-center justify-between bg-white p-3 rounded-md">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-user-clock text-coffee-main"></i>
+              <div>
+                <p class="text-sm font-medium text-coffee-dark">员工管理快捷卡</p>
+                <p class="text-xs text-gray-500">点单页右侧显示员工卡片</p>
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-quick-employee">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 功能入口 -->
       <div class="grid grid-cols-1 gap-3">
         <button id="to-employee-manage" class="py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-users"></i>员工管理
@@ -1547,6 +1763,51 @@
     </div>
   </div>
 
+  <!-- 库存废除替换弹窗 -->
+  <div id="inventory-replace-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full" onclick="event.stopPropagation()">
+      <div class="p-5 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-recycle text-coffee-main"></i>废除替换库存</h2>
+        <button class="close-modal text-gray-400 hover:text-gray-600 text-xl" onclick="document.getElementById('inventory-replace-modal').classList.add('hidden');"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <!-- 原商品信息 -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+        <p class="text-xs text-gray-500 mb-1">将废除：</p>
+        <p id="replace-old-name" class="text-sm font-bold text-coffee-dark">--</p>
+        <p id="replace-old-info" class="text-xs text-gray-600">--</p>
+        </div>
+        <!-- 箭头 -->
+        <div class="flex justify-center text-coffee-main"><i class="fa-solid fa-arrow-down-long text-xl"></i></div>
+        <!-- 选择要替换的原料（多原料时显示） -->
+        <div id="replace-material-select" class="hidden">
+          <label class="text-xs text-gray-500 mb-1 block">选择要替换的原料</label>
+          <div id="replace-material-list" class="flex flex-wrap gap-2"></div>
+        </div>
+        <!-- 新商品扫码输入 -->
+        <div>
+        <label class="text-xs text-gray-500 mb-1 block">扫描/输入新商品条形码</label>
+        <div class="relative">
+          <i class="fa-solid fa-barcode absolute left-3 top-1/2 -translate-y-1/2 text-coffee-main"></i>
+          <input id="replace-new-barcode" type="text" class="w-full pl-9 pr-3 py-3 text-sm border-2 border-coffee-light rounded-lg focus:outline-none focus:border-coffee-main" placeholder="扫描或输入条形码" autocomplete="off">
+        </div>
+        <p class="text-xs text-gray-400 mt-1">扫码/输入后按回车自动保存</p>
+        </div>
+        <!-- 新商品信息预览 -->
+        <div id="replace-new-preview" class="hidden bg-green-50 border border-green-200 rounded-lg p-3">
+          <p class="text-xs text-gray-500 mb-1">新商品：</p>
+          <p id="replace-new-name" class="text-sm font-bold text-green-700">--</p>
+          <p id="replace-new-info" class="text-xs text-gray-600">--</p>
+        </div>
+        <!-- 保存按钮 -->
+        <div class="flex gap-3 pt-2">
+          <button class="flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 text-sm btn-hover" onclick="document.getElementById('inventory-replace-modal').classList.add('hidden')">取消</button>
+          <button id="replace-save-btn" class="flex-1 py-3 rounded-lg bg-coffee-main text-white text-sm btn-hover">确认替换</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 仓库盘点弹窗 -->
   <div id="inventory-check-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-4xl p-6 my-8">
@@ -1604,7 +1865,7 @@
     <div class="bg-white rounded-lg card-shadow w-full max-w-2xl max-h-[80vh] flex flex-col">
       <div class="flex justify-between items-center p-4 border-b border-coffee-light/30">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-search text-coffee-main"></i>选择商品</h2>
-        <button onclick="document.getElementById('product-select-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="document.getElementById('product-select-modal').classList.add('hidden'); _selectedProducts = [];" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="p-4 border-b border-coffee-light/30">
         <div class="relative">
@@ -1612,11 +1873,22 @@
           <input id="product-search-input" type="text" class="w-full pl-10 pr-4 py-2.5 border border-coffee-light rounded-lg focus:outline-none focus:border-coffee-main" placeholder="搜索商品名称...">
         </div>
       </div>
+      <!-- 已选商品（购物车） -->
+      <div id="selected-products-cart" class="hidden p-4 bg-coffee-cream/30 border-b border-coffee-light/30">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-bold text-coffee-dark">已选商品</span>
+          <span class="text-xs text-gray-500">共 <span id="selected-count">0</span> 件</span>
+        </div>
+        <div id="selected-products-list" class="flex flex-wrap gap-2">
+          <!-- 已选商品标签 -->
+        </div>
+      </div>
       <div id="product-select-list" class="flex-1 overflow-y-auto p-4 space-y-2">
         <!-- 商品列表由 JS 动态生成 -->
       </div>
-      <div class="p-4 border-t border-coffee-light/30 flex justify-end">
-        <button onclick="document.getElementById('product-select-modal').classList.add('hidden')" class="py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+      <div class="p-4 border-t border-coffee-light/30 flex justify-end gap-2">
+        <button onclick="document.getElementById('product-select-modal').classList.add('hidden'); _selectedProducts = [];" class="py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+        <button id="confirm-products-btn" onclick="confirmSelectedProducts()" class="py-2.5 px-6 rounded-md bg-coffee-main text-white btn-hover text-sm shadow-md">确认</button>
       </div>
     </div>
   </div>
@@ -1753,7 +2025,7 @@
         <!-- 内容由 JS 动态填充 -->
       </div>
       <div class="flex justify-end mt-5 pt-4 border-t border-coffee-light/20">
-        <button class="close-modal py-3 px-8 rounded-lg bg-coffee-main text-white btn-hover text-sm close-btn shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 w-full"><i class="fa-solid fa-check mr-1.5"></i>我知道了</button>
+        <button class="close-modal py-3 px-8 rounded-lg bg-coffee-main text-white btn-hover text-sm close-btn shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">知道</button>
       </div>
     </div>
   </div>
@@ -2103,6 +2375,9 @@
         }
         const success = await printWithUSBDriver(code, currentPrintOrder?.goods, time, remark);
         if (success) {
+          // USB 打印模式也记录打印时间
+          const printTsUsb = Date.now();
+          updateOrderLogByCode(code, { printTime: formatLocalTime(printTsUsb) });
           document.getElementById('print-preview-modal').classList.add('hidden');
           document.getElementById('code-modal').classList.add('hidden');
           document.getElementById('tip-modal').classList.add('hidden');
@@ -2231,6 +2506,10 @@
           applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
         }
       }
+
+      // 打印时间记录到日志溯源（增强版：记录打印时间）
+      const printTs = Date.now();
+      updateOrderLogByCode(code, { printTime: formatLocalTime(printTs) });
 
       // 调用系统原生打印
       window.print();
@@ -2478,8 +2757,521 @@
       bindApiSettingsEvents();
       initSyncSystem();
 
+      // 初始化快捷卡片功能
+      initQuickCards();
+
       console.log('页面初始化完成，商品总数：', GOODS_DATA.length);
     });
+
+    // ========== 快捷卡片功能 ==========
+    // 快捷卡片设置存储
+    const QUICK_CARD_STORAGE_KEY = 'quick_cards_settings';
+    function getQuickCardsSettings() {
+      const saved = localStorage.getItem(QUICK_CARD_STORAGE_KEY);
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) {}
+      }
+      return { inventory: false, employee: false };
+    }
+    function saveQuickCardsSettings(settings) {
+      localStorage.setItem(QUICK_CARD_STORAGE_KEY, JSON.stringify(settings));
+    }
+
+    // 初始化快捷卡片（加载设置 + 绑定事件 + 更新数据）
+    function initQuickCards() {
+      const settings = getQuickCardsSettings();
+      // 根据设置显示/隐藏快捷卡片
+      document.getElementById('quick-inventory-card').classList.toggle('hidden', !settings.inventory);
+      document.getElementById('quick-employee-card').classList.toggle('hidden', !settings.employee);
+
+      // 绑定开关事件
+      document.getElementById('toggle-quick-inventory').checked = settings.inventory;
+      document.getElementById('toggle-quick-employee').checked = settings.employee;
+      document.getElementById('toggle-quick-inventory').addEventListener('change', function() {
+        const current = getQuickCardsSettings();
+        current.inventory = this.checked;
+        saveQuickCardsSettings(current);
+        document.getElementById('quick-inventory-card').classList.toggle('hidden', !this.checked);
+        if (this.checked) updateInventoryQuickCard();
+      });
+      document.getElementById('toggle-quick-employee').addEventListener('change', function() {
+        const current = getQuickCardsSettings();
+        current.employee = this.checked;
+        saveQuickCardsSettings(current);
+        document.getElementById('quick-employee-card').classList.toggle('hidden', !this.checked);
+        if (this.checked) updateEmployeeQuickCard();
+      });
+
+      // 首次进入时更新数据（如果开关打开）
+      if (settings.inventory) updateInventoryQuickCard();
+      if (settings.employee) updateEmployeeQuickCard();
+
+      // 绑定员工搜索框
+      const empSearchEl = document.getElementById('quick-employee-search');
+      if (empSearchEl) {
+        empSearchEl.addEventListener('input', function(e) {
+          searchEmployeeInQuickCard(e.target.value);
+        });
+        empSearchEl.addEventListener('focus', function(e) {
+          searchEmployeeInQuickCard(e.target.value);
+        });
+      }
+
+      // 绑定库存搜索框
+      const invSearchEl = document.getElementById('quick-inventory-search');
+      if (invSearchEl) {
+        invSearchEl.addEventListener('input', function(e) {
+          searchInventoryInQuickCard(e.target.value);
+        });
+      }
+
+      // 绑定替换弹窗：输入框回车自动保存
+      const replaceBarcodeEl = document.getElementById('replace-new-barcode');
+      if (replaceBarcodeEl) {
+        replaceBarcodeEl.addEventListener('input', function(e) {
+          previewReplaceNewGoods(e.target.value.trim());
+        });
+        replaceBarcodeEl.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveReplace();
+          }
+        });
+      }
+      // 绑定替换保存按钮
+      const replaceSaveBtn = document.getElementById('replace-save-btn');
+      if (replaceSaveBtn) {
+        replaceSaveBtn.addEventListener('click', saveReplace);
+      }
+
+      // 每60秒自动刷新快捷卡片数据
+      setInterval(function() {
+        const s = getQuickCardsSettings();
+        if (s.inventory) updateInventoryQuickCard();
+        if (s.employee) updateEmployeeQuickCard();
+      }, 60000);
+    }
+
+    // ====== 快捷卡片：员工打卡 ======
+
+    // 判断员工当前是否在上班（今天有没有未关闭的打卡记录）
+    function isEmployeeWorkingNow(empId) {
+      const today = new Date().toISOString().slice(0, 10);
+      const records = getAttendanceRecords();
+      // 查找今天该员工最新的没有下班时间的记录
+      const activeRecords = records.filter(r => r.empId === empId && r.date === today && r.checkIn && !r.checkOut);
+      return activeRecords.length > 0;
+    }
+
+    // 更新员工快捷卡片数据（只显示工作中人数）
+    function updateEmployeeQuickCard() {
+      const employees = getEmployees();
+      const today = new Date().toISOString().slice(0, 10);
+      const attendances = getAttendanceRecords();
+
+      // 工作中人数
+      let workingCount = 0;
+      employees.forEach(emp => {
+        if (isEmployeeWorkingNow(emp.id)) workingCount++;
+      });
+
+      const workingEl = document.getElementById('quick-employee-working');
+      if (workingEl) workingEl.textContent = workingCount;
+    }
+
+    // 员工搜索功能
+    function searchEmployeeInQuickCard(keyword) {
+      const resultEl = document.getElementById('quick-employee-result');
+      if (!resultEl) return;
+      keyword = (keyword || '').trim().toLowerCase();
+
+      const employees = getEmployees();
+      let matched = [];
+      if (keyword === '') {
+        // 空搜索：显示工作中员工列表
+        matched = employees.filter(e => isEmployeeWorkingNow(e.id));
+      } else {
+        // 有搜索词：按工号/姓名模糊匹配
+        matched = employees.filter(e =>
+          (e.name || '').toLowerCase().includes(keyword) ||
+          (String(e.employeeNo || e.no || '')).toLowerCase().includes(keyword)
+        );
+      }
+
+      if (matched.length === 0) {
+        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">没有找到员工</p>`;
+        return;
+      }
+
+      // 渲染员工列表：工作中放前面
+      matched.sort((a, b) => {
+        const aWorking = isEmployeeWorkingNow(a.id) ? 0 : 1;
+        const bWorking = isEmployeeWorkingNow(b.id) ? 0 : 1;
+        return aWorking - bWorking;
+      });
+
+      resultEl.innerHTML = matched.map(emp => {
+        const working = isEmployeeWorkingNow(emp.id);
+        return `
+          <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
+            <div onclick="openAttendanceForEmployee(${emp.id})" class="flex items-center gap-1 mb-1 cursor-pointer hover:opacity-70">
+              <span class="w-1.5 h-1.5 rounded-full ${working ? 'bg-green-500' : 'bg-gray-400'}"></span>
+              <span class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(emp.name || '')}</span>
+            </div>
+            <p onclick="openAttendanceForEmployee(${emp.id})" class="text-xs text-gray-500 truncate mb-1 cursor-pointer hover:opacity-70">${escapeHtml(emp.employeeNo || emp.no || '')}</p>
+            ${!working
+              ? `<button onclick="quickCardCheckIn(${emp.id})" class="w-full py-1 rounded-md bg-green-500 text-white text-xs"><i class="fa-solid fa-right-to-bracket mr-0.5"></i>上班</button>`
+              : `<button onclick="quickCardCheckOut(${emp.id})" class="w-full py-1 rounded-md bg-blue-500 text-white text-xs"><i class="fa-solid fa-right-from-bracket mr-0.5"></i>下班</button>`
+            }
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 快捷卡片：员工上班打卡
+    function quickCardCheckIn(empId) {
+      const records = getAttendanceRecords();
+      const employees = getEmployees();
+      const emp = employees.find(e => e.id === empId);
+      const now = new Date();
+      const today = now.toISOString().slice(0, 10);
+      const timeStr = now.toISOString();
+      const checkInTime = now.toTimeString().slice(0, 8);
+      records.push({
+        id: Date.now(),
+        empId: empId,
+        date: today,
+        checkIn: timeStr,
+        checkOut: null,
+        note: '快捷打卡'
+      });
+      saveAttendanceRecords(records);
+      // 记录日志
+      addLog('employee', '员工签到', {
+        employeeName: emp ? emp.name : '',
+        employeeNo: emp ? (emp.employeeNo || emp.no || '') : '',
+        position: emp ? emp.position : '',
+        checkInTime: checkInTime
+      });
+      // 刷新
+      updateEmployeeQuickCard();
+      const kw = document.getElementById('quick-employee-search').value;
+      searchEmployeeInQuickCard(kw);
+    }
+
+    // 快捷卡片：员工下班打卡
+    function quickCardCheckOut(empId) {
+      const records = getAttendanceRecords();
+      const employees = getEmployees();
+      const emp = employees.find(e => e.id === empId);
+      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const checkOutTime = now.toTimeString().slice(0, 8);
+      let checkInTime = '';
+      // 找到今天该员工最新的未下班记录
+      for (let i = records.length - 1; i >= 0; i--) {
+        const r = records[i];
+        if (r.empId === empId && r.date === today && r.checkIn && !r.checkOut) {
+          records[i].checkOut = now.toISOString();
+          if (r.checkIn) {
+            checkInTime = new Date(r.checkIn).toTimeString().slice(0, 8);
+          }
+          break;
+        }
+      }
+      saveAttendanceRecords(records);
+      // 记录日志
+      addLog('employee', '员工签退', {
+        employeeName: emp ? emp.name : '',
+        employeeNo: emp ? (emp.employeeNo || emp.no || '') : '',
+        position: emp ? emp.position : '',
+        checkInTime: checkInTime,
+        checkOutTime: checkOutTime
+      });
+      // 刷新
+      updateEmployeeQuickCard();
+      const kw = document.getElementById('quick-employee-search').value;
+      searchEmployeeInQuickCard(kw);
+    }
+
+    // ====== 快捷卡片：库存盘点 ======
+
+    // 更新库存快捷卡片数据（显示商品种类数 + 快过期数量）
+    function updateInventoryQuickCard() {
+      syncGoodsToInventory();
+      const inventory = getInventoryData();
+      const countEl = document.getElementById('quick-inventory-count');
+      if (countEl) countEl.textContent = inventory.length;
+
+      // 计算快过期数量（1小时内）
+      const now = new Date();
+      let expiringCount = 0;
+      inventory.forEach(item => {
+        if (item.produceDate && item.shelfLife) {
+          const produce = new Date(item.produceDate);
+          const unit = item.shelfLifeUnit || 'day';
+          const shelfLifeMs = unit === 'hour' ? item.shelfLife * 3600 * 1000 : item.shelfLife * 24 * 3600 * 1000;
+          const expiry = new Date(produce.getTime() + shelfLifeMs);
+          if ((expiry - now) <= 3600000) expiringCount++;
+        }
+      });
+      const expiringEl = document.getElementById('quick-inventory-expiring');
+      if (expiringEl) expiringEl.textContent = expiringCount;
+    }
+
+    // 库存搜索功能：按原料名称搜索（窄卡片版）
+    function searchInventoryInQuickCard(keyword) {
+      const resultEl = document.getElementById('quick-inventory-result');
+      if (!resultEl) return;
+      keyword = (keyword || '').trim().toLowerCase();
+
+      const goods = GOODS_DATA || getGoodsData();
+      const inventory = getInventoryData();
+
+      if (keyword === '') {
+        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">搜原料</p>`;
+        return;
+      }
+
+      // 按原料名称或编码搜索：找到包含该原料的库存记录
+      const matchedInventory = inventory.filter(item => {
+        if (!item.materials || !Array.isArray(item.materials)) return false;
+        return item.materials.some(m => 
+          (m.name || '').toLowerCase().includes(keyword) ||
+          (m.code || '').toLowerCase().includes(keyword)
+        );
+      });
+
+      // 同时按商品名称/条码搜索作为补充
+      const matchedGoods = goods.filter(g =>
+        (g.name || '').toLowerCase().includes(keyword) ||
+        (String(g.barcode || '')).toLowerCase().includes(keyword)
+      );
+
+      // 合并结果（去重）
+      const goodsIds = new Set();
+      const results = [];
+
+      matchedInventory.forEach(item => {
+        if (!goodsIds.has(item.goodsId)) {
+          goodsIds.add(item.goodsId);
+          const g = goods.find(x => x.id === item.goodsId);
+          if (g) {
+            results.push({ ...g, inventoryItem: item });
+          }
+        }
+      });
+
+      matchedGoods.forEach(g => {
+        if (!goodsIds.has(g.id)) {
+          goodsIds.add(g.id);
+          const item = inventory.find(i => i.goodsId === g.id);
+          results.push({ ...g, inventoryItem: item });
+        }
+      });
+
+      if (results.length === 0) {
+        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">未找到</p>`;
+        return;
+      }
+
+      resultEl.innerHTML = results.map(g => {
+        const inv = g.inventoryItem;
+        const qty = inv ? (inv.qty || 0) : (g.stock || 0);
+        // 显示匹配到的原料名称
+        let materialNames = '';
+        if (inv && inv.materials && Array.isArray(inv.materials)) {
+          const matchedMaterials = inv.materials.filter(m => (m.name || '').toLowerCase().includes(keyword));
+          if (matchedMaterials.length > 0) {
+            materialNames = matchedMaterials.map(m => m.name).join(', ');
+          }
+        }
+        return `
+          <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
+            <p onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" class="text-xs font-bold text-coffee-dark truncate cursor-pointer hover:opacity-70">${escapeHtml(g.name || '商品')}</p>
+            <p class="text-xs text-gray-500 truncate">库存: ${qty}${materialNames ? ' · ' + materialNames : ''}</p>
+            <button onclick="openReplaceModal(${g.id})" class="w-full mt-1 py-1 rounded-md bg-yellow-500 text-white text-xs">
+              <i class="fa-solid fa-recycle mr-0.5"></i>替换
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ====== 库存废除替换弹窗 ======
+
+    let _replaceTargetGoodsId = null;
+    let _replaceSelectedMaterialIndex = null;
+
+    function openReplaceModal(goodsId) {
+      const goods = GOODS_DATA || getGoodsData();
+      const inventory = getInventoryData();
+      const targetGoods = goods.find(g => g.id === goodsId);
+      if (!targetGoods) {
+        alert('找不到该商品');
+        return;
+      }
+      _replaceTargetGoodsId = goodsId;
+      _replaceSelectedMaterialIndex = null;
+
+      document.getElementById('replace-old-name').textContent = targetGoods.name || '未命名';
+      document.getElementById('replace-old-info').textContent = '条形码：' + (targetGoods.barcode || '--') + ' · 数量：' + (targetGoods.stock || 0);
+
+      // 获取库存记录中的原料列表
+      const invItem = inventory.find(i => i.goodsId === goodsId);
+      const materials = invItem && invItem.materials && Array.isArray(invItem.materials) ? invItem.materials : [];
+
+      // 显示/隐藏原料选择区域
+      const materialSelectEl = document.getElementById('replace-material-select');
+      const materialListEl = document.getElementById('replace-material-list');
+      
+      if (materials.length > 1) {
+        materialSelectEl.classList.remove('hidden');
+        materialListEl.innerHTML = materials.map((m, index) => `
+          <button onclick="selectReplaceMaterial(${index})" class="px-3 py-1.5 rounded-lg border-2 border-coffee-light text-xs hover:border-coffee-main hover:bg-coffee-cream transition-colors material-select-btn" data-index="${index}">
+            ${escapeHtml(m.name || '原料')}${m.code ? ' (' + m.code + ')' : ''}
+          </button>
+        `).join('');
+        // 默认选中第一个
+        selectReplaceMaterial(0);
+      } else if (materials.length === 1) {
+        materialSelectEl.classList.add('hidden');
+        _replaceSelectedMaterialIndex = 0;
+      } else {
+        materialSelectEl.classList.add('hidden');
+        _replaceSelectedMaterialIndex = -1;
+      }
+
+      document.getElementById('replace-new-barcode').value = '';
+      document.getElementById('replace-new-preview').classList.add('hidden');
+      document.getElementById('inventory-replace-modal').classList.remove('hidden');
+
+      // 自动聚焦到输入框
+      setTimeout(() => {
+        const input = document.getElementById('replace-new-barcode');
+        input.focus();
+        input.select();
+      }, 100);
+    }
+
+    // 选择要替换的原料
+    function selectReplaceMaterial(index) {
+      _replaceSelectedMaterialIndex = index;
+      document.querySelectorAll('.material-select-btn').forEach((btn, i) => {
+        if (i === index) {
+          btn.classList.remove('border-coffee-light');
+          btn.classList.add('border-coffee-main', 'bg-coffee-cream');
+        } else {
+          btn.classList.add('border-coffee-light');
+          btn.classList.remove('border-coffee-main', 'bg-coffee-cream');
+        }
+      });
+    }
+
+    // 替换弹窗：预览新商品
+    function previewReplaceNewGoods(barcode) {
+      const goods = GOODS_DATA || getGoodsData();
+      const newGoods = goods.find(g => String(g.barcode || '') === String(barcode));
+      const previewEl = document.getElementById('replace-new-preview');
+      if (newGoods && newGoods.id !== _replaceTargetGoodsId) {
+        previewEl.classList.remove('hidden');
+        document.getElementById('replace-new-name').textContent = newGoods.name || '';
+        document.getElementById('replace-new-info').textContent = '条形码：' + (newGoods.barcode || '--') + ' · 数量：' + (newGoods.stock || 0);
+        return newGoods;
+      } else if (newGoods && newGoods.id === _replaceTargetGoodsId) {
+        previewEl.classList.remove('hidden');
+        document.getElementById('replace-new-name').textContent = '⚠ 与原商品相同';
+        document.getElementById('replace-new-info').textContent = '请扫描不同的商品条形码';
+        return null;
+      }
+      previewEl.classList.add('hidden');
+      return null;
+    }
+
+    // 替换弹窗：执行保存
+    function saveReplace() {
+      const barcode = document.getElementById('replace-new-barcode').value.trim();
+      if (!barcode) {
+        alert('请输入或扫描新商品的条形码');
+        return;
+      }
+      const goods = GOODS_DATA || getGoodsData();
+      const newGoods = goods.find(g => String(g.barcode || '') === String(barcode));
+      if (!newGoods) {
+        alert('该条形码不存在于商品库中，请检查或先添加商品');
+        return;
+      }
+
+      // 获取库存记录
+      const inventory = getInventoryData();
+      const invItem = inventory.find(i => i.goodsId === _replaceTargetGoodsId);
+
+      // 如果有选中的原料，替换该原料
+      if (_replaceSelectedMaterialIndex !== null && _replaceSelectedMaterialIndex >= 0 && invItem && invItem.materials && Array.isArray(invItem.materials)) {
+        const selectedMaterial = invItem.materials[_replaceSelectedMaterialIndex];
+        if (selectedMaterial) {
+          // 更新选中的原料名称和编码为新商品的信息
+          invItem.materials[_replaceSelectedMaterialIndex] = {
+            name: newGoods.name || selectedMaterial.name,
+            code: newGoods.barcode || selectedMaterial.code || '',
+            qty: selectedMaterial.qty || ''
+          };
+          saveInventoryData(inventory);
+          // 记录日志
+          addLog('inventory', '原料替换', {
+            productName: targetGoods.name || '',
+            barcode: newGoods.barcode || '',
+            oldMaterial: selectedMaterial.name || '',
+            newMaterial: newGoods.name || selectedMaterial.name || ''
+          });
+          document.getElementById('inventory-replace-modal').classList.add('hidden');
+          _replaceTargetGoodsId = null;
+          _replaceSelectedMaterialIndex = null;
+          updateInventoryQuickCard();
+          const kw = document.getElementById('quick-inventory-search').value;
+          searchInventoryInQuickCard(kw);
+          alert('原料替换完成');
+          return;
+        }
+      }
+
+      // 如果没有选中原料，执行原有的商品级别替换（原商品数量置0）
+      if (newGoods.id === _replaceTargetGoodsId) {
+        alert('新商品不能与原商品相同');
+        return;
+      }
+
+      const goodsData = getGoodsData();
+      for (let i = 0; i < goodsData.length; i++) {
+        if (goodsData[i].id === _replaceTargetGoodsId) {
+          goodsData[i].stock = 0;
+        }
+      }
+      saveGoodsData(goodsData);
+      GOODS_DATA = goodsData;
+
+      for (let i = 0; i < inventory.length; i++) {
+        if (inventory[i].goodsId === _replaceTargetGoodsId) {
+          inventory[i].qty = 0;
+        }
+      }
+      saveInventoryData(inventory);
+
+      // 记录日志
+      addLog('inventory', '库存废除替换', {
+        productName: targetGoods.name || '',
+        barcode: newGoods.barcode || ''
+      });
+
+      document.getElementById('inventory-replace-modal').classList.add('hidden');
+      _replaceTargetGoodsId = null;
+      _replaceSelectedMaterialIndex = null;
+
+      updateInventoryQuickCard();
+      const kw = document.getElementById('quick-inventory-search').value;
+      searchInventoryInQuickCard(kw);
+      alert('替换完成，原商品已标记为0库存');
+    }
 
     // 渲染商品列表
     function renderGoodsList(cate) {
@@ -3789,6 +4581,334 @@
       document.getElementById('store-settings-modal').classList.remove('hidden');
     });
 
+    // ========== 日志记录 ==========
+    document.getElementById('to-log-viewer').addEventListener('click', function() {
+      closeAllModals();
+      document.getElementById('log-viewer-modal').classList.remove('hidden');
+      _currentLogTab = 'inventory';
+      document.getElementById('log-search-input').placeholder = '输入商品名称/条码/原料名称搜索...';
+      document.getElementById('log-result-list').innerHTML = '<p class="text-center text-gray-400 text-sm py-8">点击上方"申请搜索"按钮查询日志</p>';
+    });
+
+    // 当前日志tab
+    let _currentLogTab = 'inventory';
+
+    // 切换日志tab
+    function switchLogTab(tab) {
+      _currentLogTab = tab;
+      document.querySelectorAll('.log-tab-btn').forEach(btn => {
+        if (btn.dataset.tab === tab) {
+          btn.classList.remove('bg-coffee-cream/50', 'border-transparent');
+          btn.classList.add('bg-coffee-cream', 'border-coffee-main');
+        } else {
+          btn.classList.remove('bg-coffee-cream', 'border-coffee-main');
+          btn.classList.add('bg-coffee-cream/50', 'border-transparent');
+        }
+      });
+      // 根据tab更新搜索框placeholder
+      const input = document.getElementById('log-search-input');
+      if (tab === 'inventory') {
+        input.placeholder = '输入商品名称/条码/原料名称搜索...';
+      } else if (tab === 'employee') {
+        input.placeholder = '输入员工姓名/工号/职位搜索...';
+      } else {
+        input.placeholder = '输入取餐码/订单编号/商品名称搜索...';
+      }
+      document.getElementById('log-result-list').innerHTML = '<p class="text-center text-gray-400 text-sm py-8">点击上方"申请搜索"按钮查询日志</p>';
+    }
+
+    // ====== 日志记录存储 ======
+    const LOG_STORAGE_KEY = 'operation_logs';
+    // 限制日志数量上限，避免占用过多空间
+    const MAX_LOGS = 500;
+
+    function getAllLogs() {
+      try {
+        const saved = localStorage.getItem(LOG_STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch(e) {}
+      return [];
+    }
+
+    function saveLogs(logs) {
+      // 超过上限时只保留最新的
+      let trimmed = logs;
+      if (trimmed.length > MAX_LOGS) {
+        trimmed = trimmed.slice(trimmed.length - MAX_LOGS);
+      }
+      try {
+        localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(trimmed));
+      } catch(e) {
+        // 内存不足时尝试再删减一半
+        try {
+          const half = trimmed.slice(Math.floor(trimmed.length / 2));
+          localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(half));
+        } catch(e2) {}
+      }
+    }
+
+    // 记录日志
+    function addLog(type, action, detail) {
+      const logs = getAllLogs();
+      const log = {
+        id: Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        type: type, // inventory / employee / order
+        action: action,
+        detail: detail || {},
+        timestamp: Date.now(),
+        datetime: new Date().toISOString().slice(0, 19).replace('T', ' ')
+      };
+      logs.push(log);
+      saveLogs(logs);
+      return log;
+    }
+
+    // 根据取餐码查找并更新订单日志（用于回写制作完成/取餐/打印时间等）
+    function updateOrderLogByCode(orderCode, patch) {
+      if (!orderCode || !patch) return;
+      try {
+        const logs = getAllLogs();
+        let updated = false;
+        for (let i = logs.length - 1; i >= 0; i--) {
+          const l = logs[i];
+          if (l.type === 'order' && l.detail && l.detail.orderCode === String(orderCode)) {
+            l.detail = Object.assign({}, l.detail, patch);
+            updated = true;
+            break;
+          }
+        }
+        if (updated) saveLogs(logs);
+      } catch (e) {
+        // 静默失败，不影响正常功能
+      }
+    }
+
+    // 格式化时间戳为标准中文本地时间字符串
+    function formatLocalTime(ts) {
+      if (!ts) return '-';
+      try {
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return String(ts);
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+      } catch (e) { return String(ts); }
+    }
+
+    // 申请搜索（模拟后台处理延迟）
+    function requestLogSearch() {
+      const keyword = document.getElementById('log-search-input').value.trim().toLowerCase();
+
+      // 显示搜索中状态
+      const searchBox = document.getElementById('log-search-box');
+      const searchingEl = document.getElementById('log-searching');
+      const progressEl = document.getElementById('log-search-progress');
+      const resultEl = document.getElementById('log-result-list');
+
+      searchBox.classList.add('hidden');
+      searchingEl.classList.remove('hidden');
+      resultEl.innerHTML = '';
+
+      // 模拟后台搜索的渐进过程
+      const phases = [
+        { text: '正在索引库存数据...', progress: 15 },
+        { text: '正在扫描员工操作记录...', progress: 35 },
+        { text: '正在分析订单数据...', progress: 55 },
+        { text: '正在建立溯源关联...', progress: 75 },
+        { text: '正在整理搜索结果...', progress: 95 }
+      ];
+
+      let phaseIdx = 0;
+      const interval = setInterval(() => {
+        if (phaseIdx < phases.length) {
+          progressEl.textContent = phases[phaseIdx].text + ' ' + phases[phaseIdx].progress + '%';
+          phaseIdx++;
+        } else {
+          clearInterval(interval);
+          // 搜索完成，显示结果
+          searchingEl.classList.add('hidden');
+          searchBox.classList.remove('hidden');
+          renderLogResults(keyword);
+        }
+      }, 400); // 每400ms推进一个阶段，总耗时约2秒
+    }
+
+    // 渲染日志搜索结果
+    function renderLogResults(keyword) {
+      const logs = getAllLogs();
+      // 按类型过滤
+      let filtered = logs.filter(l => l.type === _currentLogTab);
+      // 按关键词搜索
+      if (keyword) {
+        filtered = filtered.filter(l => {
+          // 检查action和detail中的所有字段
+          const searchText = [
+            l.action,
+            JSON.stringify(l.detail || {}).toLowerCase()
+          ].join(' ').toLowerCase();
+          return searchText.includes(keyword);
+        });
+      }
+      // 按时间倒序
+      filtered.sort((a, b) => b.timestamp - a.timestamp);
+
+      const resultEl = document.getElementById('log-result-list');
+
+      if (filtered.length === 0) {
+        resultEl.innerHTML = '<p class="text-center text-gray-400 text-sm py-8"><i class="fa-solid fa-inbox mb-2 text-2xl block"></i>未找到匹配的日志记录</p>';
+        return;
+      }
+
+      resultEl.innerHTML = filtered.slice(0, 50).map(log => renderLogCard(log)).join('');
+    }
+
+    // 渲染单个日志卡片
+    function renderLogCard(log) {
+      const detail = log.detail || {};
+      let contentHtml = '';
+      let iconClass = 'fa-solid fa-question';
+      let actionText = log.action || '未知操作';
+
+      if (log.type === 'inventory') {
+        iconClass = 'fa-solid fa-box';
+        contentHtml = `
+          <p class="text-xs text-gray-600"><span class="text-gray-400">商品：</span>${escapeHtml(detail.productName || detail.goodsName || '-')}</p>
+          ${detail.barcode ? `<p class="text-xs text-gray-600"><span class="text-gray-400">条码：</span>${escapeHtml(detail.barcode)}</p>` : ''}
+          ${detail.qty !== undefined && detail.qty !== null ? `<p class="text-xs text-gray-600"><span class="text-gray-400">数量：</span>${detail.qty}</p>` : ''}
+          ${detail.materials ? `<p class="text-xs text-gray-600"><span class="text-gray-400">原料：</span>${escapeHtml(detail.materials)}</p>` : ''}
+          ${detail.oldMaterial ? `<p class="text-xs text-gray-600"><span class="text-gray-400">原原料：</span>${escapeHtml(detail.oldMaterial)}</p>` : ''}
+          ${detail.newMaterial ? `<p class="text-xs text-gray-600"><span class="text-gray-400">新原料：</span>${escapeHtml(detail.newMaterial)}</p>` : ''}
+        `;
+      } else if (log.type === 'employee') {
+        iconClass = 'fa-solid fa-user';
+        contentHtml = `
+          <p class="text-xs text-gray-600"><span class="text-gray-400">员工：</span>${escapeHtml(detail.employeeName || '-')}${detail.employeeNo ? ' (工号: ' + detail.employeeNo + ')' : ''}</p>
+          ${detail.position ? `<p class="text-xs text-gray-600"><span class="text-gray-400">职位：</span>${escapeHtml(detail.position)}</p>` : ''}
+          ${detail.checkInTime ? `<p class="text-xs text-gray-600"><span class="text-gray-400">签到：</span>${escapeHtml(detail.checkInTime)}</p>` : ''}
+          ${detail.checkOutTime ? `<p class="text-xs text-gray-600"><span class="text-gray-400">签退：</span>${escapeHtml(detail.checkOutTime)}</p>` : ''}
+        `;
+      } else if (log.type === 'order') {
+        iconClass = 'fa-solid fa-receipt';
+        contentHtml = `
+          <p class="text-xs text-gray-600"><span class="text-gray-400">取餐码：</span><span class="font-mono font-bold text-coffee-main">${escapeHtml(detail.orderCode || '-')}</span></p>
+          ${detail.items ? `<p class="text-xs text-gray-600"><span class="text-gray-400">商品：</span>${escapeHtml(detail.items)}</p>` : ''}
+          ${detail.totalAmount !== undefined ? `<p class="text-xs text-gray-600"><span class="text-gray-400">金额：</span>¥${detail.totalAmount}</p>` : ''}
+          <button onclick="showLogOrderDetail('${log.id}')" class="mt-2 text-xs px-2 py-1 bg-coffee-main/10 text-coffee-main rounded-md hover:bg-coffee-main/20 transition-colors">
+            <i class="fa-solid fa-search mr-1"></i>查看完整溯源
+          </button>
+        `;
+      }
+
+      return `
+        <div class="bg-coffee-cream/30 rounded-lg p-3 border border-coffee-light/30">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-2 flex-1 min-w-0">
+              <i class="${iconClass} text-coffee-main text-sm mt-0.5 flex-shrink-0"></i>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-coffee-dark">${escapeHtml(actionText)}</p>
+                <p class="text-xs text-gray-400 mb-2">${escapeHtml(log.datetime)}</p>
+                ${contentHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 查看订单完整溯源详情（增强版：时间线 / 店员上下班 / 原料生产保质期到期 / 日志ID水印）
+    function showLogOrderDetail(logId) {
+      const logs = getAllLogs();
+      const log = logs.find(l => l.id === logId);
+      if (!log || log.type !== 'order') return;
+      const detail = log.detail || {};
+
+      // 生成水印（日志ID，平铺在整个详情页背景）
+      function buildWatermarkHtml(markText) {
+        const rows = 10;
+        const cols = 6;
+        let html = '<div class="log-watermark" style="position:absolute;inset:0;pointer-events:none;z-index:0;">';
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const top = (r * 120 + (c % 2 === 0 ? 0 : 60)) + 'px';
+            const left = (c * 180) + 'px';
+            html += `<span style="position:absolute;top:${top};left:${left};font-size:16px;color:rgba(111,78,55,0.07);transform:rotate(-25deg);white-space:nowrap;font-family:monospace;letter-spacing:2px;">${escapeHtml(markText)}</span>`;
+          }
+        }
+        html += '</div>';
+        return html;
+      }
+
+      const contentEl = document.getElementById('log-order-detail-content');
+      contentEl.innerHTML = `
+        ${buildWatermarkHtml(log.id)}
+        <div class="log-detail-inner space-y-3">
+
+        <div class="bg-coffee-cream/40 rounded-lg p-4">
+          <h3 class="font-bold text-coffee-dark mb-2 flex items-center gap-2"><i class="fa-solid fa-clock"></i>订单信息</h3>
+          <div class="space-y-1 text-sm">
+            <p><span class="text-gray-500">取餐码：</span><span class="font-mono font-bold text-coffee-main">${escapeHtml(detail.orderCode || '-')}</span></p>
+            <p><span class="text-gray-500">下单时间：</span>${escapeHtml(detail.createTime || log.datetime || '-')}</p>
+            <p><span class="text-gray-500">打印时间：</span>${escapeHtml(detail.printTime || '未打印')}</p>
+            <p><span class="text-gray-500">制作完成：</span>${escapeHtml(detail.makeFinishTime || '未完成')}</p>
+            <p><span class="text-gray-500">取餐时间：</span>${escapeHtml(detail.pickupTime || '未取餐')}</p>
+            <p><span class="text-gray-500">商品明细：</span>${escapeHtml(detail.items || '-')}</p>
+            ${detail.remark ? `<p><span class="text-gray-500">订单备注：</span>${escapeHtml(detail.remark)}</p>` : ''}
+            ${detail.totalAmount !== undefined ? `<p><span class="text-gray-500">订单金额：</span>¥${detail.totalAmount}</p>` : ''}
+          </div>
+        </div>
+
+        <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+          <h3 class="font-bold text-green-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-users"></i>当班店员（含上下班时间）</h3>
+          <div class="space-y-2 text-sm">
+            ${detail.workingEmployees && detail.workingEmployees.length > 0 ?
+              detail.workingEmployees.map(emp => `
+                <div class="bg-white rounded-md p-2 border border-green-200">
+                  <p class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="text-green-900 font-bold">${escapeHtml(emp.name || '-')}</span>
+                    <span class="text-xs text-gray-500">${emp.no ? '(工号: ' + emp.no + ')' : ''}${emp.position ? ' ' + emp.position : ''}</span>
+                  </p>
+                  <p class="text-xs text-gray-600 mt-1">
+                    <span class="text-gray-500">上班签到：</span>${escapeHtml(emp.checkIn || '-')}　
+                    <span class="text-gray-500">下班签退：</span>${escapeHtml(emp.checkOut || '未下班')}
+                  </p>
+                </div>
+              `).join('')
+              : '<p class="text-gray-500 text-sm">无当班店员记录</p>'
+            }
+          </div>
+        </div>
+
+        <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
+          <h3 class="font-bold text-orange-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-barcode"></i>原材料溯源（入库/生产/保质期/到期）</h3>
+          <div class="space-y-2 text-sm">
+            ${detail.materials && detail.materials.length > 0 ?
+              detail.materials.map((m, idx) => `
+                <div class="bg-white rounded-md p-3 border border-orange-200">
+                  <p class="font-bold text-orange-900 mb-1">${idx + 1}. ${escapeHtml(m.name || '-')}</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-600">
+                    <p><span class="text-gray-500">原料编码：</span><span class="font-mono">${escapeHtml(m.code || '-')}</span></p>
+                    <p><span class="text-gray-500">使用数量：</span>${escapeHtml(m.qty || '-')}</p>
+                    <p><span class="text-gray-500">入库时间：</span>${escapeHtml(m.inboundTime || '未记录')}</p>
+                    <p><span class="text-gray-500">生产日期：</span>${escapeHtml(m.produceDate || '未记录')}</p>
+                    <p><span class="text-gray-500">保质期：</span>${escapeHtml(m.shelfLife || '-')}</p>
+                    <p><span class="text-gray-500">到期时间：</span><span class="${m.expireDate ? 'text-red-600' : ''}">${escapeHtml(m.expireDate || '未记录')}</span></p>
+                  </div>
+                </div>
+              `).join('')
+              : '<p class="text-gray-500 text-sm">无原料记录</p>'
+            }
+          </div>
+        </div>
+
+        <div class="text-center text-xs text-gray-400 pt-2">
+          日志ID: <span class="font-mono">${log.id}</span>　｜　记录时间: ${escapeHtml(log.datetime || '-')}
+        </div>
+
+        </div>
+      `;
+
+      document.getElementById('log-order-detail-modal').classList.remove('hidden');
+    }
+
     // 多设备数据广播同步（通过 localStorage storage 事件实现跨标签页数据同步
     function broadcastData(payload) {
       try {
@@ -3872,6 +4992,9 @@
       saveEmployees(employees);
       document.getElementById('employee-edit-modal').classList.add('hidden');
       renderEmployeeList();
+      // 员工数据变化：同步更新快捷卡片
+      const empSettings = getQuickCardsSettings();
+      if (empSettings.employee) updateEmployeeQuickCard();
     });
 
     // 渲染员工列表（增强版：按员工多条记录显示状态）
@@ -3961,6 +5084,9 @@
       let employees = getEmployees().filter(e => e.id !== id);
       saveEmployees(employees);
       renderEmployeeList();
+      // 员工数据变化：同步更新快捷卡片
+      const s = getQuickCardsSettings();
+      if (s.employee) updateEmployeeQuickCard();
     }
 
     // 签到打卡弹窗 - 选择员工列表
@@ -4080,10 +5206,13 @@
       refreshBothLists();
     });
 
-    // 同时刷新员工列表和工作中区域
+    // 同时刷新员工列表和工作中区域（包括快捷卡片）
     function refreshBothLists() {
       renderEmployeeList();
       renderTodayAttendance();
+      // 员工状态变化时同步更新员工快捷卡片
+      const settings = getQuickCardsSettings();
+      if (settings.employee) updateEmployeeQuickCard();
     }
 
     // 渲染工作中（今日签到） - 增强版：按状态排序，支持一天内多个时段
@@ -4353,12 +5482,17 @@
     });
 
     // 打开商品选择弹窗
+    // 已选商品数组（购物车模式）
+    let _selectedProducts = [];
+
     function openProductSelectModal() {
+      _selectedProducts = [];
       document.getElementById('product-select-modal').classList.remove('hidden');
+      document.getElementById('selected-products-cart').classList.add('hidden');
       renderProductSelectList('');
     }
 
-    // 渲染商品选择列表（从实际商品数据读取）
+    // 渲染商品选择列表（支持多选）
     function renderProductSelectList(searchText) {
       const goods = GOODS_DATA || getGoodsData();
       const filtered = goods.filter(g => {
@@ -4371,24 +5505,79 @@
         listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-search text-3xl mb-2"></i><p>未找到匹配的商品</p></div>';
         return;
       }
-      listEl.innerHTML = filtered.map(g => `
-        <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg hover:bg-coffee-cream cursor-pointer transition-colors" onclick="selectProduct(${g.id}, '${escapeHtml(g.name)}')">
-          <div class="flex items-center gap-3">
-            ${g.img ? `<img src="${g.img}" class="w-12 h-12 rounded-lg object-cover" alt="${g.name}">` : `<div class="w-12 h-12 rounded-lg bg-coffee-main text-white flex items-center justify-center text-lg font-bold">${g.name.charAt(0)}</div>`}
-            <div>
-              <p class="font-bold text-coffee-dark">${escapeHtml(g.name)}</p>
-              <p class="text-xs text-gray-500">分类：${g.cate || '未分类'} · 价格：¥${(g.price).toFixed(2)} · 条码：${g.barcode || '无'}</p>
+      listEl.innerHTML = filtered.map(g => {
+        const isSelected = _selectedProducts.some(p => p.id === g.id);
+        return `
+          <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg hover:bg-coffee-cream cursor-pointer transition-colors" onclick="toggleProductSelection(${g.id}, '${escapeHtml(g.name)}', '${escapeHtml(g.barcode || '')}', ${g.stock || 0})">
+            <div class="flex items-center gap-3">
+              <div class="w-5 h-5 rounded border-2 ${isSelected ? 'border-coffee-main bg-coffee-main' : 'border-gray-300'} flex items-center justify-center">
+                ${isSelected ? '<i class="fa-solid fa-check text-white text-xs"></i>' : ''}
+              </div>
+              ${g.img ? `<img src="${g.img}" class="w-12 h-12 rounded-lg object-cover" alt="${g.name}">` : `<div class="w-12 h-12 rounded-lg bg-coffee-main text-white flex items-center justify-center text-lg font-bold">${g.name.charAt(0)}</div>`}
+              <div>
+                <p class="font-bold text-coffee-dark">${escapeHtml(g.name)}</p>
+                <p class="text-xs text-gray-500">分类：${g.cate || '未分类'} · 价格：¥${(g.price).toFixed(2)} · 条码：${g.barcode || '无'}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="text-right">
+                <p class="text-xs text-gray-500">现有库存</p>
+                <p class="font-bold text-coffee-main">${g.stock || 0}</p>
+              </div>
+              <button onclick="event.stopPropagation(); toggleProductSelection(${g.id}, '${escapeHtml(g.name)}', '${escapeHtml(g.barcode || '')}', ${g.stock || 0})" class="py-2 px-4 rounded-lg ${isSelected ? 'bg-gray-200 text-gray-700' : 'bg-coffee-main text-white'} text-sm btn-hover">
+                ${isSelected ? '移除' : '<i class="fa-solid fa-plus"></i>添加'}
+              </button>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="text-right">
-              <p class="text-xs text-gray-500">现有库存</p>
-              <p class="font-bold text-coffee-main">${g.stock || 0}</p>
-            </div>
-            <button class="py-2 px-4 rounded-lg bg-coffee-main text-white text-sm btn-hover"><i class="fa-solid fa-check"></i></button>
-          </div>
-        </div>
+        `;
+      }).join('');
+    }
+
+    // 切换商品选中状态
+    function toggleProductSelection(id, name, barcode, stock) {
+      const index = _selectedProducts.findIndex(p => p.id === id);
+      if (index >= 0) {
+        _selectedProducts.splice(index, 1);
+      } else {
+        _selectedProducts.push({ id, name, barcode, stock });
+      }
+      updateSelectedProductsCart();
+      renderProductSelectList(document.getElementById('product-search-input').value);
+    }
+
+    // 更新已选商品购物车显示
+    function updateSelectedProductsCart() {
+      const cartEl = document.getElementById('selected-products-cart');
+      const listEl = document.getElementById('selected-products-list');
+      const countEl = document.getElementById('selected-count');
+      if (!cartEl || !listEl || !countEl) return;
+
+      if (_selectedProducts.length === 0) {
+        cartEl.classList.add('hidden');
+        return;
+      }
+      cartEl.classList.remove('hidden');
+      countEl.textContent = _selectedProducts.length;
+      listEl.innerHTML = _selectedProducts.map(p => `
+        <span class="inline-flex items-center gap-1 bg-coffee-main text-white text-xs px-2 py-1 rounded-full">
+          ${escapeHtml(p.name)}
+          <button onclick="_selectedProducts = _selectedProducts.filter(x => x.id !== ${p.id}); updateSelectedProductsCart(); renderProductSelectList(document.getElementById('product-search-input').value);" class="hover:text-gray-200"><i class="fa-solid fa-xmark text-xs"></i></button>
+        </span>
       `).join('');
+    }
+
+    // 确认选择商品
+    function confirmSelectedProducts() {
+      if (_selectedProducts.length === 0) {
+        alert('请先选择商品');
+        return;
+      }
+      // 将第一个选中的商品填入编辑表单
+      const first = _selectedProducts[0];
+      document.getElementById('edit-inventory-product-id').value = first.id;
+      document.getElementById('edit-inventory-product-name').value = first.name;
+      document.getElementById('product-select-modal').classList.add('hidden');
+      _selectedProducts = [];
     }
 
     // HTML转义函数
@@ -4396,13 +5585,6 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
-    }
-
-    // 选择商品
-    function selectProduct(id, name) {
-      document.getElementById('edit-inventory-product-id').value = id;
-      document.getElementById('edit-inventory-product-name').value = name;
-      document.getElementById('product-select-modal').classList.add('hidden');
     }
 
     // 商品搜索
@@ -4630,7 +5812,7 @@
       row.innerHTML = `
         <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-name" placeholder="原料名称" value="${name}">
         <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-code" placeholder="原料编码" value="${code}">
-        <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="用量" value="${qty}">
+        <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="数量" value="${qty}">
         <button onclick="removeRawMaterialRow(this)" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
       `;
       listEl.appendChild(row);
@@ -4701,6 +5883,13 @@
         });
       }
       saveInventoryData(inventory);
+      // 记录日志
+      const materialNames = materials.filter(m => m.name).map(m => m.name).join(', ');
+      addLog('inventory', (item ? '编辑库存信息' : '新增库存记录'), {
+        productName: productName,
+        qty: qty,
+        materials: materialNames
+      });
       // 同步到商品库存
       const allGoods = GOODS_DATA || getGoodsData();
       if (allGoods && selectedGoodsId) {
@@ -4711,6 +5900,9 @@
       document.getElementById('inventory-edit-modal').classList.add('hidden');
       renderInventoryList();
       checkExpiringItems();
+      // 库存数据变化：同步更新库存快捷卡片
+      const invSettings = getQuickCardsSettings();
+      if (invSettings.inventory) updateInventoryQuickCard();
     });
 
     // 原料使用记录
@@ -4763,6 +5955,9 @@
       document.getElementById('raw-material-use-modal').classList.add('hidden');
       renderInventoryList();
       renderRawMaterialLogs();
+      // 原料消耗：同步更新库存快捷卡片
+      const settings2 = getQuickCardsSettings();
+      if (settings2.inventory) updateInventoryQuickCard();
     });
 
     // 渲染原料消耗记录
@@ -7114,6 +8309,70 @@
       // 获取备注信息
       const remark = document.getElementById('order-remark').value || '';
       
+      // 准备订单商品和原料溯源数据（增强版：包含入库时间/生产日期/保质期/到期时间）
+      const orderGoodsList = [];
+      const orderMaterials = [];
+      const inventory = getInventoryData();
+      for (const gid in currentGoods) {
+        const g = currentGoods[gid];
+        if (g && g.name && g.count > 0) {
+          orderGoodsList.push(g.name + ' x' + g.count);
+          // 查找该商品对应的原料
+          const invItem = inventory.find(i => i.goodsId === parseInt(gid) || i.goodsId === gid);
+          if (invItem && invItem.materials && Array.isArray(invItem.materials)) {
+            invItem.materials.forEach(m => {
+              if (m.name) {
+                const matInfo = {
+                  name: m.name,
+                  code: m.code || '-',
+                  qty: m.qty || '-'
+                };
+                // 从原料条目中读取入库时间
+                if (m.inboundTime) matInfo.inboundTime = formatLocalTime(m.inboundTime);
+                else if (m.inboundDate) matInfo.inboundTime = formatLocalTime(m.inboundDate);
+                // 从库存条目中读取生产日期/保质期
+                if (invItem.produceDate) {
+                  try {
+                    const produce = new Date(invItem.produceDate);
+                    matInfo.produceDate = formatLocalTime(produce.getTime());
+                    // 计算到期时间
+                    if (invItem.shelfLife) {
+                      const unit = invItem.shelfLifeUnit || 'day';
+                      const ms = unit === 'hour'
+                        ? Number(invItem.shelfLife) * 3600 * 1000
+                        : Number(invItem.shelfLife) * 24 * 3600 * 1000;
+                      const expire = new Date(produce.getTime() + ms);
+                      matInfo.shelfLife = invItem.shelfLife + (unit === 'hour' ? '小时' : '天');
+                      matInfo.expireDate = formatLocalTime(expire.getTime());
+                    }
+                  } catch (e) {}
+                }
+                orderMaterials.push(matInfo);
+              }
+            });
+          }
+        }
+      }
+
+      // 获取当前正在上班的员工（增强版：包含签到/签退时间）
+      const employees = getEmployees();
+      const records = getAttendanceRecords();
+      const today = now.toISOString().slice(0, 10);
+      const workingEmployees = employees.filter(emp => {
+        // 检查是否有今天的签到记录（包括已经下班的员工也保留，方便回溯完整时间段）
+        const hasCheckIn = records.some(r => r.empId === emp.id && r.date === today && r.checkIn);
+        return hasCheckIn;
+      }).map(e => {
+        const r = records.find(x => x.empId === e.id && x.date === today);
+        return {
+          name: e.name,
+          no: e.employeeNo || e.no || '',
+          position: e.position,
+          checkIn: r ? formatLocalTime(r.checkIn) : '-',
+          checkOut: r && r.checkOut ? formatLocalTime(r.checkOut) : '未下班'
+        };
+      });
+
       // 添加到制作中列表
       const newOrder = {
         code,
@@ -7122,11 +8381,23 @@
         actualPay: payTotal,
         timeStr: timeStr,
         remark: remark,
-        userOrderId: currentUserOrderId
+        userOrderId: currentUserOrderId,
+        createTimestamp: now.getTime()
       };
       makingList.push(newOrder);
       updatePickupPanel();
       
+      // 记录订单日志（包含完整下单时间戳）
+      addLog('order', '新订单支付', {
+        orderCode: code,
+        items: orderGoodsList.join(', '),
+        totalAmount: payTotal,
+        remark: remark,
+        createTime: formatLocalTime(now.getTime()),
+        workingEmployees: workingEmployees,
+        materials: orderMaterials.length > 0 ? orderMaterials : null
+      });
+
       // 如果是用户订单，保存到已支付订单列表
       if (currentUserOrderId) {
         const paidOrder = {
@@ -7620,17 +8891,29 @@
     // 全局订单状态变更函数
     window.moveToWait = function(index) {
       const order = makingList.splice(index, 1)[0];
-      order && waitList.push(order);
-      if (order && order.userOrderId) {
-        syncOrderStatusToUser(order.userOrderId, 'wait');
+      if (order) {
+        waitList.push(order);
+        // 记录制作完成时间到订单和日志
+        const finishTs = Date.now();
+        order.makeFinishTime = finishTs;
+        updateOrderLogByCode(order.code, { makeFinishTime: formatLocalTime(finishTs) });
+        if (order.userOrderId) {
+          syncOrderStatusToUser(order.userOrderId, 'wait');
+        }
       }
       updatePickupPanel();
     };
     window.moveToFinish = function(index) {
       const order = waitList.splice(index, 1)[0];
-      order && finishList.push(order);
-      if (order && order.userOrderId) {
-        syncOrderStatusToUser(order.userOrderId, 'finish');
+      if (order) {
+        finishList.push(order);
+        // 记录取餐时间到订单和日志
+        const pickupTs = Date.now();
+        order.pickupTime = pickupTs;
+        updateOrderLogByCode(order.code, { pickupTime: formatLocalTime(pickupTs) });
+        if (order.userOrderId) {
+          syncOrderStatusToUser(order.userOrderId, 'finish');
+        }
       }
       updatePickupPanel();
     };
