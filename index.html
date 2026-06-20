@@ -923,6 +923,50 @@
             </div>
           </div>
 
+          <!-- 5.5 大模型服务（OpenAI 兼容：DeepSeek / 智谱 / 通义 / Ollama / OpenAI 等） -->
+          <div class="p-4 bg-coffee-cream/70 rounded-xl border border-coffee-main/40">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-brain text-coffee-main"></i>大模型服务（让 AI 理解你在说什么）</p>
+            <div class="text-xs text-gray-500 mb-3 leading-relaxed">
+              填好后点击「保存并后端」，AI 即可接入真实大模型；无 Key 或网络出错时自动回退到本地关键词解析。
+              <br>常用参考：DeepSeek 使用 <code style="background:#fff3;border:1px solid #e6d5bb;padding:0 4px;border-radius:3px;">https://api.deepseek.com/v1</code> 模型 <code style="background:#fff3;border:1px solid #e6d5bb;padding:0 4px;border-radius:3px;">deepseek-chat</code>；
+              OpenAI 用 <code style="background:#fff3;border:1px solid #e6d5bb;padding:0 4px;border-radius:3px;">https://api.openai.com/v1</code>；
+              本地 Ollama 用 <code style="background:#fff3;border:1px solid #e6d5bb;padding:0 4px;border-radius:3px;">http://127.0.0.1:11434/v1</code>（模型随意，如 <code style="background:#fff3;border:1px solid #e6d5bb;padding:0 4px;border-radius:3px;">qwen2.5</code>）。
+            </div>
+            <div class="space-y-2">
+              <div>
+                <label class="text-xs text-gray-600">API Base URL</label>
+                <input id="ai-llm-base" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="https://api.deepseek.com/v1" autocomplete="off">
+              </div>
+              <div>
+                <label class="text-xs text-gray-600">API Key</label>
+                <input id="ai-llm-key" type="password" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-xs text-gray-600">模型名</label>
+                  <input id="ai-llm-model" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-coffee-main" placeholder="deepseek-chat" autocomplete="off">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-600">温度（0-2）</label>
+                  <input id="ai-llm-temp" type="number" step="0.1" min="0" max="2" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-coffee-main" value="0.2" autocomplete="off">
+                </div>
+              </div>
+              <div class="flex items-center gap-2 text-xs pt-1">
+                <input type="checkbox" id="ai-llm-enabled" class="accent-coffee-main" checked>
+                <label for="ai-llm-enabled" class="text-gray-600">启用大模型（未启用或失败时，使用本地规则解析）</label>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                <button id="ai-llm-test" class="flex-1 py-2 px-3 text-sm rounded-md bg-coffee-cream text-coffee-dark border border-coffee-main/40 btn-hover flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-bolt"></i>测试连通性
+                </button>
+                <button id="ai-llm-save" class="flex-1 py-2 px-3 text-sm rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-1">
+                  <i class="fa-solid fa-cloud-arrow-up"></i>保存到后端
+                </button>
+              </div>
+              <div id="ai-llm-feedback" class="text-xs mt-2"></div>
+            </div>
+          </div>
+
           <!-- 6. 调试 / 测试区域 -->
           <div class="p-4 bg-coffee-main/5 rounded-xl border border-coffee-main/30">
             <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-flask text-coffee-main"></i>立即测试</p>
@@ -10356,6 +10400,114 @@
         addAIMsg('Sorry, I didn\'t catch that. Try: "latte", "americano", "tiramisu", "cancel", "confirm".');
       }
 
+      // ========== 后端 AI 接口调用（新增：接入 ai-server.py /api/ai/chat） ==========
+      function callAiServer(text, goods, cart, cb) {
+        // goods / cart 元素裁剪成后端期望的字段
+        const slimGoods = (goods || []).map(function (g) {
+          return { id: g.id, name: g.name, price: g.price, cate: g.cate };
+        });
+        const slimCart = (cart && cart.items ? cart.items : []).map(function (g) {
+          return { id: g.id, name: g.name, price: g.price, count: g.count };
+        });
+        // 用 window.location.origin 做默认前缀（也支持本地调试时直接写死）
+        let base = '';
+        try { base = (window.__AI_BASE_URL__) || (window.location.origin); } catch (e) { base = ''; }
+        const url = base + '/api/ai/chat';
+        let timeoutHandle = null;
+        let aborted = false;
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', url, true);
+          xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+          xhr.timeout = 15000;
+          xhr.onreadystatechange = function () {
+            if (aborted) return;
+            if (xhr.readyState === 4) {
+              try {
+                const data = JSON.parse(xhr.responseText || '{}');
+                if (data && data.ok) { cb(null, data); } else { cb(data && data.error || '服务端返回错误', null); }
+              } catch (err) { cb('解析响应失败', null); }
+            }
+          };
+          xhr.onerror = function () { cb('网络错误（请确认已启动 ai-server.py）', null); };
+          xhr.ontimeout = function () { cb('请求超时', null); };
+          xhr.send(JSON.stringify({ text: text, goods: slimGoods, cart: slimCart }));
+          timeoutHandle = setTimeout(function () { aborted = true; try { xhr.abort(); } catch (e) {} cb('请求超时', null); }, 16000);
+        } catch (e) { cb(String(e && e.message || e), null); }
+      }
+
+      // ========== 根据后端返回的意图，驱动前端侧动作 ==========
+      function applyAiResult(data, text) {
+        const intent = String(data.intent || 'unknown').toLowerCase();
+        const items = Array.isArray(data.items) ? data.items : [];
+        const remarks = Array.isArray(data.remarks) ? data.remarks : [];
+        const reply = String(data.reply || '好的');
+        const openCheckout = !!data.openCheckout;
+
+        // 1. 加购商品（order / price 都会返回相关商品，这里统一加购）
+        if ((intent === 'order' || intent === 'price' || intent === 'unknown') && items.length > 0) {
+          items.forEach(function (it) {
+            if (it && it.id) {
+              const qty = Math.max(1, parseInt(it.qty) || 1);
+              addGoodsById(it.id, qty);
+            }
+          });
+        }
+
+        // 2. 删除商品（只删解析到的具体项）
+        if (intent === 'remove') {
+          if (items.length > 0) {
+            items.forEach(function (it) { if (it && it.id) removeGoodsById(it.id); });
+          } else if (/取消|清空|重来|重新|都不要|不要了|clear all|reset all/i.test(text)) {
+            clearCartSafe();
+          }
+        }
+
+        // 3. 取消 / 清空
+        if (intent === 'cancel') { clearCartSafe(); }
+
+        // 4. 备注
+        if (remarks.length > 0) {
+          const rmEl = document.getElementById('order-remark');
+          if (rmEl) {
+            const prev = (rmEl.value || '').trim();
+            rmEl.value = prev ? (prev + ' ' + remarks.join(' ')) : remarks.join(' ');
+          }
+        }
+
+        // 5. 打开结账弹窗
+        if (openCheckout && intent !== 'unknown') {
+          try {
+            if (typeof openCheckoutModal === 'function') { setTimeout(openCheckoutModal, 800); }
+            else {
+              const pm = document.getElementById('pay-qrcode-modal');
+              if (pm) setTimeout(function () { pm.classList.remove('hidden'); }, 800);
+            }
+          } catch (e) {}
+        }
+
+        // 6. 显示回复 & 语音播报（优先显示 model/source 信息，便于调试和告知用户）
+        const tag = (data.source === 'llm' ? '🤖 ' : '🟡 ') + (data.engine || '');
+        addAIMsg(reply);
+        // 小标签显示使用的来源
+        try {
+          const el = document.getElementById('ai-messages');
+          if (el) {
+            const last = el.lastElementChild;
+            if (last) {
+              const hint = document.createElement('div');
+              hint.className = 'text-xs text-gray-400 mt-1 text-right';
+              hint.textContent = tag;
+              if (last.firstElementChild && last.firstElementChild.nextElementSibling) {
+                last.firstElementChild.nextElementSibling.appendChild(hint);
+              } else { last.appendChild(hint); }
+            }
+          }
+        } catch (e) {}
+        speakWithFallback(reply);
+        updateCartPreview();
+      }
+
       function handleInput(rawText) {
         const text = (rawText || '').trim();
         if (!text) return;
@@ -10374,17 +10526,53 @@
           return;
         }
 
-        // ========== 1. 取消/删除/减少 指令（区分全部清空和单个删除） ==========
-        // 包含取消/去掉/删除/不要 等关键词，但需进一步判断是全部还是部分
+        // ========== 1. 先调后端 AI 接口（若存在），否则走本地解析 ==========
+        // 显示一个「正在思考…」临时消息
+        let thinkingEl = null;
+        try {
+          const el = document.getElementById('ai-messages');
+          if (el) {
+            const wrap = document.createElement('div');
+            wrap.className = 'flex items-start gap-2';
+            wrap.innerHTML =
+              '<div class="w-8 h-8 rounded-full bg-coffee-main/20 flex items-center justify-center flex-shrink-0">' +
+                '<i class="fa-solid fa-robot text-coffee-main text-sm"></i></div>' +
+              '<div class="flex-1"><div class="bg-coffee-cream/60 text-coffee-dark rounded-2xl rounded-tl-sm px-4 py-2 text-sm inline-block">' +
+                '<span class="ai-typing-dot"></span><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span>' +
+              '</div></div>';
+            el.appendChild(wrap); el.scrollTop = el.scrollHeight;
+            thinkingEl = wrap;
+          }
+        } catch (e) {}
+
+        const doneLocal = function () {
+          if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+          legacyHandleInput(text, goods, cart, isEnglish);
+        };
+
+        callAiServer(text, goods, cart, function (err, data) {
+          if (err || !data) {
+            // 后端不通/出错 → 走本地规则
+            if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+            legacyHandleInput(text, goods, cart, isEnglish);
+            return;
+          }
+          // 移除临时消息并应用结果
+          if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
+          applyAiResult(data, text);
+        });
+      }
+
+      // ========== 原有的本地规则解析保留为 fallback（在函数内部保留了完整逻辑） ==========
+      function legacyHandleInput(text, goods, cart, isEnglish) {
+        // 1. 取消/清空/减少 的关键字（在 AI 后端未启用时仍能响应）
         const isRemoval = /去掉|删除|不要这个|不要那|减去|减|拿走|移除|去|去这个|remove|delete/i.test(text);
         const isClearAll = /全部|全部清空|全部不要|全部去掉|清空|重来|重新|都不要|全部取消|clear all|reset all/i.test(text);
 
         if (isClearAll || (text.length <= 6 && /^(取消|清空|重来|重新|都不要)$/.test(text))) {
           clearCartSafe();
           const msg = isEnglish ? 'Cart cleared.' : '好的，已清空购物车';
-          addAIMsg(msg);
-          speak(msg);
-          return;
+          addAIMsg(msg); speak(msg); return;
         }
 
         if (isRemoval) {
@@ -11400,12 +11588,150 @@
           }
         }
         updateStatusLine();
+
+        // —— LLM 配置 UI 同步 ——
+        var llmBase = document.getElementById('ai-llm-base');
+        var llmKey = document.getElementById('ai-llm-key');
+        var llmModel = document.getElementById('ai-llm-model');
+        var llmTemp = document.getElementById('ai-llm-temp');
+        var llmEnabled = document.getElementById('ai-llm-enabled');
+        if (llmBase) llmBase.value = settings.llmBase || '';
+        if (llmKey) llmKey.value = settings.llmKey || '';
+        if (llmModel) llmModel.value = settings.llmModel || '';
+        if (llmTemp) llmTemp.value = typeof settings.llmTemp === 'number' ? settings.llmTemp : 0.2;
+        if (llmEnabled) llmEnabled.checked = settings.llmEnabled !== false;
+        // 拉取一次后端当前已保存的 key（如果有），在输入框提示
+        try {
+          var fxhr = new XMLHttpRequest();
+          fxhr.open('GET', '/api/config', true);
+          fxhr.timeout = 5000;
+          fxhr.onreadystatechange = function () {
+            if (fxhr.readyState === 4) {
+            try {
+              var r = JSON.parse(fxhr.responseText);
+              if (r && r.config && r.config.ai) {
+                if (r.config.ai.apiBase) llmBase.value = llmBase.value || r.config.ai.apiBase;
+                if (r.config.ai.model) llmModel.value = llmModel.value || r.config.ai.model;
+                if (typeof r.config.ai.temperature === 'number') llmTemp.value = llmTemp.value || r.config.ai.temperature;
+                if (r.config.ai.enabled === false) llmEnabled.checked = false;
+                var fb2 = document.getElementById('ai-llm-feedback');
+                if (fb2) { fb2.textContent = '已与后端同步完成'; fb2.style.color = '#16a34a'; }
+              }
+            } catch (e) {}
+            }
+          };
+          fxhr.send();
+        } catch (e) {}
+      }
+
+      // —— LLM 配置保存到后端 ——
+      function saveLlmToBackend(cb) {
+        var llmBase = (document.getElementById('ai-llm-base') || {}).value || '';
+        var llmKey = (document.getElementById('ai-llm-key') || {}).value || '';
+        var llmModel = (document.getElementById('ai-llm-model') || {}).value || '';
+        var llmTemp = parseFloat((document.getElementById('ai-llm-temp') || {}).value || '0.2');
+        var llmEnabled = (document.getElementById('ai-llm-enabled') || {}).checked;
+
+        // 同步到本地 settings（方便下次打开页面时仍显示）
+        settings.llmBase = llmBase;
+        settings.llmKey = llmKey;
+        settings.llmModel = llmModel;
+        settings.llmTemp = llmTemp;
+        settings.llmEnabled = !!llmEnabled;
+        saveSettings();
+
+        try {
+          var xhr = new XMLHttpRequest();
+          xhr.open('PUT', '/api/config', true);
+          xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+          xhr.timeout = 15000;
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+              try {
+                var r = JSON.parse(xhr.responseText);
+                if (r && r.ok) {
+                  cb && cb(null, r); return;
+                }
+              } catch (e) {}
+              cb && cb('后端未启动或返回错误', null);
+            }
+          };
+          xhr.onerror = function () { cb && cb('无法连接后端，请确认已启动 ai-server.py', null); };
+          xhr.ontimeout = function () { cb && cb('请求超时', null); };
+          xhr.send(JSON.stringify({
+            ai: {
+              enabled: !!llmEnabled,
+              apiBase: llmBase,
+            apiKey: llmKey,
+            model: llmModel,
+            temperature: llmTemp
+            }
+          }));
+        } catch (e) {
+          cb && cb(String(e.message || e), null);
+        }
+      }
+
+      function bindLlmEvents() {
+        var testBtn = document.getElementById('ai-llm-test');
+        var saveBtn = document.getElementById('ai-llm-save');
+        var fb = document.getElementById('ai-llm-feedback');
+
+        if (saveBtn) saveBtn.addEventListener('click', function () {
+          if (fb) { fb.textContent = '正在保存…'; fb.style.color = '#6b7280'; }
+          saveLlmToBackend(function (err, data) {
+            if (fb) {
+              if (err) {
+              fb.textContent = '保存失败：' + (err || '未知错误');
+              fb.style.color = '#dc2626';
+            } else {
+              fb.textContent = '✅ 已保存到后端，立即生效';
+              fb.style.color = '#16a34a';
+            }
+            setTimeout(function () { if (fb) fb.textContent = ''; }, 3500);
+          });
+        });
+
+        if (testBtn) testBtn.addEventListener('click', function () {
+          // 先把当前 UI 上的值同步到后端再发一次测试请求
+          saveLlmToBackend(function (err, _) {
+            if (err) {
+              if (fb) { fb.textContent = '⚠ 保存失败：' + err; fb.style.color = '#dc2626'; }
+            return;
+          }
+          if (fb) { fb.textContent = '正在测试连通性…'; fb.style.color = '#6b7280'; }
+          try {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/ai/test', true);
+            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+            xhr.timeout = 20000;
+            xhr.onreadystatechange = function () {
+              if (xhr.readyState === 4) {
+                try {
+                  var r = JSON.parse(xhr.responseText);
+                  if (r && r.ok) {
+                    if (fb) { fb.textContent = '✅ 连通正常：' + JSON.stringify(r.echo || {}); fb.style.color = '#16a34a'; }
+                  } else {
+                    if (fb) { fb.textContent = '❌ 测试失败：' + (r && r.error || '未知错误'); fb.style.color = '#dc2626'; }
+                  }
+                } catch (e) {
+                  if (fb) { fb.textContent = '❌ 测试失败：' + e; fb.style.color = '#dc2626'; }
+                }
+                setTimeout(function () { if (fb) fb.textContent = ''; }, 4500);
+              }
+            };
+            xhr.onerror = function () { if (fb) { fb.textContent = '❌ 网络错误（请确认已启动 ai-server.py，并检查 Key/网络）'; fb.style.color = '#dc2626'; setTimeout(function () { if (fb) fb.textContent = ''; }, 4500); } };
+            xhr.ontimeout = function () { if (fb) { fb.textContent = '⏱ 请求超时'; fb.style.color = '#dc2626'; setTimeout(function () { if (fb) fb.textContent = ''; }, 4500); } };
+            xhr.send(JSON.stringify({}));
+          } catch (e) { if (fb) { fb.textContent = '❌ ' + e; fb.style.color = '#dc2626'; } }
+        });
       }
 
       // ========== 12) 初始化 ==========
       function init() {
         renderFAB();
         bindEvents();
+        bindLlmEvents();
         syncSettingsUI();
         updateCartPreview();
         setInterval(updateCartPreview, 2000);

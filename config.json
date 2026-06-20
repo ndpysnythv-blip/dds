@@ -1,0 +1,14 @@
+{
+  "ai": {
+    "enabled": true,
+    "apiBase": "https://api.deepseek.com/v1",
+    "apiKey": "sk-test-1234567890abcdef",
+    "model": "deepseek-chat",
+    "temperature": 0.3,
+    "timeout": 15
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8000
+  }
+}
