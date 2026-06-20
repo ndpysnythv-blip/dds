@@ -1536,11 +1536,11 @@
           <p id="attendance-current-time" class="text-2xl font-bold text-coffee-dark">--:--:--</p>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-2">
-        <button id="check-in-btn" class="py-3 rounded-md bg-green-500 text-white btn-hover text-sm flex items-center justify-center gap-2">
+      <div id="attendance-buttons" class="space-y-2">
+        <button id="check-in-btn" class="w-full py-3 rounded-xl bg-green-500 text-white btn-hover text-sm flex items-center justify-center gap-2">
           <i class="fa-solid fa-arrow-right-to-bracket"></i>上班签到
         </button>
-        <button id="check-out-btn" class="py-3 rounded-md bg-blue-500 text-white btn-hover text-sm flex items-center justify-center gap-2">
+        <button id="check-out-btn" class="w-full py-3 rounded-xl bg-blue-500 text-white btn-hover text-sm flex items-center justify-center gap-2 hidden">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>下班打卡
         </button>
       </div>
@@ -3860,7 +3860,7 @@
       renderEmployeeList();
     });
 
-    // 渲染员工列表（增强版）
+    // 渲染员工列表（增强版：按员工多条记录显示状态）
     function renderEmployeeList() {
       const employees = getEmployees();
       const listEl = document.getElementById('employee-list');
@@ -3874,10 +3874,28 @@
       const todayKey = new Date().toISOString().slice(0, 10);
 
       listEl.innerHTML = employees.map(emp => {
-        // 获取该员工今天的打卡状态
-        const todayRec = records.find(r => r.empId === emp.id && r.date === todayKey);
-        const statusLabel = todayRec ? (todayRec.checkOut ? '已下班' : '工作中') : '未签到';
-        const statusClass = todayRec ? (todayRec.checkOut ? 'bg-gray-400' : 'bg-green-500') : 'bg-orange-400';
+        // 获取该员工今天的所有记录（可能有多条时段）
+        const todayRecs = records.filter(r => r.empId === emp.id && r.date === todayKey);
+        // 判断是否正在上班（有没有未打卡下班的记录）
+        const isWorking = todayRecs.some(r => r.checkIn && !r.checkOut);
+        // 有没有任何签到记录
+        const hasAnyRecord = todayRecs.length > 0;
+
+        let statusLabel, statusClass, statusTextClass;
+        if (isWorking) {
+          statusLabel = '工作中';
+          statusClass = 'bg-green-500';
+          statusTextClass = 'text-green-600';
+        } else if (hasAnyRecord) {
+          statusLabel = '已下班';
+          statusClass = 'bg-gray-400';
+          statusTextClass = 'text-gray-500';
+        } else {
+          statusLabel = '未签到';
+          statusClass = 'bg-orange-400';
+          statusTextClass = 'text-orange-500';
+        }
+
         return `
         <div class="flex items-center justify-between p-4 bg-gradient-to-r from-white to-coffee-cream/30 rounded-xl border border-coffee-light/30 hover:shadow-md hover:border-coffee-main/40 transition-all cursor-pointer" onclick="openEmployeeAttendanceDetail(${emp.id})">
           <div class="flex items-center gap-3 flex-1">
@@ -3891,12 +3909,12 @@
             </div>
             <div class="text-center mr-2">
               <p class="text-xs text-gray-500">今日状态</p>
-              <p class="font-bold text-sm ${todayRec ? (todayRec.checkOut ? 'text-gray-500' : 'text-green-600') : 'text-orange-500'}">${statusLabel}</p>
+              <p class="font-bold text-sm ${statusTextClass}">${statusLabel}</p>
             </div>
           </div>
           <div class="flex items-center gap-2" onclick="event.stopPropagation()">
-            <button onclick="openAttendanceForEmployee(${emp.id})" class="py-2 px-4 rounded-xl bg-green-500 text-white text-xs btn-hover flex items-center gap-1.5 shadow-sm hover:shadow-md">
-              <i class="fa-solid fa-clock"></i>打卡
+            <button onclick="openAttendanceForEmployee(${emp.id})" class="py-2 px-4 rounded-xl ${isWorking ? 'bg-blue-500' : 'bg-green-500'} text-white text-xs btn-hover flex items-center gap-1.5 shadow-sm hover:shadow-md">
+              <i class="fa-solid ${isWorking ? 'fa-arrow-right-from-bracket' : 'fa-arrow-right-to-bracket'}"></i>${isWorking ? '下班' : '签到'}
             </button>
             <button onclick="editEmployee(${emp.id})" class="py-2 px-3 rounded-xl bg-gray-100 text-gray-600 text-xs btn-hover hover:bg-coffee-cream">
               <i class="fa-solid fa-pen"></i>
@@ -3929,16 +3947,6 @@
       let employees = getEmployees().filter(e => e.id !== id);
       saveEmployees(employees);
       renderEmployeeList();
-    }
-
-    // 打开特定员工的打卡
-    function openAttendanceForEmployee(id) {
-      document.getElementById('attendance-modal').classList.remove('hidden');
-      populateAttendanceEmployeeSelect();
-      setTimeout(() => {
-        document.getElementById('attendance-employee-select').value = String(id);
-      }, 50);
-      startAttendanceTime();
     }
 
     // 签到打卡弹窗 - 选择员工列表
@@ -3976,7 +3984,48 @@
       broadcastData({ type: 'attendance_update', data: records });
     }
 
-    // 上班签到
+    // 打开特定员工的打卡（增强版：根据当前状态显示对应按钮）
+    function openAttendanceForEmployee(id) {
+      document.getElementById('attendance-modal').classList.remove('hidden');
+      populateAttendanceEmployeeSelect();
+      setTimeout(() => {
+        document.getElementById('attendance-employee-select').value = String(id);
+        updateAttendanceButtonState();
+      }, 50);
+      startAttendanceTime();
+    }
+
+    // 选择员工时更新按钮状态
+    document.getElementById('attendance-employee-select').addEventListener('change', updateAttendanceButtonState);
+
+    // 更新打卡按钮显示状态
+    function updateAttendanceButtonState() {
+      const empId = parseInt(document.getElementById('attendance-employee-select').value);
+      const checkInBtn = document.getElementById('check-in-btn');
+      const checkOutBtn = document.getElementById('check-out-btn');
+      if (!empId) {
+        // 未选择员工，两个按钮都隐藏或都显示？—— 都隐藏，让用户先选择
+        checkInBtn.classList.add('hidden');
+        checkOutBtn.classList.add('hidden');
+        return;
+      }
+      // 判断该员工今天是否正在上班
+      const records = getAttendanceRecords();
+      const todayKey = new Date().toISOString().slice(0, 10);
+      // 找到今天该员工最新的、没有打卡下班的记录
+      const activeRecord = records.filter(r => r.empId === empId && r.date === todayKey && r.checkIn && !r.checkOut).length > 0;
+      if (activeRecord) {
+        // 正在上班 → 只显示下班打卡
+        checkInBtn.classList.add('hidden');
+        checkOutBtn.classList.remove('hidden');
+      } else {
+        // 没有上班 → 只显示上班签到
+        checkInBtn.classList.remove('hidden');
+        checkOutBtn.classList.add('hidden');
+      }
+    }
+
+    // 上班签到（支持一天内多次上下班）
     document.getElementById('check-in-btn').addEventListener('click', function() {
       const empId = parseInt(document.getElementById('attendance-employee-select').value);
       if (!empId) { alert('请选择员工'); return; }
@@ -3986,17 +4035,18 @@
       const records = getAttendanceRecords();
       const now = new Date();
       const todayKey = now.toISOString().slice(0, 10);
-      // 检查今天是否已签到
-      const existing = records.find(r => r.empId === empId && r.date === todayKey && r.checkIn);
-      if (existing) { alert(`${emp.name} 今日已签到`); return; }
+      // 检查今天是否有正在上班的记录
+      const activeRecord = records.find(r => r.empId === empId && r.date === todayKey && r.checkIn && !r.checkOut);
+      if (activeRecord) { alert(`${emp.name} 正在上班中，请先下班打卡`); return; }
+      // 新增一条签到记录（允许一天多条）
       records.push({ id: Date.now(), empId, empName: emp.name, empPosition: emp.position, date: todayKey, checkIn: now.toISOString(), checkOut: null });
       saveAttendanceRecords(records);
       alert(`✓ ${emp.name} 签到成功 ${now.toTimeString().slice(0,5)}`);
       document.getElementById('attendance-modal').classList.add('hidden');
-      renderTodayAttendance();
+      refreshBothLists();
     });
 
-    // 下班打卡
+    // 下班打卡（支持一天内多次上下班）
     document.getElementById('check-out-btn').addEventListener('click', function() {
       const empId = parseInt(document.getElementById('attendance-employee-select').value);
       if (!empId) { alert('请选择员工'); return; }
@@ -4006,17 +4056,23 @@
       const records = getAttendanceRecords();
       const now = new Date();
       const todayKey = now.toISOString().slice(0, 10);
-      const record = records.find(r => r.empId === empId && r.date === todayKey);
-      if (!record || !record.checkIn) { alert('请先完成上班签到'); return; }
-      if (record.checkOut) { alert('今日已完成下班打卡'); return; }
-      record.checkOut = now.toISOString();
+      // 找到今天该员工最新的一条未打卡记录
+      const activeRecord = records.filter(r => r.empId === empId && r.date === todayKey && r.checkIn && !r.checkOut).sort((a,b) => new Date(b.checkIn) - new Date(a.checkIn))[0];
+      if (!activeRecord) { alert('请先完成上班签到'); return; }
+      activeRecord.checkOut = now.toISOString();
       saveAttendanceRecords(records);
       alert(`✓ ${emp.name} 打卡成功 ${now.toTimeString().slice(0,5)}`);
       document.getElementById('attendance-modal').classList.add('hidden');
-      renderTodayAttendance();
+      refreshBothLists();
     });
 
-    // 渲染工作中（今日签到） - 美化版
+    // 同时刷新员工列表和工作中区域
+    function refreshBothLists() {
+      renderEmployeeList();
+      renderTodayAttendance();
+    }
+
+    // 渲染工作中（今日签到） - 增强版：按状态排序，支持一天内多个时段
     function renderTodayAttendance() {
       const records = getAttendanceRecords();
       const todayKey = new Date().toISOString().slice(0, 10);
@@ -4028,75 +4084,118 @@
         return;
       }
       const now = new Date();
-      el.innerHTML = todayRecords.map(r => {
-        const checkInTime = r.checkIn ? new Date(r.checkIn).toTimeString().slice(0, 5) : '--:--';
-        const checkOutTime = r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : null;
-        // 计算工作时长
-        let workedText = '';
-        let workedHours = 0;
-        if (r.checkIn) {
-          const start = new Date(r.checkIn);
-          const end = r.checkOut ? new Date(r.checkOut) : now;
-          const diffMs = end - start;
-          const hours = Math.floor(diffMs / 3600000);
-          const mins = Math.floor((diffMs % 3600000) / 60000);
-          workedHours = diffMs / 3600000;
-          workedText = `${hours}小时${mins}分`;
-        }
-        const isWorking = r.checkIn && !r.checkOut;
-        const statusColor = isWorking ? 'bg-green-500' : 'bg-gray-400';
-        const statusText = isWorking ? '工作中' : '已下班';
+
+      // 按员工分组：找到每个员工今天的所有记录
+      const employees = getEmployees();
+      const empTodayRecords = {};
+      todayRecords.forEach(r => {
+        if (!empTodayRecords[r.empId]) empTodayRecords[r.empId] = [];
+        empTodayRecords[r.empId].push(r);
+      });
+
+      // 按"正在上班的放上面，已下班的放下面"排序
+      const workingEmpIds = [];  // 正在上班的员工
+      const offEmpIds = [];       // 已下班的员工
+      Object.keys(empTodayRecords).forEach(empId => {
+        const hasActive = empTodayRecords[empId].some(r => r.checkIn && !r.checkOut);
+        if (hasActive) workingEmpIds.push(empId);
+        else offEmpIds.push(empId);
+      });
+      const orderedEmpIds = [...workingEmpIds, ...offEmpIds];
+
+      // 渲染每个员工的卡片（一个员工可能有多个时段）
+      el.innerHTML = orderedEmpIds.map(empId => {
+        const empRecs = empTodayRecords[empId].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+        const emp = employees.find(e => e.id === parseInt(empId)) || { name: empRecs[0].empName, employeeNo: '', position: empRecs[0].empPosition };
+        const isCurrentlyWorking = empRecs.some(r => r.checkIn && !r.checkOut);
+        const statusColor = isCurrentlyWorking ? 'bg-green-500' : 'bg-gray-400';
+        const statusText = isCurrentlyWorking ? '工作中' : '已下班';
+
+        // 计算每个时段的工作时长
+        const periodsHtml = empRecs.map(r => {
+          const checkInTime = r.checkIn ? new Date(r.checkIn).toTimeString().slice(0, 5) : '--:--';
+          const checkOutTime = r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : null;
+          let workedText = '';
+          if (r.checkIn) {
+            const start = new Date(r.checkIn);
+            const end = r.checkOut ? new Date(r.checkOut) : now;
+            const diffMs = end - start;
+            const hours = Math.floor(diffMs / 3600000);
+            const mins = Math.floor((diffMs % 3600000) / 60000);
+            workedText = `${hours}小时${mins}分`;
+          }
+          const isActive = r.checkIn && !r.checkOut;
+          return `
+            <div class="flex items-center gap-3 text-xs text-gray-600 py-1">
+              <span class="flex items-center gap-1"><i class="fa-solid fa-arrow-right-to-bracket text-green-600"></i>${checkInTime}</span>
+              <span class="text-gray-300">→</span>
+              <span class="flex items-center gap-1"><i class="fa-solid fa-arrow-right-from-bracket text-blue-600"></i>${checkOutTime || '未下班'}</span>
+              <span class="ml-2 ${isActive ? 'text-orange-600 font-bold' : 'text-gray-500'}">(${workedText || '--'})</span>
+            </div>`;
+        }).join('');
+
+        // 计算当天总工作时长
+        let totalMinutes = 0;
+        empRecs.forEach(r => {
+          if (r.checkIn) {
+            const start = new Date(r.checkIn);
+            const end = r.checkOut ? new Date(r.checkOut) : now;
+            totalMinutes += Math.floor((end - start) / 60000);
+          }
+        });
+        const totalHours = Math.floor(totalMinutes / 60);
+        const totalMins = totalMinutes % 60;
+
+        // 找到正在上班的时段（用于显示下班按钮）
+        const activeRec = empRecs.find(r => r.checkIn && !r.checkOut);
+
         return `
-        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-coffee-cream/60 to-coffee-cream/30 rounded-xl border border-coffee-light/30 hover:shadow-md transition-shadow cursor-pointer" onclick="openEmployeeAttendanceDetail(${r.empId})">
+        <div class="flex items-center justify-between p-4 ${isCurrentlyWorking ? 'bg-gradient-to-r from-green-50 to-coffee-cream/30 border-green-200' : 'bg-gradient-to-r from-gray-50 to-coffee-cream/20 border-gray-200'} rounded-xl border hover:shadow-md transition-shadow cursor-pointer" onclick="openEmployeeAttendanceDetail(${empId})">
           <div class="flex items-center gap-3 flex-1">
             <div class="relative">
-              <div class="w-12 h-12 rounded-full bg-coffee-main text-white flex items-center justify-center text-lg font-bold">${r.empName.charAt(0)}</div>
+              <div class="w-12 h-12 rounded-full ${isCurrentlyWorking ? 'bg-green-600' : 'bg-gray-400'} text-white flex items-center justify-center text-lg font-bold">${emp.name.charAt(0)}</div>
               <div class="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full ${statusColor} border-2 border-white flex items-center justify-center">
-                <i class="fa-solid ${isWorking ? 'fa-circle-notch fa-spin' : 'fa-circle-check'} text-white text-[8px]"></i>
+                <i class="fa-solid ${isCurrentlyWorking ? 'fa-circle-notch fa-spin' : 'fa-circle-check'} text-white text-[8px]"></i>
               </div>
             </div>
             <div class="flex-1">
-              <p class="font-bold text-coffee-dark">${r.empName} <span class="text-xs text-gray-500 font-normal">${r.empPosition}</span></p>
-              <div class="flex items-center gap-3 mt-1 text-xs text-gray-600">
-                <span><i class="fa-solid fa-arrow-right-to-bracket text-green-600 mr-1"></i>${checkInTime}</span>
-                <span><i class="fa-solid fa-arrow-right-from-bracket text-blue-600 mr-1"></i>${checkOutTime || '未打卡'}</span>
+              <p class="font-bold text-coffee-dark">${emp.name} <span class="text-xs text-gray-500 font-normal">${emp.position}</span></p>
+              <div class="mt-1">
+                ${periodsHtml}
               </div>
+              <p class="text-xs text-gray-500 mt-1">今日总计：${totalHours}小时${totalMins}分</p>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="text-right mr-1">
-              <p class="text-xs text-gray-500">${isWorking ? '已工作' : '工作时长'}</p>
-              <p class="font-bold ${isWorking ? 'text-orange-600' : 'text-gray-600'} text-lg">${workedText || '--'}</p>
-            </div>
-            ${isWorking ? `
-            <button onclick="event.stopPropagation(); quickCheckOut(${r.empId})" class="py-2.5 px-5 rounded-xl bg-blue-600 text-white btn-hover text-sm flex items-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div class="flex items-center gap-3" onclick="event.stopPropagation()">
+            ${activeRec ? `
+            <button onclick="quickCheckOut(${empId})" class="py-2.5 px-5 rounded-xl bg-blue-600 text-white btn-hover text-sm flex items-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
               <i class="fa-solid fa-arrow-right-from-bracket"></i>下班
             </button>` : `
             <div class="py-2.5 px-5 rounded-xl bg-gray-200 text-gray-500 text-sm flex items-center gap-2">
-              <i class="fa-solid fa-check-double"></i>已下班
+              <i class="fa-solid fa-check-double"></i>${statusText}
             </div>`}
           </div>
         </div>`;
       }).join('');
     }
 
-    // 快速下班打卡
+    // 快速下班打卡（支持一天内多次上下班）
     function quickCheckOut(empId) {
       const records = getAttendanceRecords();
       const now = new Date();
       const todayKey = now.toISOString().slice(0, 10);
-      const record = records.find(r => r.empId === empId && r.date === todayKey);
-      if (!record || !record.checkIn) return;
-      if (record.checkOut) return;
-      record.checkOut = now.toISOString();
+      // 找到今天该员工最新的一条未打卡记录
+      const activeRecord = records.filter(r => r.empId === empId && r.date === todayKey && r.checkIn && !r.checkOut).sort((a, b) => new Date(b.checkIn) - new Date(a.checkIn))[0];
+      if (!activeRecord) return;
+      activeRecord.checkOut = now.toISOString();
       saveAttendanceRecords(records);
       const employees = getEmployees();
       const emp = employees.find(e => e.id === empId);
       showTipModal(`${emp ? emp.name : '员工'} 下班打卡成功！`, 'fa-solid fa-circle-check');
-      renderTodayAttendance();
+      refreshBothLists();
     }
 
-    // 打开员工打卡详情
+    // 打开员工打卡详情（增强版：支持一天内多个时段）
     function openEmployeeAttendanceDetail(empId) {
       const employees = getEmployees();
       const emp = employees.find(e => e.id === empId);
@@ -4114,39 +4213,43 @@
       // 获取该员工的所有打卡记录
       const records = getAttendanceRecords().filter(r => r.empId === empId);
       const todayKey = new Date().toISOString().slice(0, 10);
-      const todayRecord = records.find(r => r.date === todayKey);
+      // 今天的所有记录（可能多条时段）
+      const todayRecords = records.filter(r => r.date === todayKey);
+      const hasActiveRecord = todayRecords.some(r => r.checkIn && !r.checkOut);
 
-      // 今日签到/打卡状态
-      if (todayRecord && todayRecord.checkIn) {
-        document.getElementById('detail-today-checkin').textContent = new Date(todayRecord.checkIn).toTimeString().slice(0, 5);
+      // 今日签到/打卡状态 - 显示每个时段
+      let checkInHtml = '';
+      let checkOutHtml = '';
+      if (todayRecords.length === 0) {
+        checkInHtml = '未签到';
+        checkOutHtml = '未下班';
       } else {
-        document.getElementById('detail-today-checkin').textContent = '未签到';
+        const sortedToday = [...todayRecords].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+        checkInHtml = sortedToday.map(r => r.checkIn ? new Date(r.checkIn).toTimeString().slice(0, 5) : '--:--').join(' | ');
+        checkOutHtml = sortedToday.map(r => r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : '未下班').join(' | ');
       }
-
-      if (todayRecord && todayRecord.checkOut) {
-        document.getElementById('detail-today-checkout').textContent = new Date(todayRecord.checkOut).toTimeString().slice(0, 5);
-      } else {
-        document.getElementById('detail-today-checkout').textContent = '未打卡';
-      }
+      document.getElementById('detail-today-checkin').textContent = checkInHtml;
+      document.getElementById('detail-today-checkout').textContent = checkOutHtml;
 
       // 今日已工作 + 下班按钮
       const checkoutBtn = document.getElementById('detail-checkout-btn');
-      if (todayRecord && todayRecord.checkIn && !todayRecord.checkOut) {
+      if (hasActiveRecord) {
         checkoutBtn.classList.remove('hidden');
         checkoutBtn.onclick = function() {
           quickCheckOut(empId);
-          // 重新渲染详情
           setTimeout(() => openEmployeeAttendanceDetail(empId), 300);
         };
       } else {
         checkoutBtn.classList.add('hidden');
       }
 
-      // 计算本月统计
+      // 计算本月统计（支持一天内多条记录）
       const now2 = new Date();
       const monthKey = now2.toISOString().slice(0, 7);
       const monthRecords = records.filter(r => r.date.startsWith(monthKey));
-      let monthDays = monthRecords.filter(r => r.checkIn).length;
+      // 本月出勤天数：只要当天有签到记录就算一天
+      const uniqueDates = new Set(monthRecords.map(r => r.date));
+      let monthDays = uniqueDates.size;
       let monthHours = 0;
       monthRecords.forEach(r => {
         if (r.checkIn) {
@@ -4159,36 +4262,40 @@
       document.getElementById('detail-month-days').innerHTML = `${monthDays}<span class="text-sm font-normal"> 天</span>`;
       document.getElementById('detail-month-hours').textContent = `累计 ${monthHours.toFixed(1)} 小时`;
 
-      // 实时更新工作时长
+      // 实时更新工作时长（支持多条时段）
       function updateWorkedTime() {
-        if (todayRecord && todayRecord.checkIn) {
-          const start = new Date(todayRecord.checkIn);
-          const end = todayRecord.checkOut ? new Date(todayRecord.checkOut) : new Date();
-          const diffMs = end - start;
-          const hours = Math.floor(diffMs / 3600000);
-          const mins = Math.floor((diffMs % 3600000) / 60000);
-          const secs = Math.floor((diffMs % 60000) / 1000);
-          document.getElementById('detail-today-worked').textContent = `${hours}小时${mins}分${String(secs).padStart(2, '0')}秒`;
-        } else {
+        let totalSeconds = 0;
+        todayRecords.forEach(r => {
+          if (r.checkIn) {
+            const start = new Date(r.checkIn);
+            const end = r.checkOut ? new Date(r.checkOut) : new Date();
+            totalSeconds += Math.floor((end - start) / 1000);
+          }
+        });
+        if (totalSeconds === 0) {
           document.getElementById('detail-today-worked').textContent = '今日未工作';
+        } else {
+          const hours = Math.floor(totalSeconds / 3600);
+          const mins = Math.floor((totalSeconds % 3600) / 60);
+          const secs = totalSeconds % 60;
+          document.getElementById('detail-today-worked').textContent = `${hours}小时${mins}分${String(secs).padStart(2, '0')}秒`;
         }
       }
       updateWorkedTime();
-      // 清除旧定时器并启动新的
       if (window._detailTimer) clearInterval(window._detailTimer);
       window._detailTimer = setInterval(updateWorkedTime, 1000);
 
       // 渲染历史记录（按日期倒序）
       const historyEl = document.getElementById('detail-history-list');
-      const sortedRecords = [...records].sort((a, b) => b.date.localeCompare(a.date));
+      const sortedRecords = [...records].sort((a, b) => new Date(b.checkIn) - new Date(a.checkIn));
       if (sortedRecords.length === 0) {
         historyEl.innerHTML = '<div class="text-center py-6 text-gray-500"><i class="fa-solid fa-file-lines text-2xl mb-2"></i><p>暂无历史打卡记录</p></div>';
       } else {
         historyEl.innerHTML = sortedRecords.map(r => {
-          const dateObj = new Date(r.date);
+          const dateObj = new Date(r.checkIn);
           const weekday = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dateObj.getDay()];
           const checkInTime = r.checkIn ? new Date(r.checkIn).toTimeString().slice(0, 5) : '未签到';
-          const checkOutTime = r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : '未打卡';
+          const checkOutTime = r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : '未下班';
           let durationText = '--';
           if (r.checkIn) {
             const start = new Date(r.checkIn);
