@@ -1418,6 +1418,10 @@
           <input id="employee-name-input" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="请输入员工姓名">
         </div>
         <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">工号</label>
+          <input id="employee-no-input" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="例如：EMP001">
+        </div>
+        <div>
           <label class="block text-sm text-coffee-dark mb-1.5">职位</label>
           <select id="employee-position-input" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main">
             <option value="店长">店长</option>
@@ -3653,6 +3657,23 @@
       document.getElementById('store-settings-modal').classList.remove('hidden');
     });
 
+    // 多设备数据广播同步（通过 localStorage storage 事件实现跨标签页数据同步
+    function broadcastData(payload) {
+      try {
+        const syncKey = 'sync_' + payload.type + '_' + Date.now();
+        localStorage.setItem(syncKey, JSON.stringify({
+          payload: payload,
+          timestamp: Date.now()
+        }));
+        // 清理旧的同步消息（保留最近10秒的）
+        setTimeout(() => {
+          try { localStorage.removeItem(syncKey); } catch(e) {}
+        }, 10000);
+      } catch(e) {
+        // 静默失败，不影响正常功能
+      }
+    }
+
     // ========== 员工管理 ==========
     document.getElementById('to-employee-manage').addEventListener('click', function() {
       closeAllModals();
@@ -3696,6 +3717,7 @@
       editingEmployeeId = null;
       document.getElementById('employee-edit-title').textContent = '添加员工';
       document.getElementById('employee-name-input').value = '';
+      document.getElementById('employee-no-input').value = '';
       document.getElementById('employee-position-input').value = '咖啡师';
       document.getElementById('employee-phone-input').value = '';
       document.getElementById('employee-edit-modal').classList.remove('hidden');
@@ -3704,15 +3726,16 @@
     // 保存员工信息
     document.getElementById('save-employee-btn').addEventListener('click', function() {
       const name = document.getElementById('employee-name-input').value.trim();
+      const employeeNo = document.getElementById('employee-no-input').value.trim();
       const position = document.getElementById('employee-position-input').value;
       const phone = document.getElementById('employee-phone-input').value.trim();
       if (!name) { alert('请输入员工姓名'); return; }
       let employees = getEmployees();
       if (editingEmployeeId) {
         const emp = employees.find(e => e.id === editingEmployeeId);
-        if (emp) { emp.name = name; emp.position = position; emp.phone = phone; }
+        if (emp) { emp.name = name; emp.employeeNo = employeeNo; emp.position = position; emp.phone = phone; }
       } else {
-        employees.push({ id: Date.now(), name, position, phone, createdAt: new Date().toISOString() });
+        employees.push({ id: Date.now(), name, employeeNo, position, phone, createdAt: new Date().toISOString() });
       }
       saveEmployees(employees);
       document.getElementById('employee-edit-modal').classList.add('hidden');
@@ -3733,7 +3756,7 @@
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-coffee-main text-white flex items-center justify-center font-bold">${emp.name.charAt(0)}</div>
             <div>
-              <p class="font-bold text-coffee-dark">${emp.name}</p>
+              <p class="font-bold text-coffee-dark">${emp.name}${emp.employeeNo ? ' <span class="text-xs text-gray-500 font-normal">(' + emp.employeeNo + ')</span>' : ''}</p>
               <p class="text-xs text-gray-500">${emp.position}${emp.phone ? ' | ' + emp.phone : ''}</p>
             </div>
           </div>
@@ -3754,6 +3777,7 @@
       editingEmployeeId = id;
       document.getElementById('employee-edit-title').textContent = '编辑员工';
       document.getElementById('employee-name-input').value = emp.name;
+      document.getElementById('employee-no-input').value = emp.employeeNo || '';
       document.getElementById('employee-position-input').value = emp.position;
       document.getElementById('employee-phone-input').value = emp.phone || '';
       document.getElementById('employee-edit-modal').classList.remove('hidden');
@@ -3782,7 +3806,7 @@
       const employees = getEmployees();
       const selectEl = document.getElementById('attendance-employee-select');
       if (!selectEl) return;
-      selectEl.innerHTML = '<option value="">请选择员工</option>' + employees.map(e => `<option value="${e.id}">${e.name} - ${e.position}</option>`).join('');
+      selectEl.innerHTML = '<option value="">请选择员工</option>' + employees.map(e => `<option value="${e.id}">${e.employeeNo ? '[' + e.employeeNo + '] ' : ''}${e.name} - ${e.position}</option>`).join('');
     }
 
     let attendanceTimeInterval = null;
