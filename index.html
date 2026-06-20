@@ -1599,6 +1599,28 @@
     </div>
   </div>
 
+  <!-- 商品选择弹窗 -->
+  <div id="product-select-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] hidden modal-fade">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div class="flex justify-between items-center p-4 border-b border-coffee-light/30">
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-search text-coffee-main"></i>选择商品</h2>
+        <button onclick="document.getElementById('product-select-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-4 border-b border-coffee-light/30">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          <input id="product-search-input" type="text" class="w-full pl-10 pr-4 py-2.5 border border-coffee-light rounded-lg focus:outline-none focus:border-coffee-main" placeholder="搜索商品名称...">
+        </div>
+      </div>
+      <div id="product-select-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+        <!-- 商品列表由 JS 动态生成 -->
+      </div>
+      <div class="p-4 border-t border-coffee-light/30 flex justify-end">
+        <button onclick="document.getElementById('product-select-modal').classList.add('hidden')" class="py-2.5 px-6 rounded-md bg-gray-200 text-gray-700 btn-hover text-sm">取消</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 编辑商品库存弹窗（增强版） -->
   <div id="inventory-edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
     <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
@@ -1607,15 +1629,15 @@
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="space-y-4">
-        <!-- 商品名称：可选择已有商品或手动输入 -->
+        <!-- 商品名称：点击按钮打开弹窗选择 -->
         <div>
           <label class="block text-sm text-coffee-dark mb-1.5">商品名称</label>
-          <div class="relative">
-            <select id="edit-inventory-product-select" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main mb-2" onchange="syncProductSelect()">
-              <option value="">从已有商品中选择...</option>
-              <!-- 商品列表由 JS 动态填充 -->
-            </select>
+          <div class="space-y-2">
+            <button onclick="openProductSelectModal()" class="w-full px-3 py-2.5 border-2 border-dashed border-coffee-light rounded-lg hover:border-coffee-main hover:bg-coffee-cream/30 transition-colors text-sm text-coffee-dark flex items-center justify-center gap-2">
+              <i class="fa-solid fa-plus-circle text-coffee-main"></i>从已有商品中选择...
+            </button>
             <input id="edit-inventory-product-name" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="或手动输入商品名称">
+            <input id="edit-inventory-product-id" type="hidden">
           </div>
         </div>
         <div>
@@ -2543,6 +2565,7 @@
           'attendance-modal',
           'inventory-check-modal',
           'inventory-edit-modal',
+          'product-select-modal',
           'raw-material-use-modal',
           'expiry-alert-modal',
           'tip-modal',
@@ -4208,19 +4231,68 @@
       renderRawMaterialLogs();
     });
 
+    // 打开商品选择弹窗
+    function openProductSelectModal() {
+      document.getElementById('product-select-modal').classList.remove('hidden');
+      renderProductSelectList('');
+    }
+
+    // 渲染商品选择列表
+    function renderProductSelectList(searchText) {
+      const goods = window.appState ? (window.appState.goods || []) : [];
+      const filtered = goods.filter(g => {
+        if (!searchText) return true;
+        return g.name.toLowerCase().includes(searchText.toLowerCase());
+      });
+      const listEl = document.getElementById('product-select-list');
+      if (!listEl) return;
+      if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-search text-3xl mb-2"></i><p>未找到匹配的商品</p></div>';
+        return;
+      }
+      listEl.innerHTML = filtered.map(g => `
+        <div class="flex items-center justify-between p-3 bg-coffee-cream/50 rounded-lg hover:bg-coffee-cream cursor-pointer transition-colors" onclick="selectProduct(${g.id}, '${escapeHtml(g.name)}')">
+          <div class="flex items-center gap-3">
+            ${g.image ? `<img src="${g.image}" class="w-12 h-12 rounded-lg object-cover" alt="${g.name}">` : `<div class="w-12 h-12 rounded-lg bg-coffee-main text-white flex items-center justify-center text-lg font-bold">${g.name.charAt(0)}</div>`}
+            <div>
+              <p class="font-bold text-coffee-dark">${escapeHtml(g.name)}</p>
+              <p class="text-xs text-gray-500">分类：${g.category || '未分类'} · 价格：¥${(g.price / 100).toFixed(2)}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <p class="text-xs text-gray-500">现有库存</p>
+              <p class="font-bold text-coffee-main">${g.stock || 0}</p>
+            </div>
+            <button class="py-2 px-4 rounded-lg bg-coffee-main text-white text-sm btn-hover"><i class="fa-solid fa-check"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // HTML转义函数
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 选择商品
+    function selectProduct(id, name) {
+      document.getElementById('edit-inventory-product-id').value = id;
+      document.getElementById('edit-inventory-product-name').value = name;
+      document.getElementById('product-select-modal').classList.add('hidden');
+    }
+
+    // 商品搜索
+    document.getElementById('product-search-input').addEventListener('input', function() {
+      renderProductSelectList(this.value);
+    });
+
     // 添加新库存
     document.getElementById('add-new-inventory-btn').addEventListener('click', function() {
-      editingInventoryId = Date.now(); // 使用临时ID
-      // 填充商品选择列表
-      const goods = window.appState ? (window.appState.goods || []) : [];
-      const selectEl = document.getElementById('edit-inventory-product-select');
-      if (selectEl) {
-        let html = '<option value="">从已有商品中选择...</option>';
-        goods.forEach(g => {
-          html += `<option value="${g.id}">${g.name}</option>`;
-        });
-        selectEl.innerHTML = html;
-      }
+      editingInventoryId = Date.now();
+      document.getElementById('edit-inventory-product-id').value = '';
       document.getElementById('edit-inventory-product-name').value = '';
       document.getElementById('edit-inventory-qty').value = 0;
       document.getElementById('edit-inventory-produce-date').value = '';
@@ -4320,7 +4392,7 @@
               <div class="flex flex-wrap gap-2">
                 ${item.materials.map(m => `
                   <span class="px-2 py-1 bg-coffee-cream rounded-full text-xs text-coffee-dark flex items-center gap-1">
-                    <i class="fa-solid fa-circle-dot text-coffee-main text-[8px]"></i>${m.name} ${m.qty || ''}
+                    <i class="fa-solid fa-circle-dot text-coffee-main text-[8px]"></i>${m.name}${m.code ? ' [' + m.code + ']' : ''} ${m.qty || ''}
                   </span>
                 `).join('')}
               </div>
@@ -4370,18 +4442,8 @@
       }
       editingInventoryId = item.goodsId;
 
-      // 填充商品选择列表
-      const goods = window.appState ? (window.appState.goods || []) : [];
-      const selectEl = document.getElementById('edit-inventory-product-select');
-      if (selectEl) {
-        let html = '<option value="">从已有商品中选择...</option>';
-        goods.forEach(g => {
-          html += `<option value="${g.id}" ${g.id === item.goodsId ? 'selected' : ''}>${g.name}</option>`;
-        });
-        selectEl.innerHTML = html;
-      }
-
-      // 填充商品名称输入
+      // 填充商品信息
+      document.getElementById('edit-inventory-product-id').value = goodsId;
       document.getElementById('edit-inventory-product-name').value = item.productName || '';
       document.getElementById('edit-inventory-qty').value = item.qty || 0;
       document.getElementById('edit-inventory-produce-date').value = item.produceDate || '';
@@ -4406,15 +4468,16 @@
       }
     }
 
-    // 添加原料行
-    function addRawMaterialRow(name = '', qty = '') {
+    // 添加原料行（增强版：支持原料编码）
+    function addRawMaterialRow(name = '', code = '', qty = '') {
       const listEl = document.getElementById('raw-materials-list');
       const id = Date.now() + Math.random();
       const row = document.createElement('div');
       row.className = 'flex items-center gap-2 bg-coffee-cream/50 p-2 rounded-lg';
       row.innerHTML = `
         <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-name" placeholder="原料名称" value="${name}">
-        <input type="text" class="w-28 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="用量" value="${qty}">
+        <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-code" placeholder="原料编码" value="${code}">
+        <input type="text" class="w-24 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="用量" value="${qty}">
         <button onclick="removeRawMaterialRow(this)" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
       `;
       listEl.appendChild(row);
@@ -4425,38 +4488,39 @@
       btn.parentElement.remove();
     }
 
-    // 渲染原料列表
+    // 渲染原料列表（支持编码）
     function renderRawMaterialsList(materials) {
       const listEl = document.getElementById('raw-materials-list');
       listEl.innerHTML = '';
       if (materials && materials.length) {
-        materials.forEach(m => addRawMaterialRow(m.name, m.qty));
+        materials.forEach(m => addRawMaterialRow(m.name, m.code || '', m.qty));
       } else {
         addRawMaterialRow();
       }
     }
 
-    // 保存库存编辑（增强版：支持商品名称和原料管理）
+    // 保存库存编辑（增强版：支持商品名称、原料编码和商品选择弹窗）
     document.getElementById('save-inventory-btn').addEventListener('click', function() {
       const productName = document.getElementById('edit-inventory-product-name').value.trim();
       if (!productName) { alert('请输入商品名称'); return; }
       const qty = parseInt(document.getElementById('edit-inventory-qty').value) || 0;
       
-      // 从动态行获取原料数据
+      // 从动态行获取原料数据（包含编码）
       const materials = [];
       document.querySelectorAll('#raw-materials-list > div').forEach(row => {
         const name = row.querySelector('.raw-material-name').value.trim();
+        const code = row.querySelector('.raw-material-code').value.trim();
         const qtyVal = row.querySelector('.raw-material-qty').value.trim();
         if (name) {
-          materials.push({ name, qty: qtyVal });
+          materials.push({ name, code, qty: qtyVal });
         }
       });
       
       const produceDate = document.getElementById('edit-inventory-produce-date').value;
       const shelfLife = parseInt(document.getElementById('edit-inventory-shelf-life').value) || 30;
       let inventory = getInventoryData();
-      const selectEl = document.getElementById('edit-inventory-product-select');
-      const selectedGoodsId = selectEl.value ? parseInt(selectEl.value) : null;
+      // 从 hidden input 获取商品ID
+      const selectedGoodsId = document.getElementById('edit-inventory-product-id').value ? parseInt(document.getElementById('edit-inventory-product-id').value) : null;
       const effectiveGoodsId = selectedGoodsId || editingInventoryId;
       
       let item = inventory.find(i => i.goodsId === effectiveGoodsId);
