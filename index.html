@@ -9726,90 +9726,93 @@
       }
 
       // ========== 5) 输入处理 ==========
-      // 备注关键词识别（支持同音词/模糊匹配）
+      // 备注关键词配置表（支持同音词/模糊匹配）
+      const REMARK_KEYWORDS = [
+        { canonical: '少冰', synonyms: ['少冰', '烧冰', '小冰', '上冰', '扫冰', '稍冰', '邵冰'], group: 'ice' },
+        { canonical: '去冰', synonyms: ['去冰', '娶冰', '曲冰', '去兵', '趣冰', '渠冰'], group: 'ice' },
+        { canonical: '多冰', synonyms: ['多冰', '朵冰', '夺冰', '躲冰'], group: 'ice' },
+        { canonical: '冰', synonyms: ['冰', '兵', '饼', '炳', '病'], group: 'ice_generic' },
+        { canonical: '无糖', synonyms: ['无糖', '五常', '无妨', '五堂', '无汤'], group: 'sweet' },
+        { canonical: '少糖', synonyms: ['少糖', '扫堂', '少堂', '小糖'], group: 'sweet' },
+        { canonical: '少少糖', synonyms: ['少少糖', '小小糖'], group: 'sweet' },
+        { canonical: '全糖', synonyms: ['全糖', '全堂'], group: 'sweet' },
+        { canonical: '不加糖', synonyms: ['不加糖', '不加堂', '不加汤'], group: 'sweet_generic' },
+        { canonical: '常温', synonyms: ['常温', '长温', '尝闻', '常闻'], group: 'temp' },
+        { canonical: '热', synonyms: ['热'], group: 'temp' },
+        { canonical: '温', synonyms: ['温', '问', '闻'], group: 'temp' },
+        { canonical: '凉', synonyms: ['凉', '两', '亮'], group: 'temp' }
+      ];
       function parseRemarks(text) {
-        const remarkKeywordMap = {
-          '少冰': ['少冰', '烧冰', '小冰', '上冰', '扫冰', '稍冰', '邵冰'],
-          '去冰': ['去冰', '娶冰', '曲冰', '去兵', '趣冰', '渠冰'],
-          '多冰': ['多冰', '朵冰', '夺冰', '躲冰'],
-          '无糖': ['无糖', '五常', '无妨', '五堂', '无汤'],
-          '少糖': ['少糖', '扫堂', '少堂', '小糖'],
-          '少少糖': ['少少糖', '小小糖'],
-          '全糖': ['全糖', '全堂'],
-          '不加糖': ['不加糖', '不加堂', '不加汤'],
-          '常温': ['常温', '长温', '尝闻', '常闻'],
-          '热': ['热'],
-          '温': ['温', '问', '闻'],
-          '凉': ['凉', '两', '亮'],
-          '冰': ['冰', '兵', '饼', '炳', '病']
-        };
         const found = [];
-        Object.keys(remarkKeywordMap).forEach(function (canonical) {
-          const synonyms = remarkKeywordMap[canonical];
-          for (let si = 0; si < synonyms.length; si++) {
-            if (text.indexOf(synonyms[si]) >= 0 && found.indexOf(canonical) === -1) {
-              found.push(canonical);
+        const foundGroups = {};
+        for (let i = 0; i < REMARK_KEYWORDS.length; i++) {
+          const kw = REMARK_KEYWORDS[i];
+          for (let si = 0; si < kw.synonyms.length; si++) {
+            if (text.indexOf(kw.synonyms[si]) >= 0 && found.indexOf(kw.canonical) === -1) {
+              found.push(kw.canonical);
+              foundGroups[kw.group] = true;
               break;
             }
           }
-        });
-        const hasSpecificIce = found.indexOf('少冰') >= 0 || found.indexOf('去冰') >= 0 || found.indexOf('多冰') >= 0;
-        if (hasSpecificIce) {
-          const idx = found.indexOf('冰');
-          if (idx >= 0) found.splice(idx, 1);
         }
-        const hasSweet = found.indexOf('无糖') >= 0 || found.indexOf('少糖') >= 0 || found.indexOf('全糖') >= 0 || found.indexOf('少少糖') >= 0;
-        if (hasSweet) {
-          const idx = found.indexOf('不加糖');
-          if (idx >= 0) found.splice(idx, 1);
+        // 去重：已找到具体冰/糖则移除通用项
+        if (foundGroups.ice) {
+          const genericIdx = found.indexOf('冰');
+          if (genericIdx >= 0) found.splice(genericIdx, 1);
+        }
+        if (foundGroups.sweet) {
+          const genericIdx = found.indexOf('不加糖');
+          if (genericIdx >= 0) found.splice(genericIdx, 1);
         }
         return found;
       }
 
-      // 从文本中识别要删除的商品或分类
+      // 删除目标识别配置表
+      const REMOVE_CATE_MAP = [
+        { cate: 'dessert', keywords: ['小食', '甜品', '点心', '蛋糕', '甜点'] },
+        { cate: 'espresso', keywords: ['浓缩', '美式', '意式', '黑咖'] },
+        { cate: 'latte', keywords: ['拿铁', '卡布奇诺', '玛奇朵', '奶咖'] },
+        { cate: 'drink', keywords: ['果汁', '饮品', '饮料', '气泡水', '橙汁'] }
+      ];
       function parseRemoveTarget(text) {
         const goods = getGoodsDataSafe();
         const cart = getCartSummary();
         if (cart.items.length === 0) return { type: 'empty' };
 
-        // 1. 精确匹配商品名
+        // 1. 精确或部分匹配商品名
         for (let gi = 0; gi < goods.length; gi++) {
           const g = goods[gi];
-          if (g.name && text.indexOf(g.name) >= 0) {
-            // 检查购物车里是否有这个商品
-            if (cart.items.find(function (it) { return it.id === g.id; })) {
-              return { type: 'item', ids: [g.id], names: [g.name] };
-            }
+          if (!g.name) continue;
+          // 精确匹配
+          if (text.indexOf(g.name) >= 0 && cart.items.find(function (it) { return it.id === g.id; })) {
+            return { type: 'item', ids: [g.id], names: [g.name] };
           }
         }
-        // 2. 关键词部分匹配商品名
+        // 2. 部分关键词匹配商品名
         for (let gi = 0; gi < goods.length; gi++) {
           const g = goods[gi];
           const parts = (g.name || '').match(/[\u4e00-\u9fa5A-Za-z]+/g) || [];
           for (let pi = 0; pi < parts.length; pi++) {
             const p = parts[pi];
-            if (p.length >= 2 && text.indexOf(p) >= 0) {
-              if (cart.items.find(function (it) { return it.id === g.id; })) {
-                return { type: 'item', ids: [g.id], names: [g.name] };
-              }
+            if (p.length >= 2 && text.indexOf(p) >= 0 && cart.items.find(function (it) { return it.id === g.id; })) {
+              return { type: 'item', ids: [g.id], names: [g.name] };
             }
           }
         }
-        // 3. 按分类识别：小食/甜品、咖啡、饮品
-        const cateMap = {
-          'dessert': ['小食', '甜品', '点心', '蛋糕', '甜点', '提拉米苏', '司康', '饼干'],
-          'espresso': ['浓缩', '美式', '意式', '黑咖', '黑咖啡'],
-          'latte': ['拿铁', '卡布奇诺', '玛奇朵', '奶咖', '咖啡'],
-          'drink': ['果汁', '饮品', '饮料', '气泡水', '橙汁']
-        };
-        for (const cate in cateMap) {
-          const keywords = cateMap[cate];
-          for (let ki = 0; ki < keywords.length; ki++) {
-            if (text.indexOf(keywords[ki]) >= 0) {
-              const matched = cart.items.filter(function (it) { return it.cate === cate; });
+        // 3. 按分类识别
+        for (let ci = 0; ci < REMOVE_CATE_MAP.length; ci++) {
+          const rule = REMOVE_CATE_MAP[ci];
+          for (let ki = 0; ki < rule.keywords.length; ki++) {
+            if (text.indexOf(rule.keywords[ki]) >= 0) {
+              const matched = cart.items.filter(function (it) { return it.cate === rule.cate; });
               if (matched.length > 0) {
-                return { type: 'cate', ids: matched.map(function (m) { return m.id; }), names: matched.map(function (m) { return m.name; }) };
+                return {
+                  type: 'cate',
+                  ids: matched.map(function (m) { return m.id; }),
+                  names: matched.map(function (m) { return m.name; })
+                };
               }
+              break;
             }
           }
         }
@@ -9908,85 +9911,59 @@
           return;
         }
 
-        // ========== 5. 智能问答：询问有什么商品/分类查询 ==========
-        if (/有什么甜品|有什么小食|有什么点心|有什么蛋糕|什么甜品|什么小食|什么蛋糕|dessert/i.test(text)) {
-          const dessertList = goods.filter(function (g) { return g.cate === 'dessert'; });
-          const names = dessertList.map(function (g) { return g.name; });
-          speakWithFallback('我们的甜品有：' + names.join('、') + '。要不要帮您加点呢？');
-          return;
-        }
-        if (/有什么咖啡|什么咖啡|有什么拿铁|咖啡有哪些|coffee/i.test(text)) {
-          const coffeeList = goods.filter(function (g) { return g.cate === 'latte' || g.cate === 'espresso'; });
-          const names = coffeeList.map(function (g) { return g.name; });
-          speakWithFallback('我们的咖啡有：' + names.join('、') + '。您喜欢甜一点的还是淡一点的呢？');
-          return;
-        }
-        if (/有什么饮品|有什么果汁|有什么饮料|juice|drink/i.test(text)) {
-          const drinkList = goods.filter(function (g) { return g.cate === 'drink'; });
-          const names = drinkList.map(function (g) { return g.name; });
-          speakWithFallback('我们的饮品有：' + names.join('、') + '。需要帮您下单吗？');
-          return;
-        }
-
-        // ========== 6. 智能问答：甜度/温度建议 ==========
-        if (/多少糖|甜度|糖度|糖度推荐|甜度推荐|sweet/i.test(text)) {
-          speakWithFallback('我们支持：无糖、少少糖、少糖、全糖。拿铁类建议少糖，焦糖玛奇朵建议无糖哦。您想要哪种？');
-          return;
-        }
-        if (/多少冰|冰度|冰量|加冰|ice/i.test(text)) {
-          speakWithFallback('我们支持：去冰、少冰、多冰。夏天建议少冰，冬天建议去冰或热饮。您想要哪种？');
-          return;
-        }
-
-        // ========== 7. 推荐请求（带价格/不带价格、支持冷热/分类/招牌） ==========
-        if (/推荐|招牌|热门|什么好|好喝|suggest|recommend|best|popular|喝点什么|吃点什么/i.test(text)) {
-          let recommendType = 'hot'; // 默认热门
-          let responsePrefix = '我们的招牌热门商品是：';
-          if (/冷|冰|冷饮|cold/i.test(text)) {
-            recommendType = 'cold';
-            responsePrefix = '天气热了，推荐您喝冷饮：';
-          } else if (/热|温|hot|warm/i.test(text)) {
-            recommendType = 'hot';
-            responsePrefix = '天气凉了，推荐您喝热饮：';
-          } else if (/甜品|小食|蛋糕|点心|dessert/i.test(text)) {
-            recommendType = 'dessert';
-            responsePrefix = '推荐以下甜品：';
-          } else if (/咖啡|coffee/i.test(text)) {
-            recommendType = 'coffee';
-            responsePrefix = '推荐以下咖啡：';
+        // ========== 5. 智能问答：分类查询 + 推荐 + 甜度建议（统一配置表驱动） ==========
+        // 分类查询配置表：统一处理3个分类的商品查询
+        const cateQueries = [
+          { cate: 'dessert', pattern: /有什么甜品|有什么小食|有什么点心|有什么蛋糕|什么甜品|什么小食|什么蛋糕|dessert/i, label: '甜品', ask: '要不要帮您加点呢？', filter: function (g) { return g.cate === 'dessert'; } },
+          { cate: 'coffee', pattern: /有什么咖啡|什么咖啡|有什么拿铁|咖啡有哪些|coffee/i, label: '咖啡', ask: '您喜欢甜一点的还是淡一点的呢？', filter: function (g) { return g.cate === 'latte' || g.cate === 'espresso'; } },
+          { cate: 'drink', pattern: /有什么饮品|有什么果汁|有什么饮料|juice|drink/i, label: '饮品', ask: '需要帮您下单吗？', filter: function (g) { return g.cate === 'drink'; } }
+        ];
+        for (let ci = 0; ci < cateQueries.length; ci++) {
+          const q = cateQueries[ci];
+          if (q.pattern.test(text)) {
+            const list = goods.filter(q.filter);
+            const names = list.map(function (g) { return g.name; });
+            speakWithFallback('我们的' + q.label + '有：' + names.join('、') + '。' + q.ask);
+            return;
           }
-
-          let recList = [];
-          if (recommendType === 'cold') {
-            recList = goods.filter(function (g) {
-              return g.cate === 'drink' || g.cate === 'latte';
-            }).slice(0, 3);
-          } else if (recommendType === 'hot') {
-            recList = goods.filter(function (g) {
-              return g.cate === 'espresso' || g.cate === 'latte';
-            }).slice(0, 3);
-          } else if (recommendType === 'dessert') {
-            recList = goods.filter(function (g) { return g.cate === 'dessert'; });
-          } else if (recommendType === 'coffee') {
-            recList = goods.filter(function (g) { return g.cate === 'latte' || g.cate === 'espresso'; }).slice(0, 4);
-          } else {
-            recList = getHotGoods(3);
-          }
-          const names = recList.map(function (g) { return g.name; });
-          speakWithFallback(responsePrefix + names.join('、') + '。请问您想尝试哪一个？');
-          return;
         }
 
-        // ========== 8. 口味推荐：甜的/清淡的 ==========
+        // 甜度/冰量建议配置表
+        const tipQueries = [
+          { pattern: /多少糖|甜度|糖度|糖度推荐|甜度推荐|sweet/i, text: '我们支持：无糖、少少糖、少糖、全糖。拿铁类建议少糖，焦糖玛奇朵建议无糖哦。您想要哪种？' },
+          { pattern: /多少冰|冰度|冰量|加冰|ice/i, text: '我们支持：去冰、少冰、多冰。夏天建议少冰，冬天建议去冰或热饮。您想要哪种？' }
+        ];
+        for (let ti = 0; ti < tipQueries.length; ti++) {
+          const t = tipQueries[ti];
+          if (t.pattern.test(text)) { speakWithFallback(t.text); return; }
+        }
+
+        // 推荐请求配置表：冷热/分类/招牌
+        const recRules = [
+          { pattern: /冷|冰|冷饮|cold/i, prefix: '天气热了，推荐您喝冷饮：', filter: function (g) { return g.cate === 'drink' || g.cate === 'latte'; }, limit: 3 },
+          { pattern: /热|温|hot|warm/i, prefix: '天气凉了，推荐您喝热饮：', filter: function (g) { return g.cate === 'espresso' || g.cate === 'latte'; }, limit: 3 },
+          { pattern: /甜品|小食|蛋糕|点心|dessert/i, prefix: '推荐以下甜品：', filter: function (g) { return g.cate === 'dessert'; }, limit: 5 },
+          { pattern: /咖啡|coffee/i, prefix: '推荐以下咖啡：', filter: function (g) { return g.cate === 'latte' || g.cate === 'espresso'; }, limit: 4 },
+          { pattern: /推荐|招牌|热门|什么好|好喝|suggest|recommend|best|popular|喝点什么|吃点什么/i, prefix: '我们的招牌热门商品是：', filter: null, limit: 3 }
+        ];
+        for (let ri = 0; ri < recRules.length; ri++) {
+          const rule = recRules[ri];
+          if (rule.pattern.test(text)) {
+            const list = rule.filter ? goods.filter(rule.filter).slice(0, rule.limit) : getHotGoods(rule.limit);
+            const names = list.map(function (g) { return g.name; });
+            speakWithFallback(rule.prefix + names.join('、') + '。请问您想尝试哪一个？');
+            return;
+          }
+        }
+
+        // 口味偏好问答
         if (/喜欢甜|要甜|甜点|sweet|sugar/i.test(text) && text.length <= 12) {
-          const rec = recommendByTaste('sweet');
-          const names = rec.map(function (g) { return g.name; });
+          const names = recommendByTaste('sweet').map(function (g) { return g.name; });
           speakWithFallback('好的，喜欢甜的！推荐您：' + names.join('、') + '。需要帮您下单吗？');
           return;
         }
         if (/喜欢淡|喜欢苦|不要甜|清淡|light|bitter/i.test(text) && text.length <= 12) {
-          const rec = recommendByTaste('light');
-          const names = rec.map(function (g) { return g.name; });
+          const names = recommendByTaste('light').map(function (g) { return g.name; });
           speakWithFallback('好的，喜欢清淡的！推荐您：' + names.join('、') + '。需要帮您下单吗？');
           return;
         }
@@ -9995,14 +9972,14 @@
           return;
         }
 
-        // ========== 9. 问候 ==========
+        // ========== 6. 问候 ==========
         if (text.length <= 10 && /你好|您好|在吗|哈喽|嗨|你好啊|hello|hi|hey/i.test(text)) {
           const season = getSeasonRecommendation();
           speakWithFallback('你好！' + season.tip + '，请告诉我您想点什么，比如一杯拿铁。');
           return;
         }
 
-        // ========== 10. 商品识别：精确匹配 → 关键词部分匹配 ==========
+        // ========== 7. 商品识别：精确匹配 → 关键词部分匹配 ==========
         const found = [];
         const addedIds = {};
         goods.forEach(function (g) {
@@ -10050,7 +10027,7 @@
           }
         }
 
-        // ========== 11. 商品识别成功：加入购物车并处理备注 ==========
+        // ========== 8. 商品识别成功：加入购物车并处理备注 ==========
         if (found.length > 0) {
           const names = [];
           found.forEach(function (f) {
@@ -10068,7 +10045,7 @@
           return;
         }
 
-        // ========== 12. 英文模式：英文商品名称识别 ==========
+        // ========== 9. 英文模式：英文商品名称识别 ==========
         const englishGoods = [
           { en: 'espresso', id: 1 },
           { en: 'americano', id: 2 },
@@ -10104,7 +10081,7 @@
           return;
         }
 
-        // ========== 13. 纯备注指令识别（只说备注不新增商品）==========
+        // ========== 10. 纯备注指令识别（只说备注不新增商品）==========
         const pureRemarks = parseRemarks(text);
         if (pureRemarks.length > 0) {
           const remarkInput = document.getElementById('order-remark');
@@ -10117,7 +10094,7 @@
           return;
         }
 
-        // ========== 14. 识别不确定时的二次确认 ==========
+        // ========== 11. 识别不确定时的二次确认 ==========
         const fuzzyMatches = [];
         goods.forEach(function (g) {
           const name = g.name;
@@ -10142,7 +10119,7 @@
           return;
         }
 
-        // ========== 15. 完全无法理解时 ==========
+        // ========== 12. 完全无法理解时 ==========
         speakWithFallback('抱歉没听清楚，请直接说商品名，例如一杯拿铁或两份提拉米苏。');
       }
 
