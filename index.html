@@ -2863,7 +2863,7 @@
         // 有搜索词：按工号/姓名模糊匹配
         matched = employees.filter(e =>
           (e.name || '').toLowerCase().includes(keyword) ||
-          (String(e.no || '')).toLowerCase().includes(keyword)
+          (String(e.employeeNo || e.no || '')).toLowerCase().includes(keyword)
         );
       }
 
@@ -2887,7 +2887,7 @@
               <span class="w-1.5 h-1.5 rounded-full ${working ? 'bg-green-500' : 'bg-gray-400'}"></span>
               <span class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(emp.name || '')}</span>
             </div>
-            <p onclick="openAttendanceForEmployee(${emp.id})" class="text-xs text-gray-500 truncate mb-1 cursor-pointer hover:opacity-70">${escapeHtml(emp.no || '')}</p>
+            <p onclick="openAttendanceForEmployee(${emp.id})" class="text-xs text-gray-500 truncate mb-1 cursor-pointer hover:opacity-70">${escapeHtml(emp.employeeNo || emp.no || '')}</p>
             ${!working
               ? `<button onclick="quickCardCheckIn(${emp.id})" class="w-full py-1 rounded-md bg-green-500 text-white text-xs"><i class="fa-solid fa-right-to-bracket mr-0.5"></i>上班</button>`
               : `<button onclick="quickCardCheckOut(${emp.id})" class="w-full py-1 rounded-md bg-blue-500 text-white text-xs"><i class="fa-solid fa-right-from-bracket mr-0.5"></i>下班</button>`
@@ -2900,7 +2900,7 @@
     // 快捷卡片：员工上班打卡
     function quickCardCheckIn(empId) {
       const records = getAttendanceRecords();
-      const employees = getEmployeeData();
+      const employees = getEmployees();
       const emp = employees.find(e => e.id === empId);
       const now = new Date();
       const today = now.toISOString().slice(0, 10);
@@ -2918,7 +2918,7 @@
       // 记录日志
       addLog('employee', '员工签到', {
         employeeName: emp ? emp.name : '',
-        employeeNo: emp ? emp.no : '',
+        employeeNo: emp ? (emp.employeeNo || emp.no || '') : '',
         position: emp ? emp.position : '',
         checkInTime: checkInTime
       });
@@ -2931,7 +2931,7 @@
     // 快捷卡片：员工下班打卡
     function quickCardCheckOut(empId) {
       const records = getAttendanceRecords();
-      const employees = getEmployeeData();
+      const employees = getEmployees();
       const emp = employees.find(e => e.id === empId);
       const today = new Date().toISOString().slice(0, 10);
       const now = new Date();
@@ -2952,7 +2952,7 @@
       // 记录日志
       addLog('employee', '员工签退', {
         employeeName: emp ? emp.name : '',
-        employeeNo: emp ? emp.no : '',
+        employeeNo: emp ? (emp.employeeNo || emp.no || '') : '',
         position: emp ? emp.position : '',
         checkInTime: checkInTime,
         checkOutTime: checkOutTime
@@ -8235,14 +8235,14 @@
       }
 
       // 获取当前正在上班的员工
-      const employees = getEmployeeData();
+      const employees = getEmployees();
       const records = getAttendanceRecords();
       const today = now.toISOString().slice(0, 10);
       const workingEmployees = employees.filter(emp => {
         // 检查是否有今天的签到记录且未下班
         const hasCheckIn = records.some(r => r.empId === emp.id && r.date === today && r.checkIn && !r.checkOut);
         return hasCheckIn;
-      }).map(e => ({ name: e.name, no: e.no, position: e.position }));
+      }).map(e => ({ name: e.name, no: e.employeeNo || e.no || '', position: e.position }));
 
       // 添加到制作中列表
       const newOrder = {
