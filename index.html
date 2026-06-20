@@ -10609,47 +10609,125 @@
       }
 
       function _matchGoodsSmart(text, goods, cartItems) {
-        // 在文本中找所有命中的商品，并在附近找数量
-        var hits = {}; // id -> {id, name, qty}
+        // 匹配等级策略：5=全名，4=商品前缀，3=商品后缀，1=任意子词（最宽松）
+        // 同一文本位置只保留等级最高的命中
+        var hits = {};
         var tn = _normalize(text);
-        var i, j, g, nameN, pos, qty, candidates;
+        var candidateHits = [];  // [score, pos, word, g]
+        var i, j, g, nameN, length, sub, pos, si, sj;
+
         for (i = 0; i < goods.length; i++) {
           g = goods[i];
           if (!g.name) continue;
           nameN = _normalize(g.name);
-          // 1) 全名命中
-          var foundHere = false;
-          if (nameN.length > 0 && tn.indexOf(nameN) >= 0) {
-            pos = tn.indexOf(nameN);
-            foundHere = true;
-          } else {
-            // 2) 生成 >=2 字连续子词，只要有一个命中则算
-            for (var si = 0; si < nameN.length && !foundHere; si++) {
-              for (var sj = si + 2; sj <= nameN.length && !foundHere; sj++) {
-                var sub = nameN.substring(si, sj);
-                if (sub.length >= 2 && tn.indexOf(sub) >= 0) {
-                  foundHere = true;
-                  pos = tn.indexOf(sub);
-                }
+          // 等级 5: 全名匹配
+          if (tn.indexOf(nameN) >= 0) {
+            var idx = 0;
+            while ((idx = tn.indexOf(nameN, idx)) >= 0) {
+              candidateHits.push([5, idx, nameN, g]);
+              idx = idx + nameN.length;
+            }
+            continue;
+          }
+          // 等级 4: 商品名的前缀（2~len 字）出现在文本中
+          var foundPrefix = false;
+          for (length = nameN.length; length >= 2; length--) {
+            var prefix = nameN.substring(0, length);
+            if (tn.indexOf(prefix) >= 0) {
+              var pidx = 0;
+              while ((pidx = tn.indexOf(prefix, pidx)) >= 0) {
+                candidateHits.push([4, pidx, prefix, g]);
+                pidx = pidx + prefix.length;
+              }
+              foundPrefix = true;
+              break;
+            }
+          }
+          if (foundPrefix) continue;
+          // 等级 3: 商品名的后缀出现在文本中
+          var foundSuffix = false;
+          for (length = nameN.length; length >= 2; length--) {
+            var suffix = nameN.substring(nameN.length - length);
+            if (tn.indexOf(suffix) >= 0) {
+              var sidx = 0;
+              while ((sidx = tn.indexOf(suffix, sidx)) >= 0) {
+                candidateHits.push([3, sidx, suffix, g]);
+                sidx = sidx + suffix.length;
+              }
+              foundSuffix = true;
+              break;
+            }
+          }
+          if (foundSuffix) continue;
+          // 等级 1: 任意 >=2 字子词（最宽松）
+          var subSeen = {};
+          var subHit = false;
+          for (si = 0; si < nameN.length && !subHit; si++) {
+            for (sj = si + 2; sj <= nameN.length && !subHit; sj++) {
+              sub = nameN.substring(si, sj);
+              if (subSeen[sub]) continue;
+              subSeen[sub] = true;
+              if (tn.indexOf(sub) >= 0) {
+                var bidx = tn.indexOf(sub);
+                candidateHits.push([1, bidx, sub, g]);
+                subHit = true;
               }
             }
           }
-          if (!foundHere) continue;
-          // 在命中位置前后找数量
-          qty = 1;
+        }
+
+        // 按 (score desc, len(word) desc, pos asc) 排序
+        candidateHits.sort(function (a, b) {
+          if (a[0] !== b[0]) return b[0] - a[0];
+          if (a[2].length !== b[2].length) return b[2].length - a[2].length;
+          return a[1] - b[1];
+        });
+        // 按文本位置去重：重叠的命中只留最高等级的
+        // usedPos: pos -> {score, wordLen, g}
+        var usedPos = {};
+        var filtered = [];
+        for (i = 0; i < candidateHits.length; i++) {
+          var ch = candidateHits[i];
+          var score = ch[0], pos = ch[1], word = ch[2], g = ch[3];
+          var conflict = false;
+          var wordLen = word.length;
+          for (var uk in usedPos) {
+            if (!usedPos.hasOwnProperty(uk)) continue;
+            var u = parseInt(uk, 10);
+            var uItem = usedPos[uk];
+            var usedLen = uItem.wordLen;
+            var usedScore = uItem.score;
+            var overlap = (pos < u + usedLen && u < pos + wordLen);
+            if (overlap && usedScore >= score) { conflict = true; break; }
+            if (overlap && usedScore < score) {
+              delete usedPos[uk];
+              filtered = filtered.filter(function (f) { return f[0] !== u || f[2].id !== uItem.g.id; });
+              break;
+            }
+          }
+          if (conflict) continue;
+          usedPos[pos] = { score: score, wordLen: wordLen, g: g };
+          filtered.push([pos, word, g, score]);
+        }
+
+        // 在每个命中位置附近找数量
+        for (i = 0; i < filtered.length; i++) {
+          pos = filtered[i][0];
+          var word = filtered[i][1];
+          g = filtered[i][2];
+          var qty = 1;
           var windowStart = Math.max(0, pos - 12);
-          var windowEnd = Math.min(tn.length, pos + 12);
+          var windowEnd = Math.min(tn.length, pos + word.length + 12);
           var window = tn.substring(windowStart, windowEnd);
           var nums = _extractQuantity(window);
           if (nums.length > 0) {
-            // 选距离命中点最近的数量
-            var best = nums[0];
-            var bestDist = Math.abs((pos - windowStart) - 0);
-            for (var ni = 0; ni < nums.length; ni++) {
-              var d = Math.abs((pos - windowStart) - 0);
-              if (d < bestDist) { best = nums[ni]; bestDist = d; }
+            var bestNum = nums[0];
+            var bestDist = 9999;
+            for (var k = 0; k < nums.length; k++) {
+              var d = Math.abs((pos - windowStart) - (nums[k].word ? window.indexOf(nums[k].word) : 0));
+              if (d < bestDist) { bestDist = d; bestNum = nums[k]; }
             }
-            qty = best.num;
+            qty = bestNum.num;
           }
           if (/各(一|1)|每样|每个|每杯/.test(window)) qty = 1;
           if (hits[g.id]) {
@@ -10658,7 +10736,8 @@
             hits[g.id] = { id: g.id, name: g.name, qty: qty };
           }
         }
-        // 上下文："再来一份 / 再加一个" → 默认加购物车里第一项
+
+        // 上下文："再来一份" → 默认加购物车里第一项
         if (Object.keys(hits).length === 0 &&
             /(再来一份|再来一杯|再加一份|再加一个|同样的|还是这个|还是老样子|再来|再要|再加|一样的|续杯)/.test(tn)) {
           if (cartItems && cartItems.length > 0) {
@@ -10697,6 +10776,7 @@
       }
 
       function _classifyIntent(text, items, remarks, cartItems) {
+        // 优先级（从高到低）：cancel > remove > price > menu > recommend > order > confirm > remark > chat > unknown
         var tn = _normalize(text);
         var hasRemark = remarks && remarks.length > 0;
         var hasCart = cartItems && cartItems.length > 0;
@@ -10705,34 +10785,41 @@
         // 1) 取消/清空
         if (/(取消订单|全部取消|全部不要|清空|重来|重新点|重新下单|不要了|算了|不用了|退掉|cancel all|clear all)/.test(tn)) return 'cancel';
 
-        // 2) 确认/结账（纯确认词 + 无明确要加的新商品）
-        if (/(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)/.test(tn) && !hasItems) return 'confirm';
-
-        // 3) 删除/去掉
-        // - 如果"不要"后跟着的是备注词（冰、糖等）而非商品，不要走 remove
-        if (/(去掉|不要|删除|移除|退|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)/.test(tn)) {
+        // 2) 删除/去掉（必须有"去掉/不要/删除"类关键词）
+        if (/(去掉|不要|删除|移除|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)/.test(tn)) {
           if (hasItems) return 'remove';
-          // 没说商品名但购物车有东西 → 还要区分是否只是"不要冰/不要糖"这种备注
           if (hasCart && !(hasRemark && !hasItems)) return 'remove';
         }
 
-        // 4) 价格询问
+        // 3) 价格询问（优先级高于下单）
         if (/(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份)/.test(tn)) return 'price';
 
-        // 5) 菜单/有什么（先于推荐）
-        if (/(有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的)|菜单|有啥|有什么|还有啥|有哪些)/.test(tn)) return 'menu';
+        // 4) 菜单/有什么（排除"有什么推荐"）
+        //    覆盖：有什么、有没有、有啥、有哪些、菜单
+        if (/(有没有(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有啥|还有啥|还有什么|有哪些|菜单|菜单一览|都有什么|都有啥|提供什么|有什么可以|有什么好)/.test(tn)) {
+          if (/(推荐|招牌|热门|给点建议|给建议|好喝的|好吃的|冷饮|热饮|特色|哪款|哪一种)/.test(tn)) return 'recommend';
+          return 'menu';
+        }
 
-        // 6) 推荐请求
-        if (/(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|suggest|recommend|popular|不知道点什么|给点建议|给建议)/.test(tn)) return 'recommend';
+        // 5) 推荐请求
+        if (/(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|不知道点什么|给点建议|给建议|推荐一下|有什么推荐|有啥推荐|哪款好|哪个好|选什么|挑一个|suggest|recommend|popular)/.test(tn)) return 'recommend';
 
-        // 7) 加购商品（有明确商品命中）
+        // 6) 强下单动作词 —— 必须是明确的"点单/加单"动作（避免"拿铁多少钱"中的"拿"被误匹配）
+        //    只匹配：来杯/来一份/点一杯/加一杯/打包带走一份 这样的完整短语
+        var hasOrderAction = /(来杯|来一杯|来一份|点一杯|点一份|点一个|加一杯|加一份|加一个|点个|来个|点两杯|点两份|来两杯|来两份|打包一份|打包带走|打包带走一份|给我来|给我点|给我来一杯|给我来一份|我要|我点|给我点一杯|给我点一份|给我来一杯|给我来一份|给我一杯|给我一份|给我点|帮我点|帮我来|想要一杯|想要一份|想要|想要个)/.test(tn);
+        if (hasItems && hasOrderAction) return 'order';
+
+        // 7) 确认/结账（必须没有新增商品——否则就是点单）
+        if (!hasItems && /(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)/.test(tn)) return 'confirm';
+
+        // 8) 兜底：有商品命中 → 算 order
         if (hasItems) return 'order';
 
-        // 8) 纯备注（只有备注词）
+        // 9) 纯备注
         if (hasRemark && !hasItems) return 'remark';
 
-        // 9) 问候
-        if (text.length <= 12 && /(你好|您好|在吗|哈喽|嗨|你好啊|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀)/.test(tn)) return 'chat';
+        // 10) 问候
+        if (text.length <= 12 && /(你好|您好|在吗|哈喽|嗨|你好啊|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀|hiya|欢迎|welcome)/.test(tn)) return 'chat';
 
         return 'unknown';
       }
@@ -11650,48 +11737,49 @@
           saveLlmToBackend(function (err, data) {
             if (fb) {
               if (err) {
-              fb.textContent = '保存失败：' + (err || '未知错误');
-              fb.style.color = '#dc2626';
-            } else {
-              fb.textContent = '✅ 已保存到后端，立即生效';
-              fb.style.color = '#16a34a';
+                fb.textContent = '保存失败：' + (err || '未知错误');
+                fb.style.color = '#dc2626';
+              } else {
+                fb.textContent = '✅ 已保存到后端，立即生效';
+                fb.style.color = '#16a34a';
+              }
+              setTimeout(function () { if (fb) fb.textContent = ''; }, 3500);
             }
-            setTimeout(function () { if (fb) fb.textContent = ''; }, 3500);
           });
         });
 
         if (testBtn) testBtn.addEventListener('click', function () {
-          // 先把当前 UI 上的值同步到后端再发一次测试请求
           saveLlmToBackend(function (err, _) {
             if (err) {
               if (fb) { fb.textContent = '⚠ 保存失败：' + err; fb.style.color = '#dc2626'; }
-            return;
-          }
-          if (fb) { fb.textContent = '正在测试连通性…'; fb.style.color = '#6b7280'; }
-          try {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/ai/test', true);
-            xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-            xhr.timeout = 20000;
-            xhr.onreadystatechange = function () {
-              if (xhr.readyState === 4) {
-                try {
-                  var r = JSON.parse(xhr.responseText);
-                  if (r && r.ok) {
-                    if (fb) { fb.textContent = '✅ 连通正常：' + JSON.stringify(r.echo || {}); fb.style.color = '#16a34a'; }
-                  } else {
-                    if (fb) { fb.textContent = '❌ 测试失败：' + (r && r.error || '未知错误'); fb.style.color = '#dc2626'; }
+              return;
+            }
+            if (fb) { fb.textContent = '正在测试连通性…'; fb.style.color = '#6b7280'; }
+            try {
+              var xhr = new XMLHttpRequest();
+              xhr.open('POST', '/api/ai/test', true);
+              xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
+              xhr.timeout = 20000;
+              xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                  try {
+                    var r = JSON.parse(xhr.responseText);
+                    if (r && r.ok) {
+                      if (fb) { fb.textContent = '✅ 连通正常：' + JSON.stringify(r.echo || {}); fb.style.color = '#16a34a'; }
+                    } else {
+                      if (fb) { fb.textContent = '❌ 测试失败：' + (r && r.error || '未知错误'); fb.style.color = '#dc2626'; }
+                    }
+                  } catch (e) {
+                    if (fb) { fb.textContent = '❌ 测试失败：' + e; fb.style.color = '#dc2626'; }
                   }
-                } catch (e) {
-                  if (fb) { fb.textContent = '❌ 测试失败：' + e; fb.style.color = '#dc2626'; }
+                  setTimeout(function () { if (fb) fb.textContent = ''; }, 4500);
                 }
-                setTimeout(function () { if (fb) fb.textContent = ''; }, 4500);
-              }
-            };
-            xhr.onerror = function () { if (fb) { fb.textContent = '❌ 网络错误（请确认已启动 ai-server.py，并检查 Key/网络）'; fb.style.color = '#dc2626'; setTimeout(function () { if (fb) fb.textContent = ''; }, 4500); } };
-            xhr.ontimeout = function () { if (fb) { fb.textContent = '⏱ 请求超时'; fb.style.color = '#dc2626'; setTimeout(function () { if (fb) fb.textContent = ''; }, 4500); } };
-            xhr.send(JSON.stringify({}));
-          } catch (e) { if (fb) { fb.textContent = '❌ ' + e; fb.style.color = '#dc2626'; } }
+              };
+              xhr.onerror = function () { if (fb) { fb.textContent = '❌ 网络错误（请确认已启动 ai-server.py，并检查 Key/网络）'; fb.style.color = '#dc2626'; setTimeout(function () { if (fb) fb.textContent = ''; }, 4500); } };
+              xhr.ontimeout = function () { if (fb) { fb.textContent = '⏱ 请求超时'; fb.style.color = '#dc2626'; setTimeout(function () { if (fb) fb.textContent = ''; }, 4500); } };
+              xhr.send(JSON.stringify({}));
+            } catch (e) { if (fb) { fb.textContent = '❌ ' + e; fb.style.color = '#dc2626'; } }
+          });
         });
       }
 

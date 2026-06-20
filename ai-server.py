@@ -430,55 +430,103 @@ def _extract_quantity(text):
 def _smart_match_items(text, goods, cart_items):
     """在文本中找出所有提到的商品 → [{id, name, qty}]
     支持：'拿铁 2 杯'、'两份提拉米苏'、'拿铁和美式各一杯'、'再来一份'（依赖 cart）
-    策略：
-      a) 先在文本中找出每个商品名/子词的所有命中位置
-      b) 在每个命中位置的前后 [-10, +len(name)+10] 内找数量；没数量时默认 1
-      c) 支持"再来一份/再要一个/同样再来" → 默认加购物车里第一项（或最常点的）
+    匹配等级策略（高→低）：
+      5 - 商品全名完整出现在文本中       如"拿铁咖啡"→ 文本含"拿铁咖啡"
+      4 - 商品名的**前缀**出现在文本中     如"拿铁咖啡"→ 文本含"拿铁"
+      3 - 商品名的**后缀**出现在文本中     如"生椰拿铁"→ 文本含"拿铁"
+      1 - 任意 >=2 字子词出现在文本中     （最宽松，仅作为最后手段）
+    去重：若多个商品在文本同一位置都命中，保留等级最高的那个
     """
     if not goods:
         return []
     tn = _normalize(text)
-    hits = []  # [(g, pos_in_text, matched_word)]
+    # step 1: 对每个商品，在文本中找所有命中 (匹配等级, 文本起始位置, 命中词, 商品)
+    candidate_hits = []  # (score, pos, word, g)
 
-    # a) 逐商品命中位置（用完整名先，再子词）
-    used_positions_by_g = {}
     for g in goods:
         name_n = _normalize(g.get('name', ''))
         if not name_n:
             continue
-        candidates = []  # (word, pos)
+        # 等级 5: 全名匹配
         if name_n in tn:
             for m in re.finditer(re.escape(name_n), tn):
-                candidates.append((name_n, m.start()))
-        if not candidates:
-            # 生成 >=2 字子词，找首次命中
-            sub_seen = set()
-            for i in range(len(name_n)):
-                for j in range(i + 2, len(name_n) + 1):
-                    sub = name_n[i:j]
-                    if sub in sub_seen:
-                        continue
-                    sub_seen.add(sub)
-                    if sub in tn:
-                        for m in re.finditer(re.escape(sub), tn):
-                            candidates.append((sub, m.start()))
-                        break  # 每个商品只取一个子词命中（避免被一个词无限重复）
-        for c in candidates:
-            hits.append((g, c[1], c[0]))
+                candidate_hits.append((5, m.start(), name_n, g))
+            continue  # 全名命中了就不必再子词匹配
+        # 等级 4: 商品名的前缀（2~len 字）出现在文本中
+        found_prefix = False
+        for length in range(len(name_n), 1, -1):  # 从最长前缀往下找
+            prefix = name_n[:length]
+            if prefix in tn:
+                for m in re.finditer(re.escape(prefix), tn):
+                    candidate_hits.append((4, m.start(), prefix, g))
+                found_prefix = True
+                break
+        if found_prefix:
+            continue
+        # 等级 3: 商品名的后缀出现在文本中
+        found_suffix = False
+        for length in range(len(name_n), 1, -1):
+            suffix = name_n[-length:]
+            if suffix in tn:
+                for m in re.finditer(re.escape(suffix), tn):
+                    candidate_hits.append((3, m.start(), suffix, g))
+                found_suffix = True
+                break
+        if found_suffix:
+            continue
+        # 等级 1: 任意 >=2 字子词（最宽松，最后手段）
+        sub_seen = set()
+        sub_hit = False
+        for i in range(len(name_n)):
+            if sub_hit:
+                break
+            for j in range(i + 2, len(name_n) + 1):
+                sub = name_n[i:j]
+                if sub in sub_seen:
+                    continue
+                sub_seen.add(sub)
+                if sub in tn:
+                    for m in re.finditer(re.escape(sub), tn):
+                        candidate_hits.append((1, m.start(), sub, g))
+                    sub_hit = True
+                    break
 
-    # b) 对每个命中，在附近找数量；并按商品 id 聚合，取最大位置/最合理数量
-    result_map = {}  # id -> {id, name, qty}
-    for g, pos, word in hits:
+    # step 2: 按文本位置去重 —— 同一位置只保留 score 最高、匹配词最长的
+    # 先按 (score desc, len(word) desc, pos asc) 排序
+    candidate_hits.sort(key=lambda x: (-x[0], -len(x[2]), x[1]))
+    used_positions = {}  # pos_in_text -> (score, g, word_len)
+    filtered = []
+    for score, pos, word, g in candidate_hits:
+        # 检查这个位置是否已经被更高等级的命中占据
+        conflict = False
+        word_len = len(word)
+        for used_pos, (used_score, _used_g, used_len) in list(used_positions.items()):
+            # 使用实际命中词的长度判断重叠，而不是固定+2
+            overlap = (pos < used_pos + used_len and used_pos < pos + word_len)
+            if overlap and used_score >= score:
+                conflict = True
+                break
+            if overlap and used_score < score:
+                # 新的 score 更高，替换掉旧的
+                del used_positions[used_pos]
+                filtered = [f for f in filtered if f[0] != used_pos or f[1].get('id') != _used_g.get('id')]
+                break
+        if conflict:
+            continue
+        used_positions[pos] = (score, g, word_len)
+        filtered.append((pos, g, word, score))
+
+    # step 3: 对剩下的命中，找附近的数量
+    result_map = {}
+    for pos, g, word, _score in filtered:
         qty = 1
         start = max(0, pos - 12)
         end = min(len(tn), pos + len(word) + 12)
         window = tn[start:end]
         nums = _extract_quantity(window)
         if nums:
-            # 选最靠近命中词的数量
             best = min(nums, key=lambda n: abs(n[1] - (pos - start)))
             qty = best[2] if best else 1
-        # "各一份/每样一份/每样一杯" 等强数量词
         if re.search(r'各(一|1)|每样|每个|每杯', window):
             qty = 1
         existing = result_map.get(g['id'])
@@ -487,10 +535,9 @@ def _smart_match_items(text, goods, cart_items):
         else:
             result_map[g['id']] = {'id': g['id'], 'name': g['name'], 'qty': qty}
 
-    # c) 上下文感知：用户说"再来一份/再要一杯/同样再来/还是这个" 之类
+    # step 4: 上下文感知 —— "再来一份 / 再要一个 / 同样再来"
     if not result_map and re.search(r'(再来一份|再来一杯|再加一份|再加一个|同样的|还是这个|还是老样子|再来|再要|再加|一样的|续杯|同样的来一份)', tn):
         if cart_items:
-            # 默认加购物车里第一项；如果只有一项，就加 1 份
             first = cart_items[0]
             result_map[first['id']] = {'id': first['id'], 'name': first['name'], 'qty': 1}
 
@@ -527,52 +574,67 @@ def _extract_remarks_smart(text, existing_remarks=None):
 
 def _classify_intent(text, items_found, has_remark_only, cart_has_items):
     """基于关键词 + 槽位信息，做更稳健的意图判断。
-    返回：'cancel' | 'confirm' | 'remove' | 'price' | 'menu' | 'recommend' | 'chat' | 'order' | 'remark' | 'unknown'
+    优先级（从高到低）：
+      cancel → 取消/清空/不要了
+      remove → 去掉/删除 + 有商品
+      price  → 多少钱/价格
+      menu   → 有什么/有哪些
+      recommend → 推荐/招牌/热门
+      order  → 有"来/要/点/杯/份/打包"等动作词 + 命中商品；或仅命中商品
+      confirm → 确认/结账（必须没有商品命中）
+      remark → 只有备注词（冰/糖/温度）
+      chat   → 问候
     """
     tn = _normalize(text)
+    has_items = bool(items_found)
 
-    # 1) 取消 / 清空 优先
+    # 1) 取消/清空
     if re.search(r'(取消订单|全部取消|全部不要|清空|重来|重新点|重新下单|不要了|算了|不用了|退掉|cancel all|clear all)', tn):
         return 'cancel'
 
-    # 2) 确认 / 结账（纯确认词 且 没有新增商品词）
-    confirm_pat = r'(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|就这样|行了)'
-    if re.search(confirm_pat, tn) and not items_found:
-        return 'confirm'
-
-    # 3) 删除 / 去掉某商品
-    # - 文本包含"不要/去掉..."类关键字，且其后跟着商品名 → remove
-    # - 如果其后只是备注词（冰、糖）→ 不是 remove，后面让它走 remark 处理
-    remove_pat = r'(去掉|不要|删除|移除|退|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)'
-    if re.search(remove_pat, tn):
-        if items_found:
+    # 2) 删除/去掉（必须有"去掉/不要"类关键词 + 命中了具体商品）
+    if re.search(r'(去掉|不要|删除|移除|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)', tn):
+        if has_items:
             return 'remove'
-        # 没说商品名，购物车里有东西 → 也算 remove（稍后外层要求用户说明）
+        # 没说具体商品名但购物车里有 → 也算 remove（需要用户进一步说明）
         if cart_has_items and not has_remark_only:
             return 'remove'
 
-    # 4) 价格询问
+    # 3) 价格询问
     if re.search(r'(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份)', tn):
         return 'price'
 
-    # 5) 菜单 / 有什么（先于推荐）
-    if re.search(r'(有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的)|菜单|有啥|有什么|还有啥|有哪些)', tn):
+    # 4) 菜单/有什么（排除"有什么推荐"——那是 recommend）
+    #    覆盖：有什么、有没有、有啥、有哪些、有什么可以/推荐、菜单
+    if re.search(r'(有没有(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有啥|还有啥|还有什么|有哪些|菜单|菜单一览|都有什么|都有啥|提供什么|有什么可以|有什么好)', tn):
+        # "有什么推荐/招牌/热门" 优先判为 recommend
+        if re.search(r'(推荐|招牌|热门|给点建议|给建议|好喝的|好吃的|冷饮|热饮|特色|哪款|哪一种)', tn):
+            return 'recommend'
         return 'menu'
 
-    # 6) 推荐请求
-    if re.search(r'(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|suggest|recommend|popular|不知道点什么|给点建议|给建议)', tn):
+    # 5) 推荐请求
+    if re.search(r'(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|不知道点什么|给点建议|给建议|推荐一下|有什么推荐|有啥推荐|哪款好|哪个好|选什么|挑一个|suggest|recommend|popular)', tn):
         return 'recommend'
 
-    # 7) 加购商品（有明确商品命中）
-    if items_found:
+    # 6) 强下单动作词 —— 只匹配明确的短语（避免"拿铁多少钱"中的"拿"被误匹配）
+    #    只匹配：来杯/来一份/点一杯/加一杯/打包带走一份 这样的完整短语
+    if has_items and re.search(r'(来杯|来一杯|来一份|点一杯|点一份|点一个|加一杯|加一份|加一个|点个|来个|点两杯|点两份|来两杯|来两份|打包一份|打包带走|打包带走一份|给我来|给我点|我要|我点|给我点|帮我点|帮我来|想要一杯|想要一份|想要)', tn):
         return 'order'
 
-    # 8) 纯备注（只有备注词，没有其他内容）
+    # 7) 确认/结账（必须没有新增商品——否则就是点单）
+    if not has_items and re.search(r'(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)', tn):
+        return 'confirm'
+
+    # 8) 兜底：有商品命中 → 算 order
+    if has_items:
+        return 'order'
+
+    # 9) 纯备注
     if has_remark_only:
         return 'remark'
 
-    # 9) 问候/闲聊（文本较短且像问候）
-    if len(text) <= 12 and re.search(r'(你好|您好|在吗|哈喽|嗨|你好啊|你好在吗|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀|hiya)', tn):
+    # 10) 问候/闲聊
+    if len(text) <= 12 and re.search(r'(你好|您好|在吗|哈喽|嗨|你好啊|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀|hiya|欢迎|welcome)', tn):
         return 'chat'
 
     return 'unknown'
