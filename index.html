@@ -147,7 +147,7 @@
         <h1 class="text-xl font-bold">Kora Zola  - 收银系统</h1>
         <button id="pending-orders-btn" class="relative px-3 py-1 rounded-md bg-green-500 text-white text-sm btn-hover flex items-center gap-1">
           <i class="fa-solid fa-mobile-alt"></i>小程序订单
-          <span id="pending-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+          <span id="pending-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
         </button>
         <button id="settings-btn" class="px-3 py-1 rounded-md bg-coffee-main text-white text-sm btn-hover flex items-center gap-1">
           <i class="fa-solid fa-cogs"></i>设置
@@ -7257,6 +7257,7 @@
       
       lastPendingOrderCount = pendingOrders.length;
       pendingCountEl.textContent = pendingOrders.length;
+      pendingCountEl.style.display = pendingOrders.length > 0 ? 'flex' : 'none';
       
       if (pendingOrders.length === 0) {
         container.innerHTML = `
