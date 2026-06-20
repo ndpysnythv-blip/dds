@@ -312,11 +312,6 @@
         </div>
       </aside>
 
-      <!-- AI 语音助手按钮（库存卡片直下方） -->
-      <button id="ai-assistant-fab" class="ai-voice-btn flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform font-bold text-sm" title="点击开始语音点单" aria-label="AI语音助手">
-        AI
-      </button>
-
       <!-- 中间：商品点单区域 -->
       <div class="flex-1 min-w-0">
         <div class="bg-white rounded-lg card-shadow p-2 flex gap-2 overflow-x-auto scrollbar-hide mb-4">
@@ -373,6 +368,10 @@
   <div class="bottom-pay-bar">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4">
       <div class="flex items-center gap-3">
+        <!-- AI 语音助手按钮（可拖动） -->
+        <button id="ai-assistant-fab" class="ai-voice-btn flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform font-bold text-sm cursor-grab active:cursor-grabbing" title="点击开始语音点单 | 拖动可移动位置" aria-label="AI语音助手" draggable="false">
+          AI
+        </button>
         <div>
           <p class="text-coffee-dark font-medium text-sm">选择商品后完成付款</p>
           <p class="text-coffee-main font-bold mt-1">扫描收款码完成支付</p>
@@ -9953,12 +9952,65 @@
       // ========== 9) 绑定事件 ==========
       function bindEvents() {
         const fab = document.getElementById('ai-assistant-fab');
-        if (fab) fab.addEventListener('click', function () {
-          // 点击直接开始/停止语音对话（像打电话一样）
-          toggleVoice();
-          // 同时打开弹窗显示字幕
-          openChat();
-        });
+        if (fab) {
+          // 拖动相关变量
+          let isDragging = false;
+          let startX, startY, startLeft, startTop;
+          const dragThreshold = 5; // 拖动阈值（像素）
+
+          // 鼠标按下
+          fab.addEventListener('mousedown', function (e) {
+            isDragging = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = fab.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            fab.style.zIndex = '9999';
+          });
+
+          // 鼠标移动
+          document.addEventListener('mousemove', function (e) {
+            if (!isDragging && startX !== undefined) {
+              const dx = Math.abs(e.clientX - startX);
+              const dy = Math.abs(e.clientY - startY);
+              if (dx > dragThreshold || dy > dragThreshold) {
+                isDragging = true;
+                // 切换为 fixed 定位以便自由拖动
+                fab.style.position = 'fixed';
+                fab.style.left = startLeft + 'px';
+                fab.style.top = startTop + 'px';
+                fab.style.bottom = 'auto';
+                fab.style.right = 'auto';
+                fab.style.margin = '0';
+              }
+            }
+            if (isDragging) {
+              const dx = e.clientX - startX;
+              const dy = e.clientY - startY;
+              fab.style.left = (startLeft + dx) + 'px';
+              fab.style.top = (startTop + dy) + 'px';
+              e.preventDefault();
+            }
+          });
+
+          // 鼠标松开
+          document.addEventListener('mouseup', function () {
+            if (isDragging) {
+              isDragging = false;
+            }
+            startX = startY = startLeft = startTop = undefined;
+            fab.style.zIndex = '';
+          });
+
+          // 点击事件（仅当不是拖动时触发）
+          fab.addEventListener('click', function () {
+            if (!isDragging) {
+              toggleVoice();
+              openChat();
+            }
+          });
+        }
 
         const closeBtn = document.getElementById('ai-close-btn');
         if (closeBtn) closeBtn.addEventListener('click', closeChat);
