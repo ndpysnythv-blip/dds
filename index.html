@@ -1690,6 +1690,11 @@
         </div>
         <!-- 箭头 -->
         <div class="flex justify-center text-coffee-main"><i class="fa-solid fa-arrow-down-long text-xl"></i></div>
+        <!-- 选择要替换的原料（多原料时显示） -->
+        <div id="replace-material-select" class="hidden">
+          <label class="text-xs text-gray-500 mb-1 block">选择要替换的原料</label>
+          <div id="replace-material-list" class="flex flex-wrap gap-2"></div>
+        </div>
         <!-- 新商品扫码输入 -->
         <div>
         <label class="text-xs text-gray-500 mb-1 block">扫描/输入新商品条形码</label>
@@ -2907,10 +2912,13 @@
         return;
       }
 
-      // 按原料名称搜索：找到包含该原料的库存记录
+      // 按原料名称或编码搜索：找到包含该原料的库存记录
       const matchedInventory = inventory.filter(item => {
         if (!item.materials || !Array.isArray(item.materials)) return false;
-        return item.materials.some(m => (m.name || '').toLowerCase().includes(keyword));
+        return item.materials.some(m => 
+          (m.name || '').toLowerCase().includes(keyword) ||
+          (m.code || '').toLowerCase().includes(keyword)
+        );
       });
 
       // 同时按商品名称/条码搜索作为补充
@@ -2972,18 +2980,46 @@
     // ====== 库存废除替换弹窗 ======
 
     let _replaceTargetGoodsId = null;
+    let _replaceSelectedMaterialIndex = null;
 
     function openReplaceModal(goodsId) {
       const goods = GOODS_DATA || getGoodsData();
+      const inventory = getInventoryData();
       const targetGoods = goods.find(g => g.id === goodsId);
       if (!targetGoods) {
         alert('找不到该商品');
         return;
       }
       _replaceTargetGoodsId = goodsId;
+      _replaceSelectedMaterialIndex = null;
 
       document.getElementById('replace-old-name').textContent = targetGoods.name || '未命名';
       document.getElementById('replace-old-info').textContent = '条形码：' + (targetGoods.barcode || '--') + ' · 数量：' + (targetGoods.stock || 0);
+
+      // 获取库存记录中的原料列表
+      const invItem = inventory.find(i => i.goodsId === goodsId);
+      const materials = invItem && invItem.materials && Array.isArray(invItem.materials) ? invItem.materials : [];
+
+      // 显示/隐藏原料选择区域
+      const materialSelectEl = document.getElementById('replace-material-select');
+      const materialListEl = document.getElementById('replace-material-list');
+      
+      if (materials.length > 1) {
+        materialSelectEl.classList.remove('hidden');
+        materialListEl.innerHTML = materials.map((m, index) => `
+          <button onclick="selectReplaceMaterial(${index})" class="px-3 py-1.5 rounded-lg border-2 border-coffee-light text-xs hover:border-coffee-main hover:bg-coffee-cream transition-colors material-select-btn" data-index="${index}">
+            ${escapeHtml(m.name || '原料')}${m.code ? ' (' + m.code + ')' : ''}
+          </button>
+        `).join('');
+        // 默认选中第一个
+        selectReplaceMaterial(0);
+      } else if (materials.length === 1) {
+        materialSelectEl.classList.add('hidden');
+        _replaceSelectedMaterialIndex = 0;
+      } else {
+        materialSelectEl.classList.add('hidden');
+        _replaceSelectedMaterialIndex = -1;
+      }
 
       document.getElementById('replace-new-barcode').value = '';
       document.getElementById('replace-new-preview').classList.add('hidden');
@@ -2995,6 +3031,20 @@
         input.focus();
         input.select();
       }, 100);
+    }
+
+    // 选择要替换的原料
+    function selectReplaceMaterial(index) {
+      _replaceSelectedMaterialIndex = index;
+      document.querySelectorAll('.material-select-btn').forEach((btn, i) => {
+        if (i === index) {
+          btn.classList.remove('border-coffee-light');
+          btn.classList.add('border-coffee-main', 'bg-coffee-cream');
+        } else {
+          btn.classList.add('border-coffee-light');
+          btn.classList.remove('border-coffee-main', 'bg-coffee-cream');
+        }
+      });
     }
 
     // 替换弹窗：预览新商品
@@ -3030,12 +3080,39 @@
         alert('该条形码不存在于商品库中，请检查或先添加商品');
         return;
       }
+
+      // 获取库存记录
+      const inventory = getInventoryData();
+      const invItem = inventory.find(i => i.goodsId === _replaceTargetGoodsId);
+
+      // 如果有选中的原料，替换该原料
+      if (_replaceSelectedMaterialIndex !== null && _replaceSelectedMaterialIndex >= 0 && invItem && invItem.materials && Array.isArray(invItem.materials)) {
+        const selectedMaterial = invItem.materials[_replaceSelectedMaterialIndex];
+        if (selectedMaterial) {
+          // 更新选中的原料名称和编码为新商品的信息
+          invItem.materials[_replaceSelectedMaterialIndex] = {
+            name: newGoods.name || selectedMaterial.name,
+            code: newGoods.barcode || selectedMaterial.code || '',
+            qty: selectedMaterial.qty || ''
+          };
+          saveInventoryData(inventory);
+          document.getElementById('inventory-replace-modal').classList.add('hidden');
+          _replaceTargetGoodsId = null;
+          _replaceSelectedMaterialIndex = null;
+          updateInventoryQuickCard();
+          const kw = document.getElementById('quick-inventory-search').value;
+          searchInventoryInQuickCard(kw);
+          alert('原料替换完成');
+          return;
+        }
+      }
+
+      // 如果没有选中原料，执行原有的商品级别替换（原商品数量置0）
       if (newGoods.id === _replaceTargetGoodsId) {
         alert('新商品不能与原商品相同');
         return;
       }
 
-      // 原商品数量置0（废除），新商品保留现有数据
       const goodsData = getGoodsData();
       for (let i = 0; i < goodsData.length; i++) {
         if (goodsData[i].id === _replaceTargetGoodsId) {
@@ -3045,8 +3122,6 @@
       saveGoodsData(goodsData);
       GOODS_DATA = goodsData;
 
-      // 同步更新库存表
-      const inventory = getInventoryData();
       for (let i = 0; i < inventory.length; i++) {
         if (inventory[i].goodsId === _replaceTargetGoodsId) {
           inventory[i].qty = 0;
@@ -3056,8 +3131,8 @@
 
       document.getElementById('inventory-replace-modal').classList.add('hidden');
       _replaceTargetGoodsId = null;
+      _replaceSelectedMaterialIndex = null;
 
-      // 刷新显示
       updateInventoryQuickCard();
       const kw = document.getElementById('quick-inventory-search').value;
       searchInventoryInQuickCard(kw);
