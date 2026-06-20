@@ -366,12 +366,12 @@
 
   <!-- 底部付款栏 -->
   <div class="bottom-pay-bar">
-    <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="flex items-center gap-3 text-center sm:text-left">
-        <!-- AI 语音助手按钮 -->
-        <button id="ai-assistant-fab" class="ai-voice-btn flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform" title="点击开始语音点单" aria-label="AI语音助手">
-          <i class="fa-solid fa-microphone"></i>
-        </button>
+    <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 relative">
+      <!-- AI 语音助手按钮（整个底部栏最左边） -->
+      <button id="ai-assistant-fab" class="ai-voice-btn flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform font-bold text-sm absolute left-4 sm:left-6" title="点击开始语音点单" aria-label="AI语音助手">
+        AI
+      </button>
+      <div class="flex items-center gap-3 text-center sm:text-left sm:ml-14">
         <div>
           <p class="text-coffee-dark font-medium text-sm">选择商品后完成付款</p>
           <p class="text-coffee-main font-bold mt-1">扫描收款码完成支付</p>
@@ -9879,11 +9879,9 @@
         const voiceBtn = document.getElementById('ai-voice-btn');
         if (fab) {
           fab.classList.toggle('listening', on);
-          const i = fab.querySelector('i');
-          if (i) {
-            i.className = on ? 'fa-solid fa-circle-stop text-lg animate-pulse' : 'fa-solid fa-microphone';
-            fab.style.background = on ? 'linear-gradient(to bottom right, #dc2626, #b91c1c)' : 'linear-gradient(to bottom right, #6F4E37, #8B5A2B)';
-          }
+          // AI按钮显示文字，监听时背景变红并添加脉冲动画
+          fab.style.background = on ? 'linear-gradient(to bottom right, #dc2626, #b91c1c)' : 'linear-gradient(to bottom right, #6F4E37, #8B5A2B)';
+          fab.classList.toggle('animate-pulse', on);
         }
         if (voiceBtn) {
           const i = voiceBtn.querySelector('i');
