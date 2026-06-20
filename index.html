@@ -182,44 +182,39 @@
   <main class="flex-1 container mx-auto px-4 py-6">
     <div class="flex gap-4 items-start">
 
-      <!-- 左侧：库存盘点快捷卡片 -->
+      <!-- 左侧：库存盘点快捷卡片（细长条样式） -->
       <aside id="quick-inventory-card" class="hidden flex-shrink-0">
-        <div class="bg-white rounded-lg card-shadow p-4 w-52 btn-hover">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-coffee-light/30">
-            <h3 class="text-sm font-bold text-coffee-dark flex items-center gap-1.5">
-              <i class="fa-solid fa-clipboard-list text-coffee-main"></i>库存概览
-            </h3>
-            <span id="quick-inventory-total" class="text-xs bg-coffee-main text-white px-2 py-0.5 rounded-full">0</span>
+        <div class="bg-white rounded-lg card-shadow p-3 w-24 btn-hover text-center cursor-pointer" onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" title="点击进入库存盘点">
+          <!-- 图标 -->
+          <div class="flex justify-center mb-2">
+            <div class="w-10 h-10 rounded-full bg-coffee-main/10 flex items-center justify-center">
+              <i class="fa-solid fa-clipboard-list text-coffee-main text-lg"></i>
+            </div>
           </div>
-          <!-- 库存总数 -->
-          <div class="mb-3 p-3 bg-coffee-cream/40 rounded-md">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-gray-600">商品总数</span>
-              <span id="quick-inventory-count" class="text-sm font-bold text-coffee-dark">0</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-gray-600">库存数量</span>
-              <span id="quick-inventory-qty" class="text-sm font-bold text-coffee-dark">0</span>
-            </div>
+          <!-- 标题 -->
+          <p class="text-xs font-bold text-coffee-dark mb-2">库存</p>
+          <!-- 分割线 -->
+          <div class="border-t border-coffee-light/30 my-2"></div>
+          <!-- 商品总数 -->
+          <div class="mb-2">
+            <p class="text-xs text-gray-500">商品</p>
+            <p id="quick-inventory-count" class="text-sm font-bold text-coffee-dark">0</p>
+          </div>
+          <!-- 库存数量 -->
+          <div class="mb-2">
+            <p class="text-xs text-gray-500">总量</p>
+            <p id="quick-inventory-qty" class="text-sm font-bold text-coffee-dark">0</p>
           </div>
           <!-- 即将到期 -->
-          <div class="mb-3 p-3 bg-orange-50 rounded-md">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-orange-700 flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i>即将到期</span>
-              <span id="quick-inventory-expiring" class="text-sm font-bold text-orange-700">0</span>
-            </div>
+          <div class="mb-2 bg-orange-50 rounded-md p-1.5" id="quick-inventory-expiring-box">
+            <i class="fa-solid fa-triangle-exclamation text-orange-600 text-xs"></i>
+            <p id="quick-inventory-expiring" class="text-xs font-bold text-orange-700 mt-0.5">0</p>
           </div>
-          <!-- 低库存警告 -->
-          <div class="mb-3 p-3 bg-red-50 rounded-md">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-red-700 flex items-center gap-1"><i class="fa-solid fa-circle-exclamation"></i>库存不足</span>
-              <span id="quick-inventory-low" class="text-sm font-bold text-red-700">0</span>
-            </div>
+          <!-- 库存不足 -->
+          <div class="mb-2 bg-red-50 rounded-md p-1.5" id="quick-inventory-low-box">
+            <i class="fa-solid fa-circle-exclamation text-red-600 text-xs"></i>
+            <p id="quick-inventory-low" class="text-xs font-bold text-red-700 mt-0.5">0</p>
           </div>
-          <!-- 快捷操作按钮 -->
-          <button onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" class="w-full py-2.5 rounded-md bg-coffee-main text-white text-sm btn-hover flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-magnifying-glass-chart"></i>进入盘点
-          </button>
         </div>
       </aside>
 
@@ -237,45 +232,39 @@
         </div>
       </div>
 
-      <!-- 右侧：员工管理快捷卡片 -->
+      <!-- 右侧：员工管理快捷卡片（细长条样式） -->
       <aside id="quick-employee-card" class="hidden flex-shrink-0">
-        <div class="bg-white rounded-lg card-shadow p-4 w-52 btn-hover">
-          <div class="flex items-center justify-between mb-3 pb-2 border-b border-coffee-light/30">
-            <h3 class="text-sm font-bold text-coffee-dark flex items-center gap-1.5">
-              <i class="fa-solid fa-user-clock text-coffee-main"></i>员工考勤
-            </h3>
-            <span id="quick-employee-total" class="text-xs bg-coffee-main text-white px-2 py-0.5 rounded-full">0</span>
+        <div class="bg-white rounded-lg card-shadow p-3 w-24 btn-hover text-center cursor-pointer" onclick="document.getElementById('employee-manage-modal').classList.remove('hidden');" title="点击进入员工管理">
+          <!-- 图标 -->
+          <div class="flex justify-center mb-2">
+            <div class="w-10 h-10 rounded-full bg-coffee-main/10 flex items-center justify-center">
+              <i class="fa-solid fa-user-clock text-coffee-main text-lg"></i>
+            </div>
           </div>
-          <!-- 员工状态 -->
-          <div class="mb-3 p-3 bg-coffee-cream/40 rounded-md">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-gray-600">员工总数</span>
-              <span id="quick-employee-count" class="text-sm font-bold text-coffee-dark">0</span>
-            </div>
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-green-700 flex items-center gap-1"><i class="fa-solid fa-circle-play text-xs"></i>工作中</span>
-              <span id="quick-employee-working" class="text-sm font-bold text-green-700">0</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-gray-600 flex items-center gap-1"><i class="fa-solid fa-circle-stop text-xs"></i>已下班</span>
-              <span id="quick-employee-off" class="text-sm font-bold text-gray-600">0</span>
-            </div>
+          <!-- 标题 -->
+          <p class="text-xs font-bold text-coffee-dark mb-2">员工</p>
+          <!-- 分割线 -->
+          <div class="border-t border-coffee-light/30 my-2"></div>
+          <!-- 员工总数 -->
+          <div class="mb-2">
+            <p class="text-xs text-gray-500">总数</p>
+            <p id="quick-employee-count" class="text-sm font-bold text-coffee-dark">0</p>
+          </div>
+          <!-- 工作中 -->
+          <div class="mb-2 bg-green-50 rounded-md p-1.5">
+            <i class="fa-solid fa-circle-play text-green-600 text-xs"></i>
+            <p id="quick-employee-working" class="text-xs font-bold text-green-700 mt-0.5">0</p>
+          </div>
+          <!-- 已下班 -->
+          <div class="mb-2">
+            <p class="text-xs text-gray-500">已下班</p>
+            <p id="quick-employee-off" class="text-sm font-bold text-gray-600">0</p>
           </div>
           <!-- 今日考勤 -->
-          <div class="mb-3 p-3 bg-blue-50 rounded-md">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-blue-700 flex items-center gap-1"><i class="fa-solid fa-calendar-day"></i>今日已打卡</span>
-              <span id="quick-employee-today" class="text-sm font-bold text-blue-700">0</span>
-            </div>
+          <div class="mb-2 bg-blue-50 rounded-md p-1.5">
+            <i class="fa-solid fa-calendar-day text-blue-600 text-xs"></i>
+            <p id="quick-employee-today" class="text-xs font-bold text-blue-700 mt-0.5">0</p>
           </div>
-          <!-- 在线员工列表 -->
-          <div id="quick-employee-working-list" class="mb-3 max-h-32 overflow-y-auto scrollbar-hide space-y-1.5">
-            <p class="text-xs text-gray-400 text-center py-2">暂无工作中员工</p>
-          </div>
-          <!-- 快捷操作按钮 -->
-          <button onclick="document.getElementById('employee-manage-modal').classList.remove('hidden');" class="w-full py-2.5 rounded-md bg-coffee-main text-white text-sm btn-hover flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-users-gear"></i>进入管理
-          </button>
         </div>
       </aside>
 
@@ -2685,7 +2674,6 @@
     function updateInventoryQuickCard() {
       syncGoodsToInventory();
       const inventory = getInventoryData();
-      const goods = GOODS_DATA || getGoodsData();
 
       // 商品种类数
       const totalTypes = inventory.length;
@@ -2707,11 +2695,14 @@
         if ((item.qty || 0) < 5) lowStockCount++;
       });
 
-      document.getElementById('quick-inventory-total').textContent = totalTypes;
-      document.getElementById('quick-inventory-count').textContent = totalTypes;
-      document.getElementById('quick-inventory-qty').textContent = totalQty;
-      document.getElementById('quick-inventory-expiring').textContent = expiringCount;
-      document.getElementById('quick-inventory-low').textContent = lowStockCount;
+      const countEl = document.getElementById('quick-inventory-count');
+      const qtyEl = document.getElementById('quick-inventory-qty');
+      const expiringEl = document.getElementById('quick-inventory-expiring');
+      const lowEl = document.getElementById('quick-inventory-low');
+      if (countEl) countEl.textContent = totalTypes;
+      if (qtyEl) qtyEl.textContent = totalQty;
+      if (expiringEl) expiringEl.textContent = expiringCount;
+      if (lowEl) lowEl.textContent = lowStockCount;
     }
 
     // 更新员工管理快捷卡片数据
@@ -2747,27 +2738,15 @@
         attendances.filter(a => a.date === today).map(a => a.employeeId)
       );
 
-      document.getElementById('quick-employee-total').textContent = totalCount;
-      document.getElementById('quick-employee-count').textContent = totalCount;
-      document.getElementById('quick-employee-working').textContent = workingCount;
-      document.getElementById('quick-employee-off').textContent = offCount;
-      document.getElementById('quick-employee-today').textContent = todayAttendanceIds.size;
-
-      // 更新工作中员工列表
-      const listEl = document.getElementById('quick-employee-working-list');
-      if (workingEmployees.length === 0) {
-        listEl.innerHTML = '<p class="text-xs text-gray-400 text-center py-2">暂无工作中员工</p>';
-      } else {
-        listEl.innerHTML = workingEmployees.map(emp => `
-          <div class="flex items-center justify-between p-2 bg-coffee-cream/30 rounded-md">
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
-              <span class="text-xs font-medium text-coffee-dark truncate">${escapeHtml(emp.name)}</span>
-            </div>
-            <span class="text-xs text-gray-500">${escapeHtml(emp.position || '员工')}</span>
-          </div>
-        `).join('');
-      }
+      // 更新员工快捷卡片数据
+      const empCountEl = document.getElementById('quick-employee-count');
+      const empWorkingEl = document.getElementById('quick-employee-working');
+      const empOffEl = document.getElementById('quick-employee-off');
+      const empTodayEl = document.getElementById('quick-employee-today');
+      if (empCountEl) empCountEl.textContent = totalCount;
+      if (empWorkingEl) empWorkingEl.textContent = workingCount;
+      if (empOffEl) empOffEl.textContent = offCount;
+      if (empTodayEl) empTodayEl.textContent = todayAttendanceIds.size;
     }
 
     // 渲染商品列表
