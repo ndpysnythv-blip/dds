@@ -671,6 +671,19 @@
           <i class="fa-solid fa-lock"></i>修改密码
         </button>
       </div>
+      <div class="border-t border-coffee-light/30 pt-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-shield-halved text-coffee-main"></i>
+            <span class="text-coffee-dark font-medium">密码保护</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="pwd-toggle" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+          </label>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">开启后，每次打开设置菜单需要输入密码</p>
+      </div>
     </div>
   </div>
 
@@ -4330,6 +4343,19 @@
     // 设置相关事件
     // ========== 密码管理工具 ==========
     const PWD_KEY = 'starCoffeeSettingsPwd';
+    const PWD_ENABLE_KEY = 'starCoffeeSettingsPwdEnabled';
+    function isSettingsPasswordEnabled() {
+      try {
+        const val = localStorage.getItem(PWD_ENABLE_KEY);
+        return val === 'true';
+      } catch (e) { return false; }
+    }
+    function setSettingsPasswordEnabled(enabled) {
+      try {
+        localStorage.setItem(PWD_ENABLE_KEY, enabled ? 'true' : 'false');
+        return true;
+      } catch (e) { return false; }
+    }
     function getSettingsPassword() {
       try {
         return localStorage.getItem(PWD_KEY) || '123456';
@@ -4347,7 +4373,13 @@
     // 待打开的弹窗ID（用于密码验证后打开目标弹窗）
     let pendingModalAfterAuth = null;
     function openSettingsModal(modalId) {
-      // 先判断当前会话是否已经授权过
+      // 如果密码保护未开启，直接打开
+      if (!isSettingsPasswordEnabled()) {
+        closeAllModals();
+        document.getElementById(modalId).classList.remove('hidden');
+        return;
+      }
+      // 已开启密码保护，先判断当前会话是否已经授权过
       try {
         const sessionKey = 'settingsAuthSession';
         const savedSession = sessionStorage.getItem(sessionKey);
@@ -4435,6 +4467,27 @@
           if (inp) inp.focus();
         }, 100);
       });
+
+      // 密码保护开关
+      const pwdToggle = document.getElementById('pwd-toggle');
+      pwdToggle.addEventListener('change', function() {
+        setSettingsPasswordEnabled(this.checked);
+        if (this.checked) {
+          showTipModal('密码保护已开启', 'fa-solid fa-check-circle');
+        } else {
+          sessionStorage.removeItem('settingsAuthSession');
+          showTipModal('密码保护已关闭', 'fa-solid fa-check-circle');
+        }
+      });
+      // 打开更多设置时同步开关状态
+      const moreSettingsModal = document.getElementById('more-settings-modal');
+      const originalShow = moreSettingsModal.classList.remove.bind(moreSettingsModal.classList);
+      moreSettingsModal.classList.remove = function(cls) {
+        if (cls === 'hidden') {
+          pwdToggle.checked = isSettingsPasswordEnabled();
+        }
+        return originalShow(cls);
+      };
 
       // 密码弹窗：取消
       document.getElementById('pwd-cancel').addEventListener('click', function() {
@@ -10892,9 +10945,19 @@
         if (adminBtn) {
           adminBtn.addEventListener('click', function () {
             const isActive = adminBtn.classList.contains('active-admin');
-            // 开启后台模式时需要密码验证
+            // 开启后台模式时需要密码验证（仅当密码保护已开启时）
             if (!isActive) {
-              // 校验密码（复用已授权状态）
+              // 如果密码保护未开启，直接进入后台模式
+              if (!isSettingsPasswordEnabled()) {
+                adminBtn.classList.add('active-admin');
+                if (enBtn) enBtn.classList.remove('active-en');
+                settings.mode = 'admin';
+                addAIMsg('后台模式已开启 🔧。可用指令：下架商品、上架商品、库存加/减、修改价格、查看库存、退出后台');
+                speakWithFallback('后台模式已开启');
+                if (inputEl) inputEl.placeholder = '输入后台指令…';
+                return;
+              }
+              // 密码保护已开启，校验密码（复用已授权状态）
               const auth = (function() { try { return sessionStorage.getItem('settingsAuthSession') === '1'; } catch(e) { return false; } })();
               if (!auth) {
                 addAIMsg('后台模式需要密码验证，请先进入设置验证密码。');
