@@ -1575,9 +1575,14 @@
       <div class="mb-4">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-base font-bold text-coffee-dark">商品库存明细</h3>
-          <button id="add-raw-material-btn" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
-            <i class="fa-solid fa-plus"></i>记录原料消耗
-          </button>
+          <div class="flex items-center gap-2">
+            <button id="add-new-inventory-btn" class="py-2 px-4 rounded-md bg-green-500 text-white btn-hover text-sm flex items-center gap-2">
+              <i class="fa-solid fa-plus"></i>添加库存
+            </button>
+            <button id="add-raw-material-btn" class="py-2 px-4 rounded-md bg-coffee-main text-white btn-hover text-sm flex items-center gap-2">
+              <i class="fa-solid fa-file-circle-plus"></i>记录消耗
+            </button>
+          </div>
         </div>
         <div id="inventory-list" class="space-y-2 max-h-[500px] overflow-y-auto">
           <!-- 库存卡片由 JS 动态渲染 -->
@@ -1594,26 +1599,41 @@
     </div>
   </div>
 
-  <!-- 编辑商品库存弹窗 -->
+  <!-- 编辑商品库存弹窗（增强版） -->
   <div id="inventory-edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
-        <h2 class="text-lg font-bold text-coffee-dark">编辑库存信息</h2>
+        <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-box-open text-coffee-main"></i>编辑库存信息</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="space-y-4">
-        <div class="bg-coffee-cream p-3 rounded-lg">
-          <p class="text-sm text-gray-600">商品</p>
-          <p id="edit-inventory-product-name" class="font-bold text-coffee-dark">--</p>
+        <!-- 商品名称：可选择已有商品或手动输入 -->
+        <div>
+          <label class="block text-sm text-coffee-dark mb-1.5">商品名称</label>
+          <div class="relative">
+            <select id="edit-inventory-product-select" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main mb-2" onchange="syncProductSelect()">
+              <option value="">从已有商品中选择...</option>
+              <!-- 商品列表由 JS 动态填充 -->
+            </select>
+            <input id="edit-inventory-product-name" type="text" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="或手动输入商品名称">
+          </div>
         </div>
         <div>
           <label class="block text-sm text-coffee-dark mb-1.5">现有库存数量</label>
           <input id="edit-inventory-qty" type="number" min="0" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="请输入库存数量">
         </div>
+        <!-- 原材料管理 -->
         <div>
-          <label class="block text-sm text-coffee-dark mb-1.5">原材料/配料（每行一个，用逗号分隔名称和数量）</label>
-          <textarea id="edit-inventory-materials" rows="4" class="w-full px-3 py-2 border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="例如：&#10;咖啡豆, 200g&#10;牛奶, 500ml&#10;糖浆, 50ml"></textarea>
-          <p class="text-xs text-gray-500 mt-1">格式：名称, 数量单位，每行一项</p>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-sm text-coffee-dark">原材料/配料（溯源管理）</label>
+            <button onclick="addRawMaterialRow()" class="text-xs text-coffee-main hover:text-coffee-dark flex items-center gap-1">
+              <i class="fa-solid fa-plus"></i>添加原料
+            </button>
+          </div>
+          <div id="raw-materials-list" class="space-y-2">
+            <!-- 原料行由 JS 动态生成 -->
+          </div>
+          <p class="text-xs text-gray-500 mt-1">点击添加原料，设置该商品使用哪些原材料及用量</p>
         </div>
         <div>
           <label class="block text-sm text-coffee-dark mb-1.5">生产日期/进货日期</label>
@@ -4188,6 +4208,27 @@
       renderRawMaterialLogs();
     });
 
+    // 添加新库存
+    document.getElementById('add-new-inventory-btn').addEventListener('click', function() {
+      editingInventoryId = Date.now(); // 使用临时ID
+      // 填充商品选择列表
+      const goods = window.appState ? (window.appState.goods || []) : [];
+      const selectEl = document.getElementById('edit-inventory-product-select');
+      if (selectEl) {
+        let html = '<option value="">从已有商品中选择...</option>';
+        goods.forEach(g => {
+          html += `<option value="${g.id}">${g.name}</option>`;
+        });
+        selectEl.innerHTML = html;
+      }
+      document.getElementById('edit-inventory-product-name').value = '';
+      document.getElementById('edit-inventory-qty').value = 0;
+      document.getElementById('edit-inventory-produce-date').value = '';
+      document.getElementById('edit-inventory-shelf-life').value = 30;
+      renderRawMaterialsList([]);
+      document.getElementById('inventory-edit-modal').classList.remove('hidden');
+    });
+
     // 获取商品库存数据（合并 goods 数据）
     function getInventoryData() {
       try {
@@ -4226,7 +4267,7 @@
       return inventory;
     }
 
-    // 渲染库存列表
+    // 渲染库存列表（增强版：显示原料溯源）
     function renderInventoryList() {
       syncGoodsToInventory();
       const inventory = getInventoryData();
@@ -4239,54 +4280,76 @@
       let expiringCount = 0;
       let totalQty = 0;
       if (inventory.length === 0) {
-        listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-boxes-packing text-3xl mb-2"></i><p>暂无库存数据</p></div>';
+        listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-boxes-packing text-3xl mb-2"></i><p>暂无库存数据</p><p class="text-xs mt-2">点击上方"添加库存"按钮开始管理</p></div>';
       } else {
         listEl.innerHTML = inventory.map(item => {
           totalQty += (item.qty || 0);
           let expiryText = '';
           let expiryClass = 'text-gray-500';
-          let expiryDays = null;
+          let expiryIcon = 'fa-clock';
           if (item.produceDate && item.shelfLife) {
             const produce = new Date(item.produceDate);
             const expiry = new Date(produce.getTime() + item.shelfLife * 24 * 3600 * 1000);
             const diffDays = Math.ceil((expiry - now) / (24 * 3600 * 1000));
-            expiryDays = diffDays;
             if (diffDays < 0) {
               expiryText = `已过期 ${Math.abs(diffDays)} 天`;
               expiryClass = 'text-red-600 font-bold';
+              expiryIcon = 'fa-triangle-exclamation';
               expiringCount++;
             } else if (diffDays <= 3) {
               expiryText = `${diffDays} 天后到期`;
               expiryClass = 'text-orange-500 font-bold';
+              expiryIcon = 'fa-bell';
               expiringCount++;
             } else if (diffDays <= 7) {
               expiryText = `${diffDays} 天后到期`;
               expiryClass = 'text-yellow-600';
+              expiryIcon = 'fa-calendar-days';
             } else {
               expiryText = `${diffDays} 天`;
               expiryClass = 'text-green-600';
+              expiryIcon = 'fa-check-circle';
             }
           }
-          const materialsText = (item.materials && item.materials.length) ? item.materials.slice(0, 3).map(m => `${m.name}${m.qty || ''}`).join('、') : '暂无原料信息';
+          const hasMaterials = item.materials && item.materials.length > 0;
+          const materialsHtml = hasMaterials ? `
+            <div class="mt-3 pt-3 border-t border-coffee-light/30">
+              <div class="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                <i class="fa-solid fa-flask-vial text-coffee-main"></i>原料溯源
+              </div>
+              <div class="flex flex-wrap gap-2">
+                ${item.materials.map(m => `
+                  <span class="px-2 py-1 bg-coffee-cream rounded-full text-xs text-coffee-dark flex items-center gap-1">
+                    <i class="fa-solid fa-circle-dot text-coffee-main text-[8px]"></i>${m.name} ${m.qty || ''}
+                  </span>
+                `).join('')}
+              </div>
+            </div>` : '';
           return `
-            <div class="p-3 bg-coffee-cream/50 rounded-lg">
+            <div class="p-4 bg-gradient-to-r from-white to-coffee-cream/30 rounded-xl border border-coffee-light/30 hover:shadow-md transition-all">
               <div class="flex items-center justify-between">
                 <div class="flex-1">
-                  <p class="font-bold text-coffee-dark">${item.productName}</p>
-                  <p class="text-xs text-gray-500 mt-1">原料：${materialsText}</p>
+                  <div class="flex items-center gap-2">
+                    <h4 class="font-bold text-coffee-dark">${item.productName}</h4>
+                    ${hasMaterials ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs"><i class="fa-solid fa-link"></i>已溯源</span>' : ''}
+                  </div>
+                  <p class="text-xs text-gray-500 mt-0.5">商品ID：${item.goodsId}</p>
                 </div>
                 <div class="flex items-center gap-4">
-                  <div class="text-right">
+                  <div class="text-center">
                     <p class="text-xs text-gray-500">库存</p>
-                    <p class="text-lg font-bold text-coffee-main cursor-pointer hover:text-coffee-dark" onclick="openInventoryEdit(${item.goodsId})">${item.qty || 0}</p>
+                    <p class="text-xl font-bold text-coffee-main cursor-pointer hover:text-coffee-dark" onclick="openInventoryEdit(${item.goodsId})">${item.qty || 0}</p>
                   </div>
-                  <div class="text-right min-w-[100px]">
+                  <div class="text-center min-w-[100px]">
                     <p class="text-xs text-gray-500">保质期</p>
-                    <p class="text-sm ${expiryClass}">${expiryText || '未设置'}</p>
+                    <p class="text-sm ${expiryClass} flex items-center justify-center gap-1"><i class="fa-solid ${expiryIcon}"></i>${expiryText || '未设置'}</p>
                   </div>
-                  <button onclick="openInventoryEdit(${item.goodsId})" class="py-1.5 px-3 rounded-md bg-coffee-main text-white text-xs btn-hover"><i class="fa-solid fa-pen"></i>编辑</button>
+                  <button onclick="openInventoryEdit(${item.goodsId})" class="py-2 px-4 rounded-xl bg-coffee-main text-white text-xs btn-hover flex items-center gap-1.5 shadow-sm hover:shadow-md">
+                    <i class="fa-solid fa-pen"></i>编辑
+                  </button>
                 </div>
               </div>
+              ${materialsHtml}
             </div>`;
         }).join('');
       }
@@ -4295,50 +4358,131 @@
       if (expiringEl) expiringEl.textContent = expiringCount;
     }
 
-    // 打开库存编辑
+    // 打开库存编辑（增强版：支持选择商品和原料管理）
     function openInventoryEdit(goodsId) {
       const inventory = getInventoryData();
       let item = inventory.find(i => i.goodsId === goodsId);
       if (!item) {
         const goods = window.appState ? (window.appState.goods || []).find(g => g.id === goodsId) : null;
-        item = { id: Date.now(), goodsId, productName: goods ? goods.name : '未知商品', qty: 0, materials: [], produceDate: null, shelfLife: 30 };
+        item = { id: Date.now(), goodsId, productName: goods ? goods.name : '', qty: 0, materials: [], produceDate: null, shelfLife: 30 };
         inventory.push(item);
         saveInventoryData(inventory);
       }
       editingInventoryId = item.goodsId;
-      document.getElementById('edit-inventory-product-name').textContent = item.productName;
+
+      // 填充商品选择列表
+      const goods = window.appState ? (window.appState.goods || []) : [];
+      const selectEl = document.getElementById('edit-inventory-product-select');
+      if (selectEl) {
+        let html = '<option value="">从已有商品中选择...</option>';
+        goods.forEach(g => {
+          html += `<option value="${g.id}" ${g.id === item.goodsId ? 'selected' : ''}>${g.name}</option>`;
+        });
+        selectEl.innerHTML = html;
+      }
+
+      // 填充商品名称输入
+      document.getElementById('edit-inventory-product-name').value = item.productName || '';
       document.getElementById('edit-inventory-qty').value = item.qty || 0;
-      document.getElementById('edit-inventory-materials').value = (item.materials || []).map(m => `${m.name}, ${m.qty}`).join('\n');
       document.getElementById('edit-inventory-produce-date').value = item.produceDate || '';
       document.getElementById('edit-inventory-shelf-life').value = item.shelfLife || '';
+
+      // 填充原材料列表
+      renderRawMaterialsList(item.materials || []);
+
       document.getElementById('inventory-edit-modal').classList.remove('hidden');
     }
 
-    // 保存库存编辑
+    // 同步商品选择和手动输入
+    function syncProductSelect() {
+      const selectEl = document.getElementById('edit-inventory-product-select');
+      const inputEl = document.getElementById('edit-inventory-product-name');
+      const goods = window.appState ? (window.appState.goods || []) : [];
+      if (selectEl.value) {
+        const selectedGood = goods.find(g => g.id === parseInt(selectEl.value));
+        if (selectedGood) {
+          inputEl.value = selectedGood.name;
+        }
+      }
+    }
+
+    // 添加原料行
+    function addRawMaterialRow(name = '', qty = '') {
+      const listEl = document.getElementById('raw-materials-list');
+      const id = Date.now() + Math.random();
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-2 bg-coffee-cream/50 p-2 rounded-lg';
+      row.innerHTML = `
+        <input type="text" class="flex-1 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-name" placeholder="原料名称" value="${name}">
+        <input type="text" class="w-28 px-2 py-1.5 text-sm border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main raw-material-qty" placeholder="用量" value="${qty}">
+        <button onclick="removeRawMaterialRow(this)" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
+      `;
+      listEl.appendChild(row);
+    }
+
+    // 移除原料行
+    function removeRawMaterialRow(btn) {
+      btn.parentElement.remove();
+    }
+
+    // 渲染原料列表
+    function renderRawMaterialsList(materials) {
+      const listEl = document.getElementById('raw-materials-list');
+      listEl.innerHTML = '';
+      if (materials && materials.length) {
+        materials.forEach(m => addRawMaterialRow(m.name, m.qty));
+      } else {
+        addRawMaterialRow();
+      }
+    }
+
+    // 保存库存编辑（增强版：支持商品名称和原料管理）
     document.getElementById('save-inventory-btn').addEventListener('click', function() {
-      if (editingInventoryId === null) return;
+      const productName = document.getElementById('edit-inventory-product-name').value.trim();
+      if (!productName) { alert('请输入商品名称'); return; }
       const qty = parseInt(document.getElementById('edit-inventory-qty').value) || 0;
-      const materialsRaw = document.getElementById('edit-inventory-materials').value.trim();
-      const materials = materialsRaw.split('\n').filter(l => l.trim()).map(line => {
-        const parts = line.split(',').map(s => s.trim());
-        return { name: parts[0], qty: parts[1] || '' };
+      
+      // 从动态行获取原料数据
+      const materials = [];
+      document.querySelectorAll('#raw-materials-list > div').forEach(row => {
+        const name = row.querySelector('.raw-material-name').value.trim();
+        const qtyVal = row.querySelector('.raw-material-qty').value.trim();
+        if (name) {
+          materials.push({ name, qty: qtyVal });
+        }
       });
+      
       const produceDate = document.getElementById('edit-inventory-produce-date').value;
       const shelfLife = parseInt(document.getElementById('edit-inventory-shelf-life').value) || 30;
       let inventory = getInventoryData();
-      const item = inventory.find(i => i.goodsId === editingInventoryId);
+      const selectEl = document.getElementById('edit-inventory-product-select');
+      const selectedGoodsId = selectEl.value ? parseInt(selectEl.value) : null;
+      const effectiveGoodsId = selectedGoodsId || editingInventoryId;
+      
+      let item = inventory.find(i => i.goodsId === effectiveGoodsId);
       if (item) {
+        item.productName = productName;
         item.qty = qty;
         item.materials = materials;
         item.produceDate = produceDate || null;
         item.shelfLife = shelfLife;
-        saveInventoryData(inventory);
-        // 同步到商品的库存
-        if (window.appState && window.appState.goods) {
-          const good = window.appState.goods.find(g => g.id === editingInventoryId);
-          if (good) { good.stock = qty; saveGoodsData ? saveGoodsData(window.appState.goods) : localStorage.setItem('goods_data', JSON.stringify(window.appState.goods)); }
-        }
+      } else {
+        inventory.push({
+          id: Date.now(),
+          goodsId: effectiveGoodsId,
+          productName: productName,
+          qty: qty,
+          materials: materials,
+          produceDate: produceDate || null,
+          shelfLife: shelfLife
+        });
       }
+      saveInventoryData(inventory);
+      if (window.appState && window.appState.goods && selectedGoodsId) {
+        const good = window.appState.goods.find(g => g.id === selectedGoodsId);
+        if (good) { good.stock = qty; saveGoodsData ? saveGoodsData(window.appState.goods) : localStorage.setItem('goods_data', JSON.stringify(window.appState.goods)); }
+      }
+      editingInventoryId = null;
       document.getElementById('inventory-edit-modal').classList.add('hidden');
       renderInventoryList();
       checkExpiringItems();
