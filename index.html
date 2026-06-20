@@ -9720,8 +9720,25 @@
             const res = addGoodsById(f.g.id, f.qty);
             names.push((res ? res.name : f.g.name) + '×' + f.qty);
           });
+          
+          // 识别备注关键词并填充到备注输入框
+          const remarkKeywords = ['热', '常温', '少冰', '去冰', '无糖', '少糖', '少少糖', '全糖', '不加糖', '多冰', '冰', '温', '凉'];
+          const foundRemarks = [];
+          remarkKeywords.forEach(function (kw) {
+            if (text.indexOf(kw) >= 0 && foundRemarks.indexOf(kw) === -1) {
+              foundRemarks.push(kw);
+            }
+          });
+          if (foundRemarks.length > 0) {
+            const remarkInput = document.getElementById('order-remark');
+            if (remarkInput) {
+              remarkInput.value = foundRemarks.join(' ');
+            }
+          }
+          
           const cart = getCartSummary();
-          speakWithFallback('已添加：' + names.join('、') + '，当前合计¥' + cart.total.toFixed(2) + '。说确认下单');
+          const remarkMsg = foundRemarks.length > 0 ? '，备注：' + foundRemarks.join(' ') : '';
+          speakWithFallback('已添加：' + names.join('、') + remarkMsg + '，当前合计¥' + cart.total.toFixed(2) + '。说确认下单');
           return;
         }
 
