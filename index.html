@@ -109,6 +109,30 @@
         to { opacity: 1; transform: translate(-50%, 0); }
       }
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+
+      /* 订单溯源详情水印 */
+      .log-watermark {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+        border-radius: 8px;
+      }
+      .log-watermark span {
+        position: absolute;
+        font-size: 18px;
+        color: rgba(111, 78, 55, 0.08);
+        transform: rotate(-25deg);
+        white-space: nowrap;
+        font-family: monospace;
+        letter-spacing: 2px;
+      }
+      /* 确保日志内容在水印之上 */
+      .log-detail-inner { position: relative; z-index: 1; }
     }
   </style>
   <style>
@@ -556,7 +580,7 @@
 
   <!-- 订单日志详情弹窗 -->
   <div id="log-order-detail-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-[60] hidden modal-fade overflow-y-auto p-4">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-2xl p-6 my-8">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-2xl p-6 my-8 relative overflow-hidden">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-search text-coffee-main"></i>订单溯源详情</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2351,6 +2375,9 @@
         }
         const success = await printWithUSBDriver(code, currentPrintOrder?.goods, time, remark);
         if (success) {
+          // USB 打印模式也记录打印时间
+          const printTsUsb = Date.now();
+          updateOrderLogByCode(code, { printTime: formatLocalTime(printTsUsb) });
           document.getElementById('print-preview-modal').classList.add('hidden');
           document.getElementById('code-modal').classList.add('hidden');
           document.getElementById('tip-modal').classList.add('hidden');
@@ -2479,6 +2506,10 @@
           applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
         }
       }
+
+      // 打印时间记录到日志溯源（增强版：记录打印时间）
+      const printTs = Date.now();
+      updateOrderLogByCode(code, { printTime: formatLocalTime(printTs) });
 
       // 调用系统原生打印
       window.print();
@@ -4629,6 +4660,37 @@
       };
       logs.push(log);
       saveLogs(logs);
+      return log;
+    }
+
+    // 根据取餐码查找并更新订单日志（用于回写制作完成/取餐/打印时间等）
+    function updateOrderLogByCode(orderCode, patch) {
+      if (!orderCode || !patch) return;
+      try {
+        const logs = getAllLogs();
+        let updated = false;
+        for (let i = logs.length - 1; i >= 0; i--) {
+          const l = logs[i];
+          if (l.type === 'order' && l.detail && l.detail.orderCode === String(orderCode)) {
+            l.detail = Object.assign({}, l.detail, patch);
+            updated = true;
+            break;
+          }
+        }
+        if (updated) saveLogs(logs);
+      } catch (e) {
+        // 静默失败，不影响正常功能
+      }
+    }
+
+    // 格式化时间戳为标准中文本地时间字符串
+    function formatLocalTime(ts) {
+      if (!ts) return '-';
+      try {
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return String(ts);
+        return d.toISOString().slice(0, 19).replace('T', ' ');
+      } catch (e) { return String(ts); }
     }
 
     // 申请搜索（模拟后台处理延迟）
@@ -4751,35 +4813,64 @@
       `;
     }
 
-    // 查看订单完整溯源详情
+    // 查看订单完整溯源详情（增强版：时间线 / 店员上下班 / 原料生产保质期到期 / 日志ID水印）
     function showLogOrderDetail(logId) {
       const logs = getAllLogs();
       const log = logs.find(l => l.id === logId);
       if (!log || log.type !== 'order') return;
       const detail = log.detail || {};
 
+      // 生成水印（日志ID，平铺在整个详情页背景）
+      function buildWatermarkHtml(markText) {
+        const rows = 10;
+        const cols = 6;
+        let html = '<div class="log-watermark" style="position:absolute;inset:0;pointer-events:none;z-index:0;">';
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const top = (r * 120 + (c % 2 === 0 ? 0 : 60)) + 'px';
+            const left = (c * 180) + 'px';
+            html += `<span style="position:absolute;top:${top};left:${left};font-size:16px;color:rgba(111,78,55,0.07);transform:rotate(-25deg);white-space:nowrap;font-family:monospace;letter-spacing:2px;">${escapeHtml(markText)}</span>`;
+          }
+        }
+        html += '</div>';
+        return html;
+      }
+
       const contentEl = document.getElementById('log-order-detail-content');
       contentEl.innerHTML = `
+        ${buildWatermarkHtml(log.id)}
+        <div class="log-detail-inner space-y-3">
+
         <div class="bg-coffee-cream/40 rounded-lg p-4">
           <h3 class="font-bold text-coffee-dark mb-2 flex items-center gap-2"><i class="fa-solid fa-clock"></i>订单信息</h3>
           <div class="space-y-1 text-sm">
             <p><span class="text-gray-500">取餐码：</span><span class="font-mono font-bold text-coffee-main">${escapeHtml(detail.orderCode || '-')}</span></p>
-            <p><span class="text-gray-500">下单时间：</span>${escapeHtml(log.datetime)}</p>
+            <p><span class="text-gray-500">下单时间：</span>${escapeHtml(detail.createTime || log.datetime || '-')}</p>
+            <p><span class="text-gray-500">打印时间：</span>${escapeHtml(detail.printTime || '未打印')}</p>
+            <p><span class="text-gray-500">制作完成：</span>${escapeHtml(detail.makeFinishTime || '未完成')}</p>
+            <p><span class="text-gray-500">取餐时间：</span>${escapeHtml(detail.pickupTime || '未取餐')}</p>
             <p><span class="text-gray-500">商品明细：</span>${escapeHtml(detail.items || '-')}</p>
+            ${detail.remark ? `<p><span class="text-gray-500">订单备注：</span>${escapeHtml(detail.remark)}</p>` : ''}
             ${detail.totalAmount !== undefined ? `<p><span class="text-gray-500">订单金额：</span>¥${detail.totalAmount}</p>` : ''}
           </div>
         </div>
 
         <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-          <h3 class="font-bold text-green-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-users"></i>当班店员</h3>
-          <div class="space-y-1 text-sm">
+          <h3 class="font-bold text-green-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-users"></i>当班店员（含上下班时间）</h3>
+          <div class="space-y-2 text-sm">
             ${detail.workingEmployees && detail.workingEmployees.length > 0 ?
               detail.workingEmployees.map(emp => `
-                <p class="flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span class="text-green-900">${escapeHtml(emp.name || '-')}</span>
-                  <span class="text-xs text-gray-500">${emp.no ? '(工号: ' + emp.no + ')' : ''}${emp.position ? ' ' + emp.position : ''}</span>
-                </p>
+                <div class="bg-white rounded-md p-2 border border-green-200">
+                  <p class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span class="text-green-900 font-bold">${escapeHtml(emp.name || '-')}</span>
+                    <span class="text-xs text-gray-500">${emp.no ? '(工号: ' + emp.no + ')' : ''}${emp.position ? ' ' + emp.position : ''}</span>
+                  </p>
+                  <p class="text-xs text-gray-600 mt-1">
+                    <span class="text-gray-500">上班签到：</span>${escapeHtml(emp.checkIn || '-')}　
+                    <span class="text-gray-500">下班签退：</span>${escapeHtml(emp.checkOut || '未下班')}
+                  </p>
+                </div>
               `).join('')
               : '<p class="text-gray-500 text-sm">无当班店员记录</p>'
             }
@@ -4787,14 +4878,20 @@
         </div>
 
         <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
-          <h3 class="font-bold text-orange-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-barcode"></i>原材料溯源</h3>
+          <h3 class="font-bold text-orange-800 mb-2 flex items-center gap-2"><i class="fa-solid fa-barcode"></i>原材料溯源（入库/生产/保质期/到期）</h3>
           <div class="space-y-2 text-sm">
             ${detail.materials && detail.materials.length > 0 ?
               detail.materials.map((m, idx) => `
-                <div class="bg-white rounded-md p-2 border border-orange-200">
-                  <p class="font-bold text-orange-900">${idx + 1}. ${escapeHtml(m.name || '-')}</p>
-                  <p class="text-xs text-gray-500">原料编码: <span class="font-mono">${escapeHtml(m.code || '-')}</span></p>
-                  <p class="text-xs text-gray-500">使用数量: ${escapeHtml(m.qty || '-')}</p>
+                <div class="bg-white rounded-md p-3 border border-orange-200">
+                  <p class="font-bold text-orange-900 mb-1">${idx + 1}. ${escapeHtml(m.name || '-')}</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs text-gray-600">
+                    <p><span class="text-gray-500">原料编码：</span><span class="font-mono">${escapeHtml(m.code || '-')}</span></p>
+                    <p><span class="text-gray-500">使用数量：</span>${escapeHtml(m.qty || '-')}</p>
+                    <p><span class="text-gray-500">入库时间：</span>${escapeHtml(m.inboundTime || '未记录')}</p>
+                    <p><span class="text-gray-500">生产日期：</span>${escapeHtml(m.produceDate || '未记录')}</p>
+                    <p><span class="text-gray-500">保质期：</span>${escapeHtml(m.shelfLife || '-')}</p>
+                    <p><span class="text-gray-500">到期时间：</span><span class="${m.expireDate ? 'text-red-600' : ''}">${escapeHtml(m.expireDate || '未记录')}</span></p>
+                  </div>
                 </div>
               `).join('')
               : '<p class="text-gray-500 text-sm">无原料记录</p>'
@@ -4803,7 +4900,9 @@
         </div>
 
         <div class="text-center text-xs text-gray-400 pt-2">
-          日志ID: <span class="font-mono">${log.id}</span>
+          日志ID: <span class="font-mono">${log.id}</span>　｜　记录时间: ${escapeHtml(log.datetime || '-')}
+        </div>
+
         </div>
       `;
 
@@ -8210,7 +8309,7 @@
       // 获取备注信息
       const remark = document.getElementById('order-remark').value || '';
       
-      // 准备订单商品和原料溯源数据
+      // 准备订单商品和原料溯源数据（增强版：包含入库时间/生产日期/保质期/到期时间）
       const orderGoodsList = [];
       const orderMaterials = [];
       const inventory = getInventoryData();
@@ -8223,26 +8322,56 @@
           if (invItem && invItem.materials && Array.isArray(invItem.materials)) {
             invItem.materials.forEach(m => {
               if (m.name) {
-                orderMaterials.push({
+                const matInfo = {
                   name: m.name,
                   code: m.code || '-',
                   qty: m.qty || '-'
-                });
+                };
+                // 从原料条目中读取入库时间
+                if (m.inboundTime) matInfo.inboundTime = formatLocalTime(m.inboundTime);
+                else if (m.inboundDate) matInfo.inboundTime = formatLocalTime(m.inboundDate);
+                // 从库存条目中读取生产日期/保质期
+                if (invItem.produceDate) {
+                  try {
+                    const produce = new Date(invItem.produceDate);
+                    matInfo.produceDate = formatLocalTime(produce.getTime());
+                    // 计算到期时间
+                    if (invItem.shelfLife) {
+                      const unit = invItem.shelfLifeUnit || 'day';
+                      const ms = unit === 'hour'
+                        ? Number(invItem.shelfLife) * 3600 * 1000
+                        : Number(invItem.shelfLife) * 24 * 3600 * 1000;
+                      const expire = new Date(produce.getTime() + ms);
+                      matInfo.shelfLife = invItem.shelfLife + (unit === 'hour' ? '小时' : '天');
+                      matInfo.expireDate = formatLocalTime(expire.getTime());
+                    }
+                  } catch (e) {}
+                }
+                orderMaterials.push(matInfo);
               }
             });
           }
         }
       }
 
-      // 获取当前正在上班的员工
+      // 获取当前正在上班的员工（增强版：包含签到/签退时间）
       const employees = getEmployees();
       const records = getAttendanceRecords();
       const today = now.toISOString().slice(0, 10);
       const workingEmployees = employees.filter(emp => {
-        // 检查是否有今天的签到记录且未下班
-        const hasCheckIn = records.some(r => r.empId === emp.id && r.date === today && r.checkIn && !r.checkOut);
+        // 检查是否有今天的签到记录（包括已经下班的员工也保留，方便回溯完整时间段）
+        const hasCheckIn = records.some(r => r.empId === emp.id && r.date === today && r.checkIn);
         return hasCheckIn;
-      }).map(e => ({ name: e.name, no: e.employeeNo || e.no || '', position: e.position }));
+      }).map(e => {
+        const r = records.find(x => x.empId === e.id && x.date === today);
+        return {
+          name: e.name,
+          no: e.employeeNo || e.no || '',
+          position: e.position,
+          checkIn: r ? formatLocalTime(r.checkIn) : '-',
+          checkOut: r && r.checkOut ? formatLocalTime(r.checkOut) : '未下班'
+        };
+      });
 
       // 添加到制作中列表
       const newOrder = {
@@ -8252,16 +8381,19 @@
         actualPay: payTotal,
         timeStr: timeStr,
         remark: remark,
-        userOrderId: currentUserOrderId
+        userOrderId: currentUserOrderId,
+        createTimestamp: now.getTime()
       };
       makingList.push(newOrder);
       updatePickupPanel();
       
-      // 记录订单日志
+      // 记录订单日志（包含完整下单时间戳）
       addLog('order', '新订单支付', {
         orderCode: code,
         items: orderGoodsList.join(', '),
         totalAmount: payTotal,
+        remark: remark,
+        createTime: formatLocalTime(now.getTime()),
         workingEmployees: workingEmployees,
         materials: orderMaterials.length > 0 ? orderMaterials : null
       });
@@ -8759,17 +8891,29 @@
     // 全局订单状态变更函数
     window.moveToWait = function(index) {
       const order = makingList.splice(index, 1)[0];
-      order && waitList.push(order);
-      if (order && order.userOrderId) {
-        syncOrderStatusToUser(order.userOrderId, 'wait');
+      if (order) {
+        waitList.push(order);
+        // 记录制作完成时间到订单和日志
+        const finishTs = Date.now();
+        order.makeFinishTime = finishTs;
+        updateOrderLogByCode(order.code, { makeFinishTime: formatLocalTime(finishTs) });
+        if (order.userOrderId) {
+          syncOrderStatusToUser(order.userOrderId, 'wait');
+        }
       }
       updatePickupPanel();
     };
     window.moveToFinish = function(index) {
       const order = waitList.splice(index, 1)[0];
-      order && finishList.push(order);
-      if (order && order.userOrderId) {
-        syncOrderStatusToUser(order.userOrderId, 'finish');
+      if (order) {
+        finishList.push(order);
+        // 记录取餐时间到订单和日志
+        const pickupTs = Date.now();
+        order.pickupTime = pickupTs;
+        updateOrderLogByCode(order.code, { pickupTime: formatLocalTime(pickupTs) });
+        if (order.userOrderId) {
+          syncOrderStatusToUser(order.userOrderId, 'finish');
+        }
       }
       updatePickupPanel();
     };
