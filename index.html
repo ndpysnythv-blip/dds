@@ -10364,6 +10364,16 @@
         const detectedLang = detectLanguage(text);
         const isEnglish = detectedLang === 'en-US';
 
+        // ========== 0. 结束/关闭指令 - 关闭语音识别，进入休眠（需重新唤醒）==========
+        if (/结束|关闭|拜拜|再见|拜拜了|关掉|停止|finish|end|close|stop|bye|goodbye/i.test(text)) {
+          stopVoice();
+          isWokenUp = false;
+          const msg = isEnglish ? 'Voice recognition stopped. Please say wake-up word to activate again.' : '语音识别已关闭，请说唤醒词重新唤醒。';
+          addAIMsg(msg);
+          speak(msg);
+          return;
+        }
+
         // ========== 1. 取消/删除/减少 指令（区分全部清空和单个删除） ==========
         // 包含取消/去掉/删除/不要 等关键词，但需进一步判断是全部还是部分
         const isRemoval = /去掉|删除|不要这个|不要那|减去|减|拿走|移除|去|去这个|remove|delete/i.test(text);
@@ -10964,7 +10974,7 @@
         const sb = document.getElementById('ai-live-caption');
         if (sb) {
           sb.classList.toggle('hidden', !on);
-          if (on) sb.textContent = '🎙️ 正在聆听…';
+          if (on) sb.textContent = '正在聆听…';
         }
       }
 
