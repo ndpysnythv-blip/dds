@@ -1,0 +1,10 @@
+const fs = require('fs');
+const h = fs.readFileSync('/workspace/index.html', 'utf-8');
+const jsA = h.indexOf('    // ☕ AI 语音助手');
+const tmp = h.substring(jsA);
+const iifeEndIdx = tmp.indexOf('    })();');
+const jsB = jsA + iifeEndIdx + '    })();'.length;
+console.log('JS REPLACE FROM:', jsA, 'TO:', jsB, 'LEN:', jsB - jsA);
+console.log('CONTEXT start:', h.substring(jsA, jsA + 40));
+console.log('CONTEXT end:', h.substring(jsB - 40, jsB + 20));
+fs.writeFileSync('/tmp/ai_replace_bounds.txt', JSON.stringify({ jsA: jsA, jsB: jsB }));

@@ -110,6 +110,76 @@
       }
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
 
+      /* ============ AI助手专属样式 ============ */
+      @keyframes fabPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        50% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+      }
+      .animate-fab-pulse { animation: fabPulse 1.5s ease-in-out infinite; }
+
+      @keyframes fabPulseIdle {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(111, 78, 55, 0.4); }
+        50% { box-shadow: 0 0 0 12px rgba(111, 78, 55, 0); }
+      }
+      .animate-fab-idle { animation: fabPulseIdle 2.5s ease-in-out infinite; }
+
+      @keyframes slideUp {
+        from { transform: translateY(40px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-slide-up { animation: slideUp 0.35s ease-out; }
+
+      @keyframes aiTyping {
+        0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+        30% { transform: translateY(-4px); opacity: 1; }
+      }
+      .ai-typing-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #6f4e37;
+        margin: 0 2px;
+        animation: aiTyping 1.2s infinite;
+      }
+      .ai-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+      .ai-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+      @keyframes waveformBar {
+        0%, 100% { transform: scaleY(0.3); }
+        50% { transform: scaleY(1); }
+      }
+      .ai-wave-bar {
+        display: inline-block;
+        width: 3px;
+        height: 18px;
+        background: #8B5A2B;
+        margin: 0 1px;
+        border-radius: 2px;
+        transform-origin: center;
+        animation: waveformBar 1s infinite;
+      }
+      .ai-wave-bar:nth-child(2) { animation-delay: 0.1s; }
+      .ai-wave-bar:nth-child(3) { animation-delay: 0.2s; }
+      .ai-wave-bar:nth-child(4) { animation-delay: 0.3s; }
+      .ai-wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+      #ai-messages::-webkit-scrollbar {
+        width: 4px;
+      }
+      #ai-messages::-webkit-scrollbar-thumb {
+        background: rgba(111, 78, 55, 0.3);
+        border-radius: 2px;
+      }
+
+      #ai-assistant-modal:not(.hidden) {
+        display: flex;
+      }
+      #ai-assistant-fab.listening {
+        background: linear-gradient(to bottom right, #dc2626, #991b1b) !important;
+        animation: none;
+      }
+
       /* 订单溯源详情水印 */
       .log-watermark {
         position: absolute;
@@ -287,12 +357,25 @@
     </div>
   </main>
 
+  <!-- 实时字幕区域 -->
+  <div id="ai-live-caption" class="fixed bottom-24 left-0 right-0 text-center px-4 hidden z-40">
+    <span class="inline-block bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+      正在聆听…
+    </span>
+  </div>
+
   <!-- 底部付款栏 -->
   <div class="bottom-pay-bar">
-    <div class="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="text-center sm:text-left">
-        <p class="text-coffee-dark font-medium text-sm">选择商品后完成付款</p>
-        <p class="text-coffee-main font-bold mt-1">扫描收款码完成支付</p>
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4">
+      <div class="flex items-center gap-3">
+        <!-- AI 语音助手按钮（可拖动） -->
+        <button id="ai-assistant-fab" class="ai-voice-btn flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform font-bold text-sm cursor-grab active:cursor-grabbing" title="点击开始语音点单 | 拖动可移动位置" aria-label="AI语音助手" draggable="false">
+          AI
+        </button>
+        <div>
+          <p class="text-coffee-dark font-medium text-sm">选择商品后完成付款</p>
+          <p class="text-coffee-main font-bold mt-1">扫描收款码完成支付</p>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <i class="fa-solid fa-hand-pointer text-2xl text-coffee-light"></i>
@@ -509,22 +592,229 @@
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="grid grid-cols-1 gap-3 mb-6">
-        <button id="to-goods-manage" class="py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2 text-lg">
+        <button id="to-store-settings" class="py-4 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-store"></i>门店设置
+        </button>
+        <button id="to-goods-manage" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-box"></i>商品管理
         </button>
         <button id="to-print-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-print"></i>打印设置
         </button>
+        <button id="to-ai-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
+          <i class="fa-solid fa-robot"></i>AI助手
+        </button>
         <button id="to-api-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-server"></i>后台设置
-        </button>
-        <button id="to-store-settings" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
-          <i class="fa-solid fa-store"></i>门店设置
         </button>
         <button id="to-log-viewer" class="py-4 rounded-md bg-coffee-cream text-coffee-dark btn-hover flex items-center justify-center gap-2 text-lg">
           <i class="fa-solid fa-book"></i>日志记录
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- AI 助手设置弹窗 -->
+  <div id="ai-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-xl my-6">
+      <div class="p-6">
+        <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-5">
+          <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-robot text-coffee-main"></i>AI助手</h2>
+          <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div id="ai-settings-content" class="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+
+          <!-- 1. 总开关 -->
+          <div class="p-4 bg-coffee-cream/60 rounded-xl border-2 border-coffee-main/30">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <p class="text-coffee-dark font-bold text-base">🧠 启用 AI 助手</p>
+                <p class="text-sm text-gray-500 mt-1">打开后右下角出现圆形悬浮按钮，支持语音与文字点单</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-enabled" class="sr-only peer" checked>
+                <div class="w-14 h-8 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+            <div id="ai-status-indicator" class="mt-3 text-xs text-gray-500 bg-white rounded-lg px-3 py-2 border border-coffee-main/10">
+              <i class="fa-solid fa-circle-info text-coffee-main mr-1"></i>
+              <span id="ai-status-line">就绪 · 点击悬浮按钮开始使用</span>
+            </div>
+          </div>
+
+          <!-- 2. 悬浮按钮样式 -->
+          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-bullseye text-coffee-main"></i>悬浮按钮样式</p>
+            <div class="grid grid-cols-3 gap-2 mb-3">
+              <label class="flex flex-col items-center p-3 border-2 border-coffee-main bg-white rounded-lg cursor-pointer ai-style-label" data-style="circle">
+                <span class="w-10 h-10 rounded-full bg-coffee-main text-white text-lg font-bold flex items-center justify-center mb-1">AI</span>
+                <span class="text-xs text-coffee-dark font-medium">圆形</span>
+                <input type="radio" name="ai-style" value="circle" class="sr-only" checked>
+              </label>
+              <label class="flex flex-col items-center p-3 border-2 border-gray-200 bg-white rounded-lg cursor-pointer ai-style-label" data-style="pill">
+                <span class="w-16 h-8 rounded-full bg-coffee-main text-white text-sm font-bold flex items-center justify-center mb-1">AI 助手</span>
+                <span class="text-xs text-coffee-dark font-medium">胶囊</span>
+                <input type="radio" name="ai-style" value="pill" class="sr-only">
+              </label>
+              <label class="flex flex-col items-center p-3 border-2 border-gray-200 bg-white rounded-lg cursor-pointer ai-style-label" data-style="icon">
+                <span class="w-10 h-10 rounded-full bg-coffee-main text-white flex items-center justify-center mb-1">
+                  <i class="fa-solid fa-microphone-lines text-base"></i>
+                </span>
+                <span class="text-xs text-coffee-dark font-medium">图标</span>
+                <input type="radio" name="ai-style" value="icon" class="sr-only">
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs text-gray-500 block mb-1">大小 (像素)</label>
+                <input type="number" id="ai-btn-size" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main" value="56" min="36" max="120">
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 block mb-1">边距 (像素)</label>
+                <input type="number" id="ai-btn-margin" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main" value="24" min="0" max="200">
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 语音识别 -->
+          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-microphone text-coffee-main"></i>语音识别</p>
+
+            <div class="mb-3">
+              <label class="text-xs text-gray-500 block mb-1">识别语言</label>
+              <select id="ai-lang" class="w-full px-3 py-2 border border-coffee-light rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white">
+                <option value="zh-CN">中文（普通话）</option>
+                <option value="zh-HK">粤语</option>
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="ja-JP">日本語</option>
+                <option value="ko-KR">한국어</option>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-2">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">自动连续识别</p>
+                <p class="text-xs text-gray-500">打开弹窗后自动开启麦克风，持续识别</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-continuous" class="sr-only peer">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">说话结束自动发送</p>
+                <p class="text-xs text-gray-500">检测到停顿后自动作为一条消息提交</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-auto-send" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 4. 语音合成（AI 说话） -->
+          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-volume-high text-coffee-main"></i>AI 语音回复</p>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-3">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">启用 AI 语音播报</p>
+                <p class="text-xs text-gray-500">识别后 AI 会用语音回应你</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-tts" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-500 block mb-1">语速</label>
+                <input type="range" id="ai-tts-rate" min="0.5" max="2" step="0.1" value="1" class="w-full accent-coffee-main">
+                <p class="text-xs text-center text-gray-500 mt-1"><span id="ai-tts-rate-val">1.0</span>x</p>
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 block mb-1">音调</label>
+                <input type="range" id="ai-tts-pitch" min="0" max="2" step="0.1" value="1" class="w-full accent-coffee-main">
+                <p class="text-xs text-center text-gray-500 mt-1"><span id="ai-tts-pitch-val">1.0</span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. 下单交互 -->
+          <div class="p-4 bg-coffee-cream/40 rounded-xl border border-coffee-main/20">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-mug-hot text-coffee-main"></i>下单行为</p>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg mb-2">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">说「确认」后自动打开支付</p>
+                <p class="text-xs text-gray-500">识别到关键词后直接进入收银员扫码环节</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-auto-checkout" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-white rounded-lg">
+              <div>
+                <p class="text-coffee-dark text-sm font-medium">自动关闭对话弹窗</p>
+                <p class="text-xs text-gray-500">确认下单后自动关闭 AI 对话，避免遮挡</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ai-toggle-auto-close" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 6. 调试 / 测试区域 -->
+          <div class="p-4 bg-coffee-main/5 rounded-xl border border-coffee-main/30">
+            <p class="text-coffee-dark font-bold text-sm mb-3 flex items-center gap-2"><i class="fa-solid fa-flask text-coffee-main"></i>立即测试</p>
+            <div class="text-xs text-gray-500 mb-3">点击下方按钮测试浏览器语音功能与 TTS 播报</div>
+            <div class="grid grid-cols-2 gap-2 mb-2">
+              <button id="ai-test-mic" class="py-2 px-3 text-sm rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-1">
+                <i class="fa-solid fa-microphone"></i>测试麦克风
+              </button>
+              <button id="ai-test-tts" class="py-2 px-3 text-sm rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-1">
+                <i class="fa-solid fa-volume-high"></i>测试播报
+              </button>
+            </div>
+            <button id="ai-test-order" class="w-full py-2 px-3 text-sm rounded-md bg-coffee-cream text-coffee-dark border border-coffee-main/40 btn-hover flex items-center justify-center gap-1">
+              <i class="fa-solid fa-mug-hot"></i>试下单：加入「拿铁 × 1」到购物车
+            </button>
+          </div>
+
+          <!-- 7. 浏览器兼容性提示 -->
+          <div class="p-4 bg-amber-50 rounded-xl border border-amber-200" id="ai-compat-notice" style="display:none;">
+            <p class="text-coffee-dark font-bold text-sm mb-1 flex items-center gap-2">
+              <i class="fa-solid fa-triangle-exclamation text-amber-500"></i>浏览器兼容性提示
+            </p>
+            <p id="ai-compat-text" class="text-xs text-gray-600 leading-relaxed"></p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 底部保存 -->
+      <div class="p-6 pt-4">
+        <div class="grid grid-cols-2 gap-2 pt-4 border-t border-coffee-light/30">
+          <button id="ai-reset-settings" class="py-3 rounded-md bg-coffee-cream text-coffee-dark border-2 border-coffee-main/40 btn-hover flex items-center justify-center gap-1 text-sm">
+            <i class="fa-solid fa-rotate-left"></i>恢复默认
+          </button>
+          <button id="ai-save-settings" class="py-3 rounded-md bg-coffee-main text-white btn-hover flex items-center justify-center gap-1 text-sm">
+            <i class="fa-solid fa-save"></i>保存设置
+          </button>
+        </div>
+        <div id="ai-save-feedback" class="mt-2 text-center text-xs text-green-600 hidden">
+          <i class="fa-solid fa-check-circle"></i> 已保存 · 悬浮按钮已立即应用
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -669,6 +959,17 @@
               <input type="number" id="paper-height-input" class="w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm" value="50" min="20" max="300">
             </div>
           </div>
+        </div>
+
+        <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
+          <div>
+            <p class="text-coffee-dark font-medium">横向打印（小票标签）</p>
+            <p class="text-sm text-gray-500">开启后内容将旋转 90° 横向输出，打印机会以横向纸张识别</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="landscape-print-toggle" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+          </label>
         </div>
 
         <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
@@ -2237,6 +2538,10 @@
     let waitList = [];
     let finishList = [];
     let currentGoods = {};
+    // 暴露到 window，供 AI 助手模块跨 script 访问
+    window.__GOODS_DATA__ = () => GOODS_DATA;
+    window.__CURRENT_GOODS__ = () => currentGoods;
+    window.__SET_CURRENT_GOODS__ = (v) => { currentGoods = v; };
     let currentPayType = '';
     let searchClearTimer = null;
     let isPanelCollapsed = false;
@@ -2392,17 +2697,36 @@
 
       const printArea = document.getElementById('native-print-content');
 
-      // 封装通用的打印样式（@page 使用像素，与 label 内容坐标保持一致）
-      function buildPrintStyle(pageWidthPX, pageHeightPX) {
+      // 封装通用的打印样式（@page 使用像素，与 label 内容坐标保持一致
+      // 兼容标签打印机：同时提供 size: w h; 并追加 size: landscape; 确保横向生效
+      function buildPrintStyle(pageWidthPX, pageHeightPX, opts) {
+        opts = opts || {};
+        const isLandscape = !!opts.isLandscape;
+        // mm 双写：先用像素尺寸，再追加 landscape 关键字回退，确保横打机可识别的 mm 尺寸
+        const widthMM = Math.round(pageWidthPX / 3.78);
+        const heightMM = Math.round(pageHeightPX / 3.78);
         return `
           @page {
-            size: ${pageWidthPX}px ${pageHeightPX}px;
+            size: ${widthMM}mm ${heightMM}mm;
+            ${isLandscape ? 'size: ' + widthMM + 'mm ' + heightMM + 'mm;' : ''}
             margin: 0mm;
+            orientation: ${isLandscape ? 'landscape' : 'portrait'};
+          }
+          @media print {
+            @page {
+              size: ${widthMM}mm ${heightMM}mm ${isLandscape ? 'landscape' : ''};
+              margin: 0mm;
+            }
           }
           #native-print-content {
             display: none;
           }
           @media print {
+            html, body {
+              width: ${widthMM}mm;
+              height: ${heightMM}mm;
+              margin: 0 !important;
+            }
             body * {
               visibility: hidden !important;
             }
@@ -2421,7 +2745,8 @@
               background: white !important;
               z-index: 99999 !important;
               padding: 0 !important;
-              margin: 0 !important;
+              width: ${widthMM}mm !important;
+              height: ${heightMM}mm !important;
             }
           }
         `;
@@ -2436,10 +2761,16 @@
         document.head.appendChild(style);
       }
 
+      // 决定本次打印是否横向：
+      // 1) 模板画布已旋转 90/270 度 → 横
+      // 2) 明确开启 landscapePrint 开关 → 横
+      // 3) 纸张宽 > 高 → 默认当作横向纸
+      const rotated = (canvasRotation === 90 || canvasRotation === 270);
+      const widePaper = paperWidthMM > paperHeightMM;
+      const effectiveLandscape = rotated || printSettings.landscapePrint || widePaper;
+
       if (mergeLabels) {
         // 合并标签模式：两张标签横向排列，每张各占一半页面
-        // 单张标签在合并纸张内的大小 = 合并纸张高度（纵向）× 合并纸张宽度的一半（横向）
-        // 这里用像素做单位，与模板内容坐标一致
         const mergePageWidthPX = Math.round(mergePaperWidthMM * MM_TO_PX);
         const mergePageHeightPX = Math.round(mergePaperHeightMM * MM_TO_PX);
         const halfWidthPX = Math.round(mergePageWidthPX / 2);
@@ -2458,10 +2789,10 @@
             </div>
           </div>
         `;
-        applyStyle(buildPrintStyle(mergePageWidthPX, mergePageHeightPX));
+        applyStyle(buildPrintStyle(mergePageWidthPX, mergePageHeightPX, { isLandscape: true }));
       } else {
         // 普通模式：两张标签分开打印，每张一页
-        if (canvasRotation === 90 || canvasRotation === 270) {
+        if (rotated) {
           // 旋转 90/270：页面宽高互换，内容在页面中心旋转
           const pageWidthPX = paperHeightPX;
           const pageHeightPX = paperWidthPX;
@@ -2478,8 +2809,9 @@
               </div>
             </div>
           `;
-          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX));
+          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX, { isLandscape: true }));
         } else if (canvasRotation === 180) {
+          // 上下颠倒（倒打），内容整体旋转 180 度
           printArea.innerHTML = `
             <div style="page-break-after: always; break-after: page; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
               <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(180deg); transform-origin: center center;">
@@ -2492,9 +2824,26 @@
               </div>
             </div>
           `;
-          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
+          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX, { isLandscape: effectiveLandscape }));
+        } else if (effectiveLandscape) {
+          // 用户没有旋转画布，但要求横向打印 —— 把内容旋转 90 度 + 页面宽高互换
+          const pageWidthPX = paperHeightPX;
+          const pageHeightPX = paperWidthPX;
+          printArea.innerHTML = `
+            <div style="page-break-after: always; break-after: page; width: ${pageWidthPX}px; height: ${pageHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(90deg); transform-origin: center center;">
+                ${label1}
+              </div>
+            </div>
+            <div style="page-break-after: avoid; break-after: auto; width: ${pageWidthPX}px; height: ${pageHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(90deg); transform-origin: center center;">
+                ${label2}
+              </div>
+            </div>
+          `;
+          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX, { isLandscape: true }));
         } else {
-          // 默认：不旋转，两张标签各自一页
+          // 完全纵向：不旋转，两张标签各自一页
           printArea.innerHTML = `
             <div style="page-break-after: always; break-after: page; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
               ${label1}
@@ -2503,7 +2852,7 @@
               ${label2}
             </div>
           `;
-          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
+          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX, { isLandscape: false }));
         }
       }
 
@@ -3689,7 +4038,7 @@
       mergeLabels: false,
       mergePaperWidth: 100,
       mergePaperHeight: 80,
-      landscapePrint: false,
+      landscapePrint: true,
       canvasRotation: 0,
       templateConfig: {
         logo: 'https://img.icons8.com/doodle/96/coffee--v1.png',
@@ -3780,6 +4129,11 @@
     function updatePrintSettingsUI() {
       document.getElementById('auto-print-toggle').checked = printSettings.autoPrint;
       document.getElementById('auto-dismiss-toggle').checked = printSettings.autoDismiss;
+      // 横向打印开关
+      const landscapeToggle = document.getElementById('landscape-print-toggle');
+      if (landscapeToggle) {
+        landscapeToggle.checked = !!printSettings.landscapePrint;
+      }
       
       // 更新呼叫取餐状态显示
       const callStatus = document.getElementById('auto-call-pickup-status');
@@ -3834,6 +4188,9 @@
     function savePrintSettings() {
       printSettings.autoPrint = document.getElementById('auto-print-toggle').checked;
       printSettings.autoDismiss = document.getElementById('auto-dismiss-toggle').checked;
+      // 横向打印
+      const landscapeEl = document.getElementById('landscape-print-toggle');
+      printSettings.landscapePrint = landscapeEl ? landscapeEl.checked : false;
       const selectedModeLabel = document.querySelector('.print-mode-label.border-coffee-main');
       printSettings.printMode = selectedModeLabel ? selectedModeLabel.dataset.mode : 'label';
       printSettings.template = document.querySelector('input[name="print-template"]:checked').value;
@@ -9088,7 +9445,757 @@
         document.getElementById('print-preview-modal').classList.add('hidden');
       });
     }
-  </script>
+
+    // ============================================================
+    // ============================================================
+    // ============================================================
+    // ☕ AI 语音助手（完整功能版）
+    // ============================================================
+    (function () {
+      // ========== 1) 全局状态 ==========
+      const SETTINGS_KEY = 'aiAssistantSettings_v2';
+      let recognition = null;
+      let settings = loadSettings();
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return {
+          enabled: true, style: 'circle', buttonSize: 56, buttonMargin: 24,
+          lang: 'zh-CN', continuous: false, autoSend: true,
+          tts: true, ttsRate: 1.0, ttsPitch: 1.0,
+          autoCheckout: true, autoCloseAfterCheckout: true,
+        };
+      }
+      function saveSettings() {
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+      }
+
+      function isSpeechSupported() {
+        return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+      }
+      function isTTSSupported() { return 'speechSynthesis' in window; }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      // ========== 2) 商品 / 购物车（跨 script 访问） ==========
+      function getGoodsDataSafe() {
+        // 优先使用主脚本暴露的 window 引用，其次回退到 localStorage
+        if (typeof window.__GOODS_DATA__ === 'function') {
+          const d = window.__GOODS_DATA__();
+          if (Array.isArray(d) && d.length > 0) return d;
+        }
+        if (typeof getGoodsData === 'function') {
+          const d = getGoodsData();
+          if (Array.isArray(d) && d.length > 0) return d;
+        }
+        try {
+          const raw = localStorage.getItem('starCoffeeGoods');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch (e) {}
+        return [
+          { id: 1, name: '经典意式浓缩', price: 18 },
+          { id: 2, name: '美式咖啡', price: 22 },
+          { id: 3, name: '拿铁咖啡', price: 28 },
+          { id: 4, name: '卡布奇诺', price: 30 },
+          { id: 5, name: '生椰拿铁', price: 32 },
+          { id: 6, name: '提拉米苏', price: 26 },
+          { id: 7, name: '蔓越莓司康', price: 16 },
+          { id: 8, name: '鲜榨橙汁', price: 20 },
+          { id: 9, name: '气泡水', price: 18 },
+          { id: 10, name: '焦糖玛奇朵', price: 35 }
+        ];
+      }
+
+      function getCurrentGoodsRef() {
+        if (typeof window.__CURRENT_GOODS__ === 'function') return window.__CURRENT_GOODS__();
+        if (typeof currentGoods !== 'undefined') return currentGoods;
+        if (!window.__AI_CURRENT_GOODS__) window.__AI_CURRENT_GOODS__ = {};
+        return window.__AI_CURRENT_GOODS__;
+      }
+
+      function addGoodsById(id, qty) {
+        const data = getGoodsDataSafe();
+        const g = data.find(function (x) { return x.id === id; });
+        if (!g) return null;
+        const ref = getCurrentGoodsRef();
+        if (ref[id]) ref[id].count = (ref[id].count || 0) + qty;
+        else ref[id] = Object.assign({}, g, { count: qty });
+        // 同步暴露到主脚本（若主脚本采用引用读取，此步为可选安全保障）
+        if (typeof window.__SET_CURRENT_GOODS__ === 'function') window.__SET_CURRENT_GOODS__(ref);
+        if (typeof updateBottomAmount === 'function') updateBottomAmount();
+        else if (typeof window.__UPDATE_BOTTOM_AMOUNT__ === 'function') window.__UPDATE_BOTTOM_AMOUNT__();
+        return g;
+      }
+
+      function clearCartSafe() {
+        const ref = getCurrentGoodsRef();
+        Object.keys(ref).forEach(function (k) { delete ref[k]; });
+        if (typeof window.__SET_CURRENT_GOODS__ === 'function') window.__SET_CURRENT_GOODS__(ref);
+        if (typeof updateBottomAmount === 'function') updateBottomAmount();
+      }
+
+      function getCartSummary() {
+        const ref = getCurrentGoodsRef();
+        const items = Object.values(ref);
+        let count = 0, total = 0;
+        items.forEach(function (g) {
+          count += g.count || 0;
+          total += (g.price || 0) * (g.count || 0);
+        });
+        return { count: count, total: total, items: items };
+      }
+
+      function parseChineseNumber(text) {
+        const m = text.match(/(\d+(?:\.\d+)?)/);
+        if (m) return parseFloat(m[1]);
+        const map = { '零': 0, '一': 1, '二': 2, '两': 2, '俩': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+        let cur = 0, result = 0;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+          if (map[c] !== undefined) {
+            if (c === '十') cur = cur === 0 ? 10 : cur * 10;
+            else cur += map[c];
+          } else { result += cur; cur = 0; }
+        }
+        result += cur;
+        return result > 0 ? result : null;
+      }
+
+      // ========== 3) 消息渲染 ==========
+      function addUserMsg(text) {
+        const el = document.getElementById('ai-messages');
+        if (!el) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-start gap-2 flex-row-reverse';
+        wrap.innerHTML =
+          '<div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">' +
+            '<i class="fa-solid fa-user text-green-600 text-sm"></i></div>' +
+          '<div class="flex-1 text-right">' +
+            '<div class="bg-green-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm max-w-[85%] inline-block text-left">' +
+            escapeHtml(text) + '</div></div>';
+        el.appendChild(wrap);
+        el.scrollTop = el.scrollHeight;
+        updateCartPreview();
+      }
+
+      function addAIMsg(text) {
+        const el = document.getElementById('ai-messages');
+        if (!el) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-start gap-2';
+        wrap.innerHTML =
+          '<div class="w-8 h-8 rounded-full bg-coffee-main/20 flex items-center justify-center flex-shrink-0">' +
+            '<i class="fa-solid fa-robot text-coffee-main text-sm"></i></div>' +
+          '<div class="flex-1">' +
+            '<div class="bg-coffee-cream rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-coffee-dark max-w-[85%] inline-block leading-relaxed">' +
+            text + '</div></div>';
+        el.appendChild(wrap);
+        el.scrollTop = el.scrollHeight;
+        updateCartPreview();
+      }
+
+      // ========== 4) UI - FAB 渲染 ==========
+      function renderFAB() {
+        const fab = document.getElementById('ai-assistant-fab');
+        if (!fab) return;
+        if (!settings.enabled) {
+          fab.style.display = 'none';
+          fab.classList.add('hidden');
+          return;
+        }
+        fab.classList.remove('hidden');
+        fab.style.display = 'flex';
+      }
+
+      function updateCartPreview() {
+        const cartP = document.getElementById('ai-cart-preview');
+        const cartI = document.getElementById('ai-cart-items');
+        const cartT = document.getElementById('ai-cart-total');
+        const cart = getCartSummary();
+        if (cartP) {
+          if (cart.count > 0) {
+            cartP.classList.remove('hidden');
+            if (cartI) {
+              const names = cart.items.map(function (g) { return g.name + '×' + g.count; });
+              cartI.textContent = names.join('、');
+            }
+            if (cartT) cartT.textContent = cart.total.toFixed(2);
+          } else {
+            cartP.classList.add('hidden');
+          }
+        }
+      }
+
+      // ========== 5) 输入处理 ==========
+      function handleInput(rawText) {
+        const text = (rawText || '').trim();
+        if (!text) return;
+
+        // 取消/清空
+        if (text.length <= 16 && /取消|不要|重来|重新|去掉|删除|清空|cancel|reset|clear|stop|不要|退出|关闭|no/i.test(text)) {
+          clearCartSafe();
+          speakWithFallback('好的，已清空购物车');
+          return;
+        }
+
+        // 确认/结账
+        if (text.length <= 16 && /确认|结账|买单|支付|付款|好的|对了|完成|没错|就是这样|是的|对|结账|下单|confirm|checkout|done|ok|yes/i.test(text)) {
+          const cart = getCartSummary();
+          if (cart.items.length === 0) { speakWithFallback('您还没有选择商品哦'); return; }
+          const names = cart.items.map(function (g) { return g.name + '×' + g.count; });
+          speakWithFallback('已确认：' + names.join('、') + '，合计¥' + cart.total.toFixed(2) + '。请收银员扫码完成支付');
+          if (settings.autoCheckout) {
+            setTimeout(function () { if (typeof openCheckoutModal === 'function') openCheckoutModal(); }, 1400);
+            if (settings.autoCloseAfterCheckout) setTimeout(closeChat, 1800);
+          }
+          return;
+        }
+
+        // 商品识别：优先精确匹配商品名；若无匹配再以最长关键词在前的顺序做部分匹配
+        const goods = getGoodsDataSafe();
+        const found = [];
+        const addedIds = {};
+        goods.forEach(function (g) {
+          if (!g.name) return;
+          if (text.indexOf(g.name) >= 0) {
+            const around = text.substring(Math.max(0, text.indexOf(g.name) - 5), text.indexOf(g.name) + g.name.length + 5);
+            let qty = parseChineseNumber(around) || 1;
+            if (qty > 99) qty = 1;
+            found.push({ g: g, qty: qty });
+            addedIds[g.id] = true;
+          }
+        });
+        // 精确匹配没有命中：尝试关键词部分匹配（最长优先），且每个商品只加一次
+        if (found.length === 0) {
+          const candidates = [];
+          goods.forEach(function (g) {
+            if (!g.name) return;
+            // 完整商品名作为最高优先级候选
+            if (g.name.length >= 2) candidates.push({ word: g.name, g: g, priority: 3 });
+            const parts = (g.name.match(/[\u4e00-\u9fa5A-Za-z]+/g) || []);
+            const seen = {};
+            parts.forEach(function (p) {
+              if (p.length < 2) return;
+              if (!seen[p]) { seen[p] = true; candidates.push({ word: p, g: g, priority: 2 }); }
+              // 进一步枚举子片段
+              for (let len = Math.min(p.length - 1, 4); len >= 2; len--) {
+                for (let i = 0; i + len <= p.length; i++) {
+                  const sub = p.substring(i, i + len);
+                  if (!seen[sub]) { seen[sub] = true; candidates.push({ word: sub, g: g, priority: 1 }); }
+                }
+              }
+            });
+          });
+          // 按优先级降序、再按词长降序：确保用户说「拿铁」时先匹配到「拿铁咖啡」
+          candidates.sort(function (a, b) {
+            if (a.priority !== b.priority) return b.priority - a.priority;
+            return b.word.length - a.word.length;
+          });
+          for (let ci = 0; ci < candidates.length; ci++) {
+            const c = candidates[ci];
+            if (addedIds[c.g.id]) continue;
+            if (text.indexOf(c.word) < 0) continue;
+            const around = text.substring(Math.max(0, text.indexOf(c.word) - 5), text.indexOf(c.word) + c.word.length + 5);
+            let qty = parseChineseNumber(around) || 1;
+            if (qty > 99) qty = 1;
+            found.push({ g: c.g, qty: qty });
+            addedIds[c.g.id] = true;
+            // 仅添加第一个命中的商品，避免「拿铁」同时命中「拿铁咖啡」「生椰拿铁」等多个
+            break;
+          }
+        }
+
+        if (found.length > 0) {
+          const names = [];
+          found.forEach(function (f) {
+            const res = addGoodsById(f.g.id, f.qty);
+            names.push((res ? res.name : f.g.name) + '×' + f.qty);
+          });
+          const cart = getCartSummary();
+          speakWithFallback('已添加：' + names.join('、') + '，当前合计¥' + cart.total.toFixed(2) + '。说确认下单');
+          return;
+        }
+
+        // 问候
+        if (text.length <= 10 && /你好|您好|在吗|哈喽|嗨|你好啊|hello|hi|hey/i.test(text)) {
+          speakWithFallback('你好！请告诉我您想点什么，比如一杯拿铁。');
+          return;
+        }
+
+        // 无法理解
+        speakWithFallback('抱歉没听清楚，请直接说商品名，例如一杯拿铁或两份提拉米苏。');
+      }
+
+      // ========== 6) 语音识别 ==========
+      // 检测是否为安全上下文（HTTPS / localhost）
+      function checkSecureContext() {
+        if (window.isSecureContext) return true;
+        const proto = location.protocol.toLowerCase();
+        const host = location.hostname.toLowerCase();
+        return proto === 'https:' || host === 'localhost' || host === '127.0.0.1';
+      }
+
+      function startVoice() {
+        if (!isSpeechSupported()) {
+          addAIMsg('⚠️ 当前浏览器不支持语音识别<br>建议使用 <strong>Chrome / Edge</strong> 浏览器。<br>您可以直接在输入框打字使用文字点单功能。');
+          return;
+        }
+        if (!checkSecureContext()) {
+          addAIMsg('⚠️ 语音识别需要安全连接<br><strong>当前环境：</strong>' + location.hostname + '<br><strong>解决方法：</strong><br>1. 在您自己的电脑上运行本系统（localhost 或 127.0.0.1）<br>2. 或使用 HTTPS 协议访问<br><strong>当前可用：</strong>您可以直接在输入框打字使用文字点单功能。');
+          return;
+        }
+        // 先获取麦克风权限，再启动语音识别
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+          // 权限获取成功，启动识别
+          initSpeechRecognition(stream);
+        }).catch(function (err) {
+          console.warn('[AI] 麦克风权限获取失败:', err);
+          let msg = '';
+          if (err.name === 'NotAllowedError') {
+            msg = '⚠️ 麦克风权限被拒绝<br><strong>请按以下步骤操作：</strong><br>1. 点击浏览器地址栏左侧的 🔒 图标<br>2. 在「麦克风」选项中选择「允许」<br>3. 刷新页面后重试';
+          } else if (err.name === 'NotFoundError') {
+            msg = '⚠️ 未检测到麦克风设备<br>请检查是否连接了麦克风，或使用文字点单功能。';
+          } else if (err.name === 'NotReadableError') {
+            msg = '⚠️ 麦克风被其他应用占用<br>请关闭其他使用麦克风的程序后重试。';
+          } else {
+            msg = '⚠️ 无法访问麦克风<br>错误：' + (err.message || err.name);
+          }
+          addAIMsg(msg);
+          setListeningUI(false);
+        });
+      }
+
+      function initSpeechRecognition(stream) {
+        try { if (recognition) trySilentStop(recognition); } catch (e) {}
+
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR();
+        recognition.lang = settings.lang || 'zh-CN';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.maxAlternatives = 1;
+
+        let lastFinalText = '';
+        recognition.onresult = function (e) {
+          let finalText = '';
+          let interimText = '';
+          for (let i = 0; i < e.results.length; i++) {
+            if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+            else interimText += e.results[i][0].transcript;
+          }
+          // 更新实时字幕区域（底部付款栏上方）
+          const liveCaption = document.getElementById('ai-live-caption');
+          if (liveCaption) {
+            liveCaption.classList.remove('hidden');
+            if (interimText) {
+              liveCaption.textContent = '🎤 ' + interimText;
+              liveCaption.style.opacity = '0.7';
+            } else if (finalText) {
+              liveCaption.textContent = '🎤 ' + finalText;
+              liveCaption.style.opacity = '1';
+            }
+          }
+          // 更新弹窗内状态条
+          const sb = document.getElementById('ai-status-bar');
+          const sm = document.getElementById('ai-status-msg');
+          if (sb && sm) {
+            sb.classList.remove('hidden');
+            sm.textContent = '🎙️ ' + (interimText || finalText || '聆听中…');
+          }
+          // 处理 final：自动识别并语音回复
+          if (finalText && finalText.trim() && finalText !== lastFinalText) {
+            lastFinalText = finalText;
+            addUserMsg(finalText.trim());
+            handleInput(finalText.trim());
+          }
+        };
+
+        recognition.onerror = function (e) {
+          console.warn('[AI] 语音错误:', e.error);
+          let msg = '';
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            msg = '⚠️ 语音识别权限被拒绝<br>请允许麦克风权限后重试。';
+          } else if (e.error === 'audio-capture') {
+            msg = '⚠️ 未检测到可用麦克风设备';
+          } else if (e.error === 'network') {
+            msg = '⚠️ 网络连接异常<br>语音识别需要联网，请检查网络。';
+          } else if (e.error === 'no-speech') {
+            msg = '未检测到语音，请再说一次。';
+          } else if (e.error === 'aborted') {
+            msg = '语音识别已停止';
+          } else {
+            msg = '⚠️ 语音识别异常: ' + e.error;
+          }
+          addAIMsg(msg);
+          speakWithFallback(msg.replace(/<[^>]*>/g, ''));
+        };
+
+        recognition.onend = function () {
+          const liveCaption = document.getElementById('ai-live-caption');
+          if (liveCaption) liveCaption.classList.add('hidden');
+          const sb = document.getElementById('ai-status-bar');
+          if (sb) sb.classList.add('hidden');
+          if (settings.continuous) { try { recognition.start(); } catch (err) {} }
+          else { setListeningUI(false); }
+        };
+
+        try {
+          recognition.start();
+          setListeningUI(true);
+        } catch (err) {
+          console.warn('[AI] 麦克风启动失败', err);
+          speakWithFallback('启动语音识别失败: ' + (err.message || '未知错误'));
+          setListeningUI(false);
+        }
+      }
+
+      function trySilentStop(rec) { try { rec.stop(); } catch (e) {} }
+
+      function stopVoice() {
+        if (recognition) trySilentStop(recognition);
+        setListeningUI(false);
+      }
+
+      function toggleVoice() {
+        const fab = document.getElementById('ai-assistant-fab');
+        const isOn = fab && fab.classList.contains('listening');
+        if (isOn) {
+          stopVoice();
+          speakWithFallback('语音点单已结束。');
+        } else {
+          startVoice();
+          speakWithFallback('你好！我是AI助手，请告诉我您想点什么。');
+        }
+      }
+
+      function setListeningUI(on) {
+        const fab = document.getElementById('ai-assistant-fab');
+        const voiceBtn = document.getElementById('ai-voice-btn');
+        if (fab) {
+          fab.classList.toggle('listening', on);
+          // AI按钮显示文字，监听时背景变红并添加脉冲动画
+          fab.style.background = on ? 'linear-gradient(to bottom right, #dc2626, #b91c1c)' : 'linear-gradient(to bottom right, #6F4E37, #8B5A2B)';
+          fab.classList.toggle('animate-pulse', on);
+        }
+        if (voiceBtn) {
+          const i = voiceBtn.querySelector('i');
+          if (i) i.className = on ? 'fa-solid fa-stop text-lg' : 'fa-solid fa-microphone text-lg';
+          voiceBtn.classList.toggle('bg-red-600', on);
+          voiceBtn.classList.toggle('bg-coffee-main', !on);
+        }
+        // 更新实时字幕区域
+        const sb = document.getElementById('ai-live-caption');
+        if (sb) {
+          sb.classList.toggle('hidden', !on);
+          if (on) sb.textContent = '🎙️ 正在聆听…';
+        }
+      }
+
+      // ========== 7) 弹窗 ==========
+      function openChat() {
+        const m = document.getElementById('ai-assistant-modal');
+        if (m) {
+          m.classList.remove('hidden');
+          m.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; pointer-events: none; display: flex; justify-content: flex-start; align-items: flex-end; padding: 16px; background: transparent;';
+          const inner = m.querySelector('div');
+          if (inner) {
+            inner.style.cssText = 'pointer-events: auto; margin-right: auto; width: 100%; max-width: 420px; background: #fff; border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.2); overflow: hidden; border: 1px solid rgba(111,78,55,0.3);';
+          }
+        }
+        updateCartPreview();
+        if (settings.continuous) setTimeout(startVoice, 300);
+      }
+      function closeChat() {
+        const m = document.getElementById('ai-assistant-modal');
+        if (m) {
+          m.classList.add('hidden');
+          m.style.display = 'none';
+        }
+        stopVoice();
+      }
+
+      // ========== 8) TTS ==========
+      function speak(text) {
+        if (!isTTSSupported() || !settings.tts) return;
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g, ''));
+          u.lang = settings.lang || 'zh-CN';
+          u.rate = settings.ttsRate || 1;
+          u.pitch = settings.ttsPitch || 1;
+          u.volume = 1;
+          const voices = window.speechSynthesis.getVoices();
+          if (voices && voices.length > 0) {
+            if (settings.lang && settings.lang.indexOf('zh') >= 0) {
+              const zh = voices.find(function (v) { return /zh|cmn|chinese|CN|China/i.test(v.lang + v.name); });
+              if (zh) u.voice = zh;
+            } else {
+              const en = voices.find(function (v) { return /^en|english|English/i.test(v.lang); });
+              if (en) u.voice = en;
+            }
+          }
+          window.speechSynthesis.speak(u);
+        } catch (e) { console.warn('[AI] TTS 错误:', e); }
+      }
+
+      function speakWithFallback(text) { addAIMsg(text); speak(text); }
+
+      // ========== 9) 绑定事件 ==========
+      function bindEvents() {
+        const fab = document.getElementById('ai-assistant-fab');
+        if (fab) {
+          // 拖动相关变量
+          let isDragging = false;
+          let startX, startY, startLeft, startTop;
+          const dragThreshold = 5; // 拖动阈值（像素）
+
+          // 鼠标按下
+          fab.addEventListener('mousedown', function (e) {
+            isDragging = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = fab.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            fab.style.zIndex = '9999';
+          });
+
+          // 鼠标移动
+          document.addEventListener('mousemove', function (e) {
+            if (!isDragging && startX !== undefined) {
+              const dx = Math.abs(e.clientX - startX);
+              const dy = Math.abs(e.clientY - startY);
+              if (dx > dragThreshold || dy > dragThreshold) {
+                isDragging = true;
+                // 切换为 fixed 定位以便自由拖动
+                fab.style.position = 'fixed';
+                fab.style.left = startLeft + 'px';
+                fab.style.top = startTop + 'px';
+                fab.style.bottom = 'auto';
+                fab.style.right = 'auto';
+                fab.style.margin = '0';
+              }
+            }
+            if (isDragging) {
+              const dx = e.clientX - startX;
+              const dy = e.clientY - startY;
+              fab.style.left = (startLeft + dx) + 'px';
+              fab.style.top = (startTop + dy) + 'px';
+              e.preventDefault();
+            }
+          });
+
+          // 鼠标松开
+          document.addEventListener('mouseup', function () {
+            if (isDragging) {
+              isDragging = false;
+            }
+            startX = startY = startLeft = startTop = undefined;
+            fab.style.zIndex = '';
+          });
+
+          // 点击事件（仅当不是拖动时触发）
+          fab.addEventListener('click', function () {
+            if (!isDragging) {
+              toggleVoice();
+              openChat();
+            }
+          });
+        }
+
+        const closeBtn = document.getElementById('ai-close-btn');
+        if (closeBtn) closeBtn.addEventListener('click', closeChat);
+
+        const voiceBtn = document.getElementById('ai-voice-btn');
+        if (voiceBtn) voiceBtn.addEventListener('click', toggleVoice);
+
+        const sendBtn = document.getElementById('ai-send-btn');
+        const inputEl = document.getElementById('ai-input');
+        if (sendBtn) sendBtn.addEventListener('click', function () {
+          const v = (inputEl && inputEl.value || '').trim();
+          if (v) { addUserMsg(v); if (inputEl) inputEl.value = ''; handleInput(v); }
+        });
+        if (inputEl) inputEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            const v = inputEl.value.trim();
+            if (v) { addUserMsg(v); inputEl.value = ''; handleInput(v); }
+          }
+        });
+
+        // 设置面板的事件绑定
+        bindSettingsEvents();
+
+        // 设置主菜单入口
+        const toAi = document.getElementById('to-ai-settings');
+        if (toAi) toAi.addEventListener('click', function () {
+          document.getElementById('settings-modal').classList.add('hidden');
+          const m = document.getElementById('ai-settings-modal');
+          if (m) m.classList.remove('hidden');
+          syncSettingsUI();
+        });
+      }
+
+      // ========== 10) 设置面板事件 ==========
+      function bindSettingsEvents() {
+        const tE = document.getElementById('ai-toggle-enabled');
+        if (tE) tE.addEventListener('change', function () {
+          settings.enabled = !!tE.checked;
+          renderFAB();
+          updateStatusLine();
+        });
+
+        document.querySelectorAll('input[name="ai-style"]').forEach(function (r) {
+          r.addEventListener('change', function () { settings.style = r.value; renderFAB(); });
+        });
+
+        const si = document.getElementById('ai-btn-size');
+        if (si) si.addEventListener('change', function () {
+          settings.buttonSize = parseInt(si.value) || 56; renderFAB();
+        });
+
+        const mi = document.getElementById('ai-btn-margin');
+        if (mi) mi.addEventListener('change', function () {
+          settings.buttonMargin = parseInt(mi.value) || 24; renderFAB();
+        });
+
+        const ls = document.getElementById('ai-lang');
+        if (ls) ls.addEventListener('change', function () { settings.lang = ls.value; });
+
+        const ct = document.getElementById('ai-toggle-continuous');
+        if (ct) ct.addEventListener('change', function () { settings.continuous = !!ct.checked; });
+
+        const asT = document.getElementById('ai-toggle-auto-send');
+        if (asT) asT.addEventListener('change', function () { settings.autoSend = !!asT.checked; });
+
+        const tt = document.getElementById('ai-toggle-tts');
+        if (tt) tt.addEventListener('change', function () { settings.tts = !!tt.checked; });
+
+        const tR = document.getElementById('ai-tts-rate');
+        const tRV = document.getElementById('ai-tts-rate-val');
+        if (tR) tR.addEventListener('input', function () {
+          settings.ttsRate = parseFloat(tR.value) || 1;
+          if (tRV) tRV.textContent = settings.ttsRate.toFixed(1);
+        });
+
+        const tP = document.getElementById('ai-tts-pitch');
+        const tPV = document.getElementById('ai-tts-pitch-val');
+        if (tP) tP.addEventListener('input', function () {
+          settings.ttsPitch = parseFloat(tP.value) || 1;
+          if (tPV) tPV.textContent = settings.ttsPitch.toFixed(1);
+        });
+
+        const aC = document.getElementById('ai-toggle-auto-checkout');
+        if (aC) aC.addEventListener('change', function () { settings.autoCheckout = !!aC.checked; });
+
+        const aC2 = document.getElementById('ai-toggle-auto-close');
+        if (aC2) aC2.addEventListener('change', function () { settings.autoCloseAfterCheckout = !!aC2.checked; });
+
+        // 测试按钮
+        const testMic = document.getElementById('ai-test-mic');
+        if (testMic) testMic.addEventListener('click', function () { openChat(); setTimeout(startVoice, 200); });
+
+        const testTts = document.getElementById('ai-test-tts');
+        if (testTts) testTts.addEventListener('click', function () { speak('你好，我是 AI 助手，很高兴为您服务'); });
+
+        const testOrder = document.getElementById('ai-test-order');
+        if (testOrder) testOrder.addEventListener('click', function () {
+          const goods = getGoodsDataSafe();
+          if (goods.length === 0) { addAIMsg('商品数据暂不可用'); return; }
+          const first = goods[0];
+          addGoodsById(first.id, 1);
+          addUserMsg('（测试）加入 ' + first.name + '×1');
+          speakWithFallback('测试下单成功，已加入' + first.name + '。当前合计¥' + getCartSummary().total.toFixed(2));
+        });
+
+        // 保存 & 恢复
+        const sb = document.getElementById('ai-save-settings');
+        if (sb) sb.addEventListener('click', function () {
+          saveSettings();
+          const fb = document.getElementById('ai-save-feedback');
+          if (fb) { fb.classList.remove('hidden'); setTimeout(function () { fb.classList.add('hidden'); }, 2500); }
+          document.getElementById('ai-settings-modal').classList.add('hidden');
+          renderFAB();
+        });
+
+        const rs = document.getElementById('ai-reset-settings');
+        if (rs) rs.addEventListener('click', function () {
+          try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
+          settings = loadSettings();
+          syncSettingsUI();
+          renderFAB();
+          addAIMsg('设置已恢复默认');
+        });
+      }
+
+      function updateStatusLine() {
+        const sl = document.getElementById('ai-status-line');
+        if (sl) sl.textContent = settings.enabled ? '就绪 · 点击右下角 AI 按钮立即使用' : 'AI 助手未启用。开启后右下角出现按钮';
+      }
+
+      // ========== 11) 同步 UI 状态 ==========
+      function syncSettingsUI() {
+        var e1 = document.getElementById('ai-toggle-enabled'); if (e1) e1.checked = !!settings.enabled;
+        document.querySelectorAll('input[name="ai-style"]').forEach(function (r) {
+          r.checked = r.value === (settings.style || 'circle');
+        });
+        var vSize = document.getElementById('ai-btn-size'); if (vSize) vSize.value = settings.buttonSize || 56;
+        var vMarg = document.getElementById('ai-btn-margin'); if (vMarg) vMarg.value = settings.buttonMargin || 24;
+        var vLang = document.getElementById('ai-lang'); if (vLang) vLang.value = settings.lang || 'zh-CN';
+        var vCont = document.getElementById('ai-toggle-continuous'); if (vCont) vCont.checked = !!settings.continuous;
+        var vAutoSend = document.getElementById('ai-toggle-auto-send'); if (vAutoSend) vAutoSend.checked = !!settings.autoSend;
+        var vTts = document.getElementById('ai-toggle-tts'); if (vTts) vTts.checked = !!settings.tts;
+        var vRate = document.getElementById('ai-tts-rate'); var vRateV = document.getElementById('ai-tts-rate-val');
+        if (vRate) vRate.value = settings.ttsRate || 1; if (vRateV) vRateV.textContent = (settings.ttsRate || 1).toFixed(1);
+        var vPitch = document.getElementById('ai-tts-pitch'); var vPitchV = document.getElementById('ai-tts-pitch-val');
+        if (vPitch) vPitch.value = settings.ttsPitch || 1; if (vPitchV) vPitchV.textContent = (settings.ttsPitch || 1).toFixed(1);
+        var vAutoCk = document.getElementById('ai-toggle-auto-checkout'); if (vAutoCk) vAutoCk.checked = !!settings.autoCheckout;
+        var vAutoClose = document.getElementById('ai-toggle-auto-close'); if (vAutoClose) vAutoClose.checked = !!settings.autoCloseAfterCheckout;
+        var vNotice = document.getElementById('ai-compat-notice');
+        var vText = document.getElementById('ai-compat-text');
+        if (vNotice && vText) {
+          if (!isSpeechSupported()) {
+            vNotice.style.display = '';
+            vText.textContent = '当前浏览器不支持语音识别。建议使用 Chrome / Edge 浏览器，或直接使用文字点单功能。';
+          } else {
+            vNotice.style.display = 'none';
+          }
+        }
+        updateStatusLine();
+      }
+
+      // ========== 12) 初始化 ==========
+      function init() {
+        renderFAB();
+        bindEvents();
+        syncSettingsUI();
+        updateCartPreview();
+        setInterval(updateCartPreview, 2000);
+        if (isTTSSupported()) {
+          try {
+            window.speechSynthesis.onvoiceschanged = function () { /* lazy load */ };
+          } catch (e) {}
+        }
+      }
+
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(init, 200);
+      } else {
+        document.addEventListener('DOMContentLoaded', init);
+      }
+    })();
+
+
+
+</script>
 
   <!-- 系统原生打印隐藏内容区域 -->
   <div id="native-print-content">
@@ -9107,6 +10214,35 @@
     <div class="divider"></div>
     <div id="native-print-time" class="time"></div>
     <div id="native-print-footer" class="footer">请凭此票取餐 谢谢惠顾</div>
+  </div>
+
+  <!-- AI 对话弹窗 -->
+  <div id="ai-assistant-modal" class="fixed inset-0 z-[9999] hidden pointer-events-none p-4 sm:p-6" style="display:none;">
+    <div class="pointer-events-auto ml-auto w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden border border-coffee-main/30">
+      <div class="bg-gradient-to-r from-coffee-dark to-coffee-main text-white p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2"><i class="fa-solid fa-robot text-xl"></i><h3 class="font-bold text-base">AI 助手</h3></div>
+        <button id="ai-close-btn" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center"><i class="fa-solid fa-xmark text-sm"></i></button>
+      </div>
+      <div id="ai-cart-preview" class="hidden bg-coffee-cream/60 border-b border-coffee-main/20 px-4 py-2 text-sm">
+        <div class="flex items-center justify-between"><span class="text-coffee-dark truncate max-w-[200px]"><i class="fa-solid fa-mug-hot mr-1 text-coffee-main"></i><span id="ai-cart-items">无商品</span></span><span class="font-bold text-coffee-dark">¥<span id="ai-cart-total">0.00</span></span></div>
+      </div>
+      <div id="ai-messages" class="h-72 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-coffee-white to-white scroll-smooth">
+        <div class="flex items-start gap-2">
+          <div class="w-8 h-8 rounded-full bg-coffee-main/20 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-robot text-coffee-main text-sm"></i></div>
+          <div class="flex-1">
+            <div class="bg-coffee-cream rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-coffee-dark max-w-[85%] inline-block leading-relaxed">你好！请告诉我您想点什么 👋<br>比如「一杯拿铁」或「两份提拉米苏」</div>
+          </div>
+        </div>
+      </div>
+      <div id="ai-status-bar" class="hidden px-4 py-2 text-sm text-center bg-coffee-main/10 text-coffee-dark border-t border-coffee-main/10"><span id="ai-status-msg">—</span></div>
+      <div class="p-3 border-t border-coffee-main/20 bg-coffee-white/40">
+        <div class="flex gap-2 items-center">
+          <button id="ai-voice-btn" class="flex-shrink-0 w-12 h-12 rounded-full bg-coffee-main text-white hover:bg-coffee-dark transition flex items-center justify-center shadow-md"><i class="fa-solid fa-microphone text-lg"></i></button>
+          <input id="ai-input" type="text" class="flex-1 px-4 py-3 border border-coffee-light rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white" placeholder="说话或输入…回车发送" autocomplete="off">
+          <button id="ai-send-btn" class="flex-shrink-0 w-12 h-12 rounded-full bg-green-500 text-white hover:bg-green-600 transition flex items-center justify-center shadow-md"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+        </div>
+      </div>
+    </div>
   </div>
 
 </body>

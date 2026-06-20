@@ -1,0 +1,556 @@
+    // ============================================================
+    // ☕ AI 语音助手（完整功能版）
+    // ============================================================
+    (function () {
+      // ========== 1) 全局状态 ==========
+      const SETTINGS_KEY = 'aiAssistantSettings_v2';
+      let recognition = null;
+      let settings = loadSettings();
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return {
+          enabled: false, style: 'circle', buttonSize: 56, buttonMargin: 24,
+          lang: 'zh-CN', continuous: false, autoSend: true,
+          tts: true, ttsRate: 1.0, ttsPitch: 1.0,
+          autoCheckout: true, autoCloseAfterCheckout: true,
+        };
+      }
+      function saveSettings() {
+        try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+      }
+
+      function isSpeechSupported() {
+        return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+      }
+      function isTTSSupported() { return 'speechSynthesis' in window; }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      // ========== 2) 商品 / 购物车 ==========
+      function getGoodsDataSafe() {
+        if (typeof GOODS_DATA !== 'undefined' && Array.isArray(GOODS_DATA) && GOODS_DATA.length > 0) return GOODS_DATA;
+        if (typeof getGoodsData === 'function') return getGoodsData() || [];
+        return [];
+      }
+
+      function addGoodsById(id, qty) {
+        const data = getGoodsDataSafe();
+        const g = data.find(function (x) { return x.id === id; });
+        if (!g) return null;
+        if (typeof currentGoods === 'undefined') return g;
+        if (currentGoods[id]) currentGoods[id].count += qty;
+        else currentGoods[id] = Object.assign({}, g, { count: qty });
+        if (typeof updateBottomAmount === 'function') updateBottomAmount();
+        return g;
+      }
+
+      function clearCartSafe() {
+        if (typeof currentGoods === 'undefined') return;
+        Object.keys(currentGoods).forEach(function (k) { delete currentGoods[k]; });
+        if (typeof updateBottomAmount === 'function') updateBottomAmount();
+      }
+
+      function getCartSummary() {
+        if (typeof currentGoods === 'undefined') return { count: 0, total: 0, items: [] };
+        const items = Object.values(currentGoods);
+        let count = 0, total = 0;
+        items.forEach(function (g) {
+          count += g.count || 0;
+          total += (g.price || 0) * (g.count || 0);
+        });
+        return { count: count, total: total, items: items };
+      }
+
+      function parseChineseNumber(text) {
+        const m = text.match(/(\d+(?:\.\d+)?)/);
+        if (m) return parseFloat(m[1]);
+        const map = { '零': 0, '一': 1, '二': 2, '两': 2, '俩': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 };
+        let cur = 0, result = 0;
+        for (let i = 0; i < text.length; i++) {
+          const c = text[i];
+          if (map[c] !== undefined) {
+            if (c === '十') cur = cur === 0 ? 10 : cur * 10;
+            else cur += map[c];
+          } else { result += cur; cur = 0; }
+        }
+        result += cur;
+        return result > 0 ? result : null;
+      }
+
+      // ========== 3) 消息渲染 ==========
+      function addUserMsg(text) {
+        const el = document.getElementById('ai-messages');
+        if (!el) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-start gap-2 flex-row-reverse';
+        wrap.innerHTML =
+          '<div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">' +
+            '<i class="fa-solid fa-user text-green-600 text-sm"></i></div>' +
+          '<div class="flex-1 text-right">' +
+            '<div class="bg-green-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm max-w-[85%] inline-block text-left">' +
+            escapeHtml(text) + '</div></div>';
+        el.appendChild(wrap);
+        el.scrollTop = el.scrollHeight;
+        updateCartPreview();
+      }
+
+      function addAIMsg(text) {
+        const el = document.getElementById('ai-messages');
+        if (!el) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'flex items-start gap-2';
+        wrap.innerHTML =
+          '<div class="w-8 h-8 rounded-full bg-coffee-main/20 flex items-center justify-center flex-shrink-0">' +
+            '<i class="fa-solid fa-robot text-coffee-main text-sm"></i></div>' +
+          '<div class="flex-1">' +
+            '<div class="bg-coffee-cream rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-coffee-dark max-w-[85%] inline-block leading-relaxed">' +
+            text + '</div></div>';
+        el.appendChild(wrap);
+        el.scrollTop = el.scrollHeight;
+        updateCartPreview();
+      }
+
+      // ========== 4) UI - FAB 渲染 ==========
+      function renderFAB() {
+        const fab = document.getElementById('ai-assistant-fab');
+        if (!fab) return;
+        if (!settings.enabled) {
+          fab.classList.add('hidden');
+          return;
+        }
+        fab.classList.remove('hidden');
+
+        // 清空默认的 style/class
+        fab.removeAttribute('style');
+        fab.className = 'fixed z-[9998] rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-2xl hover:scale-105 ring-4 ring-coffee-main/20 transition-transform flex items-center justify-center';
+
+        const size = settings.buttonSize || 56;
+        const margin = settings.buttonMargin || 24;
+
+        if (settings.style === 'pill') {
+          fab.style.width = 'auto';
+          fab.style.height = Math.max(40, Math.round(size * 0.7)) + 'px';
+          fab.style.padding = '0 18px';
+          fab.style.bottom = (margin + 8) + 'px';
+          fab.style.right = margin + 'px';
+          fab.innerHTML = '<span class="font-bold text-base">AI 助手</span>';
+        } else if (settings.style === 'icon') {
+          fab.style.width = size + 'px';
+          fab.style.height = size + 'px';
+          fab.style.bottom = (margin + 8) + 'px';
+          fab.style.right = margin + 'px';
+          fab.innerHTML = '<i class="fa-solid fa-microphone-lines text-lg"></i>';
+        } else { // circle
+          fab.style.width = size + 'px';
+          fab.style.height = size + 'px';
+          fab.style.bottom = (margin + 8) + 'px';
+          fab.style.right = margin + 'px';
+          fab.style.fontWeight = 'bold';
+          fab.style.fontSize = Math.round(size * 0.32) + 'px';
+          fab.innerHTML = 'AI';
+        }
+      }
+
+      function updateCartPreview() {
+        const cartP = document.getElementById('ai-cart-preview');
+        const cartC = document.getElementById('ai-cart-count');
+        const cartT = document.getElementById('ai-cart-total');
+        const cart = getCartSummary();
+        if (cartP) {
+          if (cart.count > 0) {
+            cartP.classList.remove('hidden');
+            if (cartC) cartC.textContent = cart.count;
+            if (cartT) cartT.textContent = cart.total.toFixed(2);
+          } else {
+            cartP.classList.add('hidden');
+          }
+        }
+      }
+
+      // ========== 5) 输入处理 ==========
+      function handleInput(rawText) {
+        const text = (rawText || '').trim();
+        if (!text) return;
+
+        // 取消/清空
+        if (text.length <= 16 && /取消|不要|重来|重新|去掉|删除|清空|cancel|reset|clear|stop|不要|退出|关闭|no/i.test(text)) {
+          clearCartSafe();
+          speakWithFallback('好的，已清空购物车');
+          return;
+        }
+
+        // 确认/结账
+        if (text.length <= 16 && /确认|结账|买单|支付|付款|好的|对了|完成|没错|就是这样|是的|对|结账|下单|confirm|checkout|done|ok|yes/i.test(text)) {
+          const cart = getCartSummary();
+          if (cart.items.length === 0) { speakWithFallback('您还没有选择商品哦'); return; }
+          const names = cart.items.map(function (g) { return g.name + '×' + g.count; });
+          speakWithFallback('已确认：' + names.join('、') + '，合计¥' + cart.total.toFixed(2) + '。请收银员扫码完成支付');
+          if (settings.autoCheckout) {
+            setTimeout(function () { if (typeof openCheckoutModal === 'function') openCheckoutModal(); }, 1400);
+            if (settings.autoCloseAfterCheckout) setTimeout(closeChat, 1800);
+          }
+          return;
+        }
+
+        // 商品识别
+        const goods = getGoodsDataSafe();
+        const found = [];
+        goods.forEach(function (g) {
+          if (g.name && text.indexOf(g.name) >= 0) {
+            const idxPos = text.indexOf(g.name);
+            const around = text.substring(Math.max(0, idxPos - 5), idxPos + g.name.length + 5);
+            let qty = parseChineseNumber(around) || 1;
+            if (qty > 99) qty = 1;
+            found.push({ g: g, qty: qty });
+          }
+        });
+
+        if (found.length > 0) {
+          const names = [];
+          found.forEach(function (f) {
+            const res = addGoodsById(f.g.id, f.qty);
+            names.push((res ? res.name : f.g.name) + '×' + f.qty);
+          });
+          const cart = getCartSummary();
+          speakWithFallback('已添加：' + names.join('、') + '，当前合计¥' + cart.total.toFixed(2) + '。说确认开单');
+          return;
+        }
+
+        // 问候
+        if (text.length <= 10 && /你好|您好|在吗|哈喽|嗨|你好啊|hello|hi|hey/i.test(text)) {
+          speakWithFallback('你好！请告诉我您想点什么，比如一杯拿铁。');
+          return;
+        }
+
+        // 无法理解
+        speakWithFallback('抱歉没听清楚，请直接说商品名，例如一杯拿铁或两份提拉米苏。');
+      }
+
+      // ========== 6) 语音识别 ==========
+      function startVoice() {
+        if (!isSpeechSupported()) {
+          addAIMsg('⚠️ 当前浏览器不支持语音识别<br>建议使用 Chrome / Edge 浏览器。可直接在输入框打字使用文字点单功能。');
+          return;
+        }
+        try { if (recognition) trySilentStop(recognition); } catch (e) {}
+
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR();
+        recognition.lang = settings.lang || 'zh-CN';
+        recognition.interimResults = true;
+        recognition.continuous = !!settings.continuous;
+        recognition.maxAlternatives = 1;
+
+        let lastFinalText = '';
+        recognition.onresult = function (e) {
+          let finalText = '';
+          let interimText = '';
+          for (let i = 0; i < e.results.length; i++) {
+            if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+            else interimText += e.results[i][0].transcript;
+          }
+          // 实时字幕显示（弹窗内顶部状态条）
+          const sb = document.getElementById('ai-status-bar');
+          const sm = document.getElementById('ai-status-msg');
+          if (sb && sm) {
+            sb.classList.remove('hidden');
+            sm.textContent = '🎙️ ' + (interimText || finalText || '聆听中…');
+          }
+          // 处理 final
+          if (finalText && finalText.trim() && finalText !== lastFinalText) {
+            lastFinalText = finalText;
+            addUserMsg(finalText.trim());
+            handleInput(finalText.trim());
+          }
+        };
+
+        recognition.onerror = function (e) {
+          console.warn('[AI] 语音错误:', e.error);
+          if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            addAIMsg('⚠️ 请允许使用麦克风<br>点地址栏左侧 🔒 图标 → 允许麦克风');
+          } else if (e.error === 'audio-capture') {
+            addAIMsg('⚠️ 未检测到可用麦克风设备');
+          } else {
+            addAIMsg('⚠️ 语音识别中断');
+          }
+          if (!settings.continuous) setListeningUI(false);
+        };
+
+        recognition.onend = function () {
+          if (settings.continuous) { try { recognition.start(); } catch (err) {} }
+          else { setListeningUI(false); }
+        };
+
+        try {
+          recognition.start();
+          setListeningUI(true);
+        } catch (err) {
+          console.warn('[AI] 麦克风启动失败', err);
+          setListeningUI(false);
+        }
+      }
+
+      function trySilentStop(rec) { try { rec.stop(); } catch (e) {} }
+
+      function stopVoice() {
+        if (recognition) trySilentStop(recognition);
+        setListeningUI(false);
+      }
+
+      function toggleVoice() {
+        const fab = document.getElementById('ai-assistant-fab');
+        const isOn = fab && fab.classList.contains('listening');
+        if (isOn) stopVoice(); else startVoice();
+      }
+
+      function setListeningUI(on) {
+        const fab = document.getElementById('ai-assistant-fab');
+        const voiceBtn = document.getElementById('ai-voice-btn');
+        if (fab) fab.classList.toggle('listening', on);
+        if (voiceBtn) {
+          const i = voiceBtn.querySelector('i');
+          if (i) i.className = on ? 'fa-solid fa-stop text-lg' : 'fa-solid fa-microphone text-lg';
+          voiceBtn.classList.toggle('bg-red-600', on);
+          voiceBtn.classList.toggle('bg-coffee-main', !on);
+        }
+        const sb = document.getElementById('ai-status-bar');
+        const sm = document.getElementById('ai-status-msg');
+        if (sb && sm) {
+          if (on) { sb.classList.remove('hidden'); sm.textContent = '🎙️ 正在聆听…请说话'; }
+          else { sb.classList.add('hidden'); sm.textContent = ''; }
+        }
+      }
+
+      // ========== 7) 弹窗 ==========
+      function openChat() {
+        const m = document.getElementById('ai-assistant-modal');
+        if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; }
+        updateCartPreview();
+        if (settings.continuous) setTimeout(startVoice, 300);
+      }
+      function closeChat() {
+        const m = document.getElementById('ai-assistant-modal');
+        if (m) { m.classList.add('hidden'); m.style.display = 'none'; }
+        stopVoice();
+      }
+
+      // ========== 8) TTS ==========
+      function speak(text) {
+        if (!isTTSSupported() || !settings.tts) return;
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g, ''));
+          u.lang = settings.lang || 'zh-CN';
+          u.rate = settings.ttsRate || 1;
+          u.pitch = settings.ttsPitch || 1;
+          u.volume = 1;
+          const voices = window.speechSynthesis.getVoices();
+          if (voices && voices.length > 0) {
+            if (settings.lang && settings.lang.indexOf('zh') >= 0) {
+              const zh = voices.find(function (v) { return /zh|cmn|chinese|CN|China/i.test(v.lang + v.name); });
+              if (zh) u.voice = zh;
+            } else {
+              const en = voices.find(function (v) { return /^en|english|English/i.test(v.lang); });
+              if (en) u.voice = en;
+            }
+          }
+          window.speechSynthesis.speak(u);
+        } catch (e) { console.warn('[AI] TTS 错误:', e); }
+      }
+
+      function speakWithFallback(text) { addAIMsg(text); speak(text); }
+
+      // ========== 9) 绑定事件 ==========
+      function bindEvents() {
+        const fab = document.getElementById('ai-assistant-fab');
+        if (fab) fab.addEventListener('click', function () { openChat(); });
+
+        const closeBtn = document.getElementById('ai-close-btn');
+        if (closeBtn) closeBtn.addEventListener('click', closeChat);
+
+        const voiceBtn = document.getElementById('ai-voice-btn');
+        if (voiceBtn) voiceBtn.addEventListener('click', toggleVoice);
+
+        const sendBtn = document.getElementById('ai-send-btn');
+        const inputEl = document.getElementById('ai-input');
+        if (sendBtn) sendBtn.addEventListener('click', function () {
+          const v = (inputEl && inputEl.value || '').trim();
+          if (v) { addUserMsg(v); if (inputEl) inputEl.value = ''; handleInput(v); }
+        });
+        if (inputEl) inputEl.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            const v = inputEl.value.trim();
+            if (v) { addUserMsg(v); inputEl.value = ''; handleInput(v); }
+          }
+        });
+
+        // 设置面板的事件绑定
+        bindSettingsEvents();
+
+        // 设置主菜单入口
+        const toAi = document.getElementById('to-ai-settings');
+        if (toAi) toAi.addEventListener('click', function () {
+          document.getElementById('settings-modal').classList.add('hidden');
+          const m = document.getElementById('ai-settings-modal');
+          if (m) m.classList.remove('hidden');
+          syncSettingsUI();
+        });
+      }
+
+      // ========== 10) 设置面板事件 ==========
+      function bindSettingsEvents() {
+        const tE = document.getElementById('ai-toggle-enabled');
+        if (tE) tE.addEventListener('change', function () {
+          settings.enabled = !!tE.checked;
+          renderFAB();
+          updateStatusLine();
+        });
+
+        document.querySelectorAll('input[name="ai-style"]').forEach(function (r) {
+          r.addEventListener('change', function () { settings.style = r.value; renderFAB(); });
+        });
+
+        const si = document.getElementById('ai-btn-size');
+        if (si) si.addEventListener('change', function () {
+          settings.buttonSize = parseInt(si.value) || 56; renderFAB();
+        });
+
+        const mi = document.getElementById('ai-btn-margin');
+        if (mi) mi.addEventListener('change', function () {
+          settings.buttonMargin = parseInt(mi.value) || 24; renderFAB();
+        });
+
+        const ls = document.getElementById('ai-lang');
+        if (ls) ls.addEventListener('change', function () { settings.lang = ls.value; });
+
+        const ct = document.getElementById('ai-toggle-continuous');
+        if (ct) ct.addEventListener('change', function () { settings.continuous = !!ct.checked; });
+
+        const asT = document.getElementById('ai-toggle-auto-send');
+        if (asT) asT.addEventListener('change', function () { settings.autoSend = !!asT.checked; });
+
+        const tt = document.getElementById('ai-toggle-tts');
+        if (tt) tt.addEventListener('change', function () { settings.tts = !!tt.checked; });
+
+        const tR = document.getElementById('ai-tts-rate');
+        const tRV = document.getElementById('ai-tts-rate-val');
+        if (tR) tR.addEventListener('input', function () {
+          settings.ttsRate = parseFloat(tR.value) || 1;
+          if (tRV) tRV.textContent = settings.ttsRate.toFixed(1);
+        });
+
+        const tP = document.getElementById('ai-tts-pitch');
+        const tPV = document.getElementById('ai-tts-pitch-val');
+        if (tP) tP.addEventListener('input', function () {
+          settings.ttsPitch = parseFloat(tP.value) || 1;
+          if (tPV) tPV.textContent = settings.ttsPitch.toFixed(1);
+        });
+
+        const aC = document.getElementById('ai-toggle-auto-checkout');
+        if (aC) aC.addEventListener('change', function () { settings.autoCheckout = !!aC.checked; });
+
+        const aC2 = document.getElementById('ai-toggle-auto-close');
+        if (aC2) aC2.addEventListener('change', function () { settings.autoCloseAfterCheckout = !!aC2.checked; });
+
+        // 测试按钮
+        const testMic = document.getElementById('ai-test-mic');
+        if (testMic) testMic.addEventListener('click', function () { openChat(); setTimeout(startVoice, 200); });
+
+        const testTts = document.getElementById('ai-test-tts');
+        if (testTts) testTts.addEventListener('click', function () { speak('你好，我是 AI 助手，很高兴为您服务'); });
+
+        const testOrder = document.getElementById('ai-test-order');
+        if (testOrder) testOrder.addEventListener('click', function () {
+          const goods = getGoodsDataSafe();
+          if (goods.length === 0) { addAIMsg('商品数据暂不可用'); return; }
+          const first = goods[0];
+          addGoodsById(first.id, 1);
+          addUserMsg('（测试）加入 ' + first.name + '×1');
+          speakWithFallback('测试下单成功，已加入' + first.name + '。当前合计¥' + getCartSummary().total.toFixed(2));
+        });
+
+        // 保存 & 恢复
+        const sb = document.getElementById('ai-save-settings');
+        if (sb) sb.addEventListener('click', function () {
+          saveSettings();
+          const fb = document.getElementById('ai-save-feedback');
+          if (fb) { fb.classList.remove('hidden'); setTimeout(function () { fb.classList.add('hidden'); }, 2500); }
+          document.getElementById('ai-settings-modal').classList.add('hidden');
+          renderFAB();
+        });
+
+        const rs = document.getElementById('ai-reset-settings');
+        if (rs) rs.addEventListener('click', function () {
+          try { localStorage.removeItem(SETTINGS_KEY); } catch (e) {}
+          settings = loadSettings();
+          syncSettingsUI();
+          renderFAB();
+          addAIMsg('设置已恢复默认');
+        });
+      }
+
+      function updateStatusLine() {
+        const sl = document.getElementById('ai-status-line');
+        if (sl) sl.textContent = settings.enabled ? '就绪 · 点击右下角 AI 按钮立即使用' : 'AI 助手未启用。开启后右下角出现按钮';
+      }
+
+      // ========== 11) 同步 UI 状态 ==========
+      function syncSettingsUI() {
+        const tE = document.getElementById('ai-toggle-enabled'); if (tE) tE.checked = !!settings.enabled;
+        document.querySelectorAll('input[name="ai-style"]').forEach(function (r) {
+          r.checked = r.value === (settings.style || 'circle');
+        });
+        const si = document.getElementById('ai-btn-size'); if (si) si.value = settings.buttonSize || 56;
+        const mi = document.getElementById('ai-btn-margin'); if (mi) mi.value = settings.buttonMargin || 24;
+        const ls = document.getElementById('ai-lang'); if (ls) ls.value = settings.lang || 'zh-CN';
+        const ct = document.getElementById('ai-toggle-continuous'); if (ct) ct.checked = !!settings.continuous;
+        const at = document.getElementById('ai-toggle-auto-send'); if (at) at.checked = !!settings.autoSend;
+        const tt = document.getElementById('ai-toggle-tts'); if (tt) tt.checked = !!settings.tts;
+        const tR = document.getElementById('ai-tts-rate'); const tRV = document.getElementById('ai-tts-rate-val');
+        if (tR) tR.value = settings.ttsRate || 1; if (tRV) tRV.textContent = (settings.ttsRate || 1).toFixed(1);
+        const tP = document.getElementById('ai-tts-pitch'); const tPV = document.getElementById('ai-tts-pitch-val');
+        if (tP) tP.value = settings.ttsPitch || 1; if (tPV) tPV.textContent = (settings.ttsPitch || 1).toFixed(1);
+        const aC = document.getElementById('ai-toggle-auto-checkout'); if (aC) aC.checked = !!settings.autoCheckout;
+        const aC2 = document.getElementById('ai-toggle-auto-close'); if (aC2) aC2.checked = !!settings.autoCloseAfterCheckout;
+
+        const cn = document.getElementById('ai-compat-notice');
+        const ct = document.getElementById('ai-compat-text');
+        if (cn && ct) {
+          if (!isSpeechSupported()) {
+            cn.style.display = '';
+            ct.textContent = '当前浏览器不支持语音识别。建议使用 Chrome / Edge 浏览器，或直接使用文字点单功能。';
+          } else {
+            cn.style.display = 'none';
+          }
+        }
+        updateStatusLine();
+      }
+
+      // ========== 12) 初始化 ==========
+      function init() {
+        renderFAB();
+        bindEvents();
+        syncSettingsUI();
+        updateCartPreview();
+        setInterval(updateCartPreview, 2000);
+        if (isTTSSupported()) {
+          try {
+            window.speechSynthesis.onvoiceschanged = function () { /* lazy load */ };
+          } catch (e) {}
+        }
+      }
+
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(init, 200);
+      } else {
+        document.addEventListener('DOMContentLoaded', init);
+      }
+    })();
+

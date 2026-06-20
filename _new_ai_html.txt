@@ -1,0 +1,32 @@
+  <!-- ======== AI 助手：悬浮按钮（圆形 + AI 两字） ========= -->
+  <button id="ai-assistant-fab" class="hidden fixed z-[9998] rounded-full bg-gradient-to-br from-coffee-main to-coffee-dark text-white shadow-2xl hover:scale-105 ring-4 ring-coffee-main/20 transition-transform flex items-center justify-center" style="bottom:120px;right:24px;width:56px;height:56px;font-weight:bold;font-size:18px;" title="AI 助手">AI</button>
+
+  <!-- AI 对话弹窗 -->
+  <div id="ai-assistant-modal" class="fixed inset-0 z-[9999] hidden pointer-events-none p-4 sm:p-6" style="display:none;">
+    <div class="pointer-events-auto ml-auto w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden border border-coffee-main/30">
+      <div class="bg-gradient-to-r from-coffee-dark to-coffee-main text-white p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2"><i class="fa-solid fa-robot text-xl"></i><h3 class="font-bold text-base">AI 助手</h3></div>
+        <button id="ai-close-btn" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 transition flex items-center justify-center"><i class="fa-solid fa-xmark text-sm"></i></button>
+      </div>
+      <div id="ai-cart-preview" class="hidden bg-coffee-cream/60 border-b border-coffee-main/20 px-4 py-2 text-sm">
+        <div class="flex items-center justify-between"><span class="text-coffee-dark"><i class="fa-solid fa-mug-hot mr-1 text-coffee-main"></i><span id="ai-cart-count">0</span> 件商品</span><span class="font-bold text-coffee-dark">¥<span id="ai-cart-total">0.00</span></span></div>
+      </div>
+      <div id="ai-messages" class="h-72 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-coffee-white to-white scroll-smooth">
+        <div class="flex items-start gap-2">
+          <div class="w-8 h-8 rounded-full bg-coffee-main/20 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-robot text-coffee-main text-sm"></i></div>
+          <div class="flex-1">
+            <div class="bg-coffee-cream rounded-2xl rounded-tl-sm px-4 py-2 text-sm text-coffee-dark max-w-[85%] inline-block leading-relaxed">你好！请告诉我您想点什么 👋<br>比如「一杯拿铁」或「两份提拉米苏」</div>
+          </div>
+        </div>
+      </div>
+      <div id="ai-status-bar" class="hidden px-4 py-2 text-sm text-center bg-coffee-main/10 text-coffee-dark border-t border-coffee-main/10"><span id="ai-status-msg">—</span></div>
+      <div class="p-3 border-t border-coffee-main/20 bg-coffee-white/40">
+        <div class="flex gap-2 items-center">
+          <button id="ai-voice-btn" class="flex-shrink-0 w-12 h-12 rounded-full bg-coffee-main text-white hover:bg-coffee-dark transition flex items-center justify-center shadow-md"><i class="fa-solid fa-microphone text-lg"></i></button>
+          <input id="ai-input" type="text" class="flex-1 px-4 py-3 border border-coffee-light rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-coffee-main bg-white" placeholder="说话或输入…回车发送" autocomplete="off">
+          <button id="ai-send-btn" class="flex-shrink-0 w-12 h-12 rounded-full bg-green-500 text-white hover:bg-green-600 transition flex items-center justify-center shadow-md"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
