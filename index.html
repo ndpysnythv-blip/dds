@@ -184,28 +184,36 @@
 
       <!-- 左侧：库存盘点快捷卡片（细长条样式） -->
       <aside id="quick-inventory-card" class="hidden flex-shrink-0">
-        <div class="bg-white rounded-lg card-shadow p-3 w-52 h-full flex flex-col" title="库存快速盘点">
-          <!-- 标题 -->
-          <div class="flex items-center gap-2 mb-3 pb-2 border-b border-coffee-light/30">
-            <i class="fa-solid fa-clipboard-list text-coffee-main"></i>
-            <span class="text-sm font-bold text-coffee-dark">库存快速盘点</span>
+        <div class="bg-white rounded-lg card-shadow p-3 w-24 h-full flex flex-col" title="库存快速盘点">
+          <!-- 图标标题 -->
+          <div class="flex flex-col items-center mb-2">
+            <div class="w-9 h-9 rounded-full bg-coffee-main/10 flex items-center justify-center mb-1">
+              <i class="fa-solid fa-clipboard-list text-coffee-main"></i>
+            </div>
+            <p class="text-xs font-bold text-coffee-dark">库存</p>
           </div>
-          <!-- 库存总数（只显示一个总数量） -->
-          <div class="mb-3 p-2 bg-coffee-main rounded-md text-center text-white">
-            <p class="text-xs opacity-90">商品库存</p>
-            <p id="quick-inventory-count" class="text-2xl font-bold">0</p>
+          <!-- 分割线 -->
+          <div class="border-t border-coffee-light/30 my-1"></div>
+          <!-- 库存总数 -->
+          <div class="mb-2 text-center">
+            <p class="text-xs text-gray-500">总数</p>
+            <p id="quick-inventory-count" class="text-xl font-bold text-coffee-dark">0</p>
           </div>
           <!-- 搜索框 -->
-          <div class="mb-3">
-            <label class="text-xs text-gray-500 mb-1 block">扫描条形码 / 输入名称</label>
-            <div class="relative">
-              <i class="fa-solid fa-barcode absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-              <input id="quick-inventory-search" type="text" class="w-full pl-7 pr-2 py-2 text-xs border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="扫码或输入商品名">
-            </div>
+          <div class="mb-2">
+            <input id="quick-inventory-search" type="text" class="w-full px-2 py-1.5 text-xs border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="扫码">
           </div>
           <!-- 搜索结果 -->
           <div id="quick-inventory-result" class="flex-1 overflow-y-auto scrollbar-hide">
-            <p class="text-xs text-gray-400 text-center py-4">扫码或输入商品名查找</p>
+            <p class="text-xs text-gray-400 text-center py-2">扫码查找</p>
+          </div>
+          <!-- 快过期提示（底部） -->
+          <div id="quick-inventory-expiring-box" class="mt-2 bg-orange-50 rounded-md p-2">
+            <div class="flex items-center justify-center gap-1">
+              <i class="fa-solid fa-triangle-exclamation text-orange-600 text-xs"></i>
+              <span class="text-xs text-orange-600">快过期</span>
+            </div>
+            <p id="quick-inventory-expiring" class="text-center text-base font-bold text-orange-700 mt-0.5">0</p>
           </div>
         </div>
       </aside>
@@ -226,28 +234,28 @@
 
       <!-- 右侧：员工管理快捷卡片（细长条样式） -->
       <aside id="quick-employee-card" class="hidden flex-shrink-0">
-        <div class="bg-white rounded-lg card-shadow p-3 w-52 h-full flex flex-col" title="员工快速打卡">
-          <!-- 标题 -->
-          <div class="flex items-center gap-2 mb-3 pb-2 border-b border-coffee-light/30">
-            <i class="fa-solid fa-user-clock text-coffee-main"></i>
-            <span class="text-sm font-bold text-coffee-dark">员工快速打卡</span>
+        <div class="bg-white rounded-lg card-shadow p-3 w-24 h-full flex flex-col" title="员工快速打卡">
+          <!-- 图标标题 -->
+          <div class="flex flex-col items-center mb-2">
+            <div class="w-9 h-9 rounded-full bg-coffee-main/10 flex items-center justify-center mb-1">
+              <i class="fa-solid fa-user-clock text-coffee-main"></i>
+            </div>
+            <p class="text-xs font-bold text-coffee-dark">员工</p>
           </div>
-          <!-- 工作中人数（只显示工作中） -->
-          <div class="mb-3 p-2 bg-green-500 rounded-md text-center text-white">
-            <p class="text-xs opacity-90">工作中</p>
-            <p id="quick-employee-working" class="text-2xl font-bold">0</p>
+          <!-- 分割线 -->
+          <div class="border-t border-coffee-light/30 my-1"></div>
+          <!-- 工作中人数 -->
+          <div class="mb-2 text-center">
+            <p class="text-xs text-green-600">工作中</p>
+            <p id="quick-employee-working" class="text-xl font-bold text-green-700">0</p>
           </div>
           <!-- 搜索框 -->
-          <div class="mb-3">
-            <label class="text-xs text-gray-500 mb-1 block">搜索工号 / 姓名</label>
-            <div class="relative">
-              <i class="fa-solid fa-magnifying-glass absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-              <input id="quick-employee-search" type="text" class="w-full pl-7 pr-2 py-2 text-xs border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="工号或姓名">
-            </div>
+          <div class="mb-2">
+            <input id="quick-employee-search" type="text" class="w-full px-2 py-1.5 text-xs border border-coffee-light rounded-md focus:outline-none focus:border-coffee-main" placeholder="搜工号">
           </div>
           <!-- 搜索结果 -->
-          <div id="quick-employee-result" class="flex-1 overflow-y-auto scrollbar-hide space-y-2">
-            <p class="text-xs text-gray-400 text-center py-4">搜索员工进行上下班打卡</p>
+          <div id="quick-employee-result" class="flex-1 overflow-y-auto scrollbar-hide">
+            <p class="text-xs text-gray-400 text-center py-2">搜索打卡</p>
           </div>
         </div>
       </aside>
@@ -2793,20 +2801,16 @@
       resultEl.innerHTML = matched.map(emp => {
         const working = isEmployeeWorkingNow(emp.id);
         return `
-          <div class="bg-coffee-cream/40 rounded-lg p-2">
-            <div class="flex items-center gap-2 mb-1.5">
-              <span class="w-2 h-2 rounded-full ${working ? 'bg-green-500' : 'bg-gray-400'} inline-block flex-shrink-0"></span>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(emp.name || '未命名')}</p>
-                <p class="text-xs text-gray-500 truncate">${escapeHtml(emp.no || '')} · ${escapeHtml(emp.position || '员工')}</p>
-              </div>
+          <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
+            <div class="flex items-center gap-1 mb-1">
+              <span class="w-1.5 h-1.5 rounded-full ${working ? 'bg-green-500' : 'bg-gray-400'}"></span>
+              <span class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(emp.name || '')}</span>
             </div>
-            <div class="flex gap-1.5">
-              ${!working
-                ? `<button onclick="quickCardCheckIn(${emp.id})" class="flex-1 py-1.5 rounded-md bg-green-500 text-white text-xs btn-hover flex items-center justify-center gap-1"><i class="fa-solid fa-right-to-bracket"></i>上班</button>`
-                : `<button onclick="quickCardCheckOut(${emp.id})" class="flex-1 py-1.5 rounded-md bg-blue-500 text-white text-xs btn-hover flex items-center justify-center gap-1"><i class="fa-solid fa-right-from-bracket"></i>下班</button>`
-              }
-            </div>
+            <p class="text-xs text-gray-500 truncate mb-1">${escapeHtml(emp.no || '')}</p>
+            ${!working
+              ? `<button onclick="quickCardCheckIn(${emp.id})" class="w-full py-1 rounded-md bg-green-500 text-white text-xs"><i class="fa-solid fa-right-to-bracket mr-0.5"></i>上班</button>`
+              : `<button onclick="quickCardCheckOut(${emp.id})" class="w-full py-1 rounded-md bg-blue-500 text-white text-xs"><i class="fa-solid fa-right-from-bracket mr-0.5"></i>下班</button>`
+            }
           </div>
         `;
       }).join('');
@@ -2855,15 +2859,30 @@
 
     // ====== 快捷卡片：库存盘点 ======
 
-    // 更新库存快捷卡片数据（只显示商品种类数）
+    // 更新库存快捷卡片数据（显示商品种类数 + 快过期数量）
     function updateInventoryQuickCard() {
       syncGoodsToInventory();
       const inventory = getInventoryData();
       const countEl = document.getElementById('quick-inventory-count');
       if (countEl) countEl.textContent = inventory.length;
+
+      // 计算快过期数量（1小时内）
+      const now = new Date();
+      let expiringCount = 0;
+      inventory.forEach(item => {
+        if (item.produceDate && item.shelfLife) {
+          const produce = new Date(item.produceDate);
+          const unit = item.shelfLifeUnit || 'day';
+          const shelfLifeMs = unit === 'hour' ? item.shelfLife * 3600 * 1000 : item.shelfLife * 24 * 3600 * 1000;
+          const expiry = new Date(produce.getTime() + shelfLifeMs);
+          if ((expiry - now) <= 3600000) expiringCount++;
+        }
+      });
+      const expiringEl = document.getElementById('quick-inventory-expiring');
+      if (expiringEl) expiringEl.textContent = expiringCount;
     }
 
-    // 库存搜索功能：按条形码或商品名查找
+    // 库存搜索功能：按条形码或商品名查找（窄卡片版）
     function searchInventoryInQuickCard(keyword) {
       const resultEl = document.getElementById('quick-inventory-result');
       if (!resultEl) return;
@@ -2873,11 +2892,10 @@
       const inventory = getInventoryData();
 
       if (keyword === '') {
-        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">扫码或输入商品名查找</p>`;
+        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">扫码查找</p>`;
         return;
       }
 
-      // 按条形码精确匹配优先，其次名称模糊匹配
       let matchedGoods = goods.filter(g =>
         (String(g.barcode || '')).toLowerCase() === keyword ||
         (g.name || '').toLowerCase().includes(keyword)
@@ -2889,7 +2907,7 @@
       }
 
       if (matchedGoods.length === 0) {
-        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-4">没有找到对应商品</p>`;
+        resultEl.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">未找到</p>`;
         return;
       }
 
@@ -2897,14 +2915,11 @@
         const inv = inventory.find(i => i.goodsId === g.id);
         const qty = inv ? (inv.qty || 0) : (g.stock || 0);
         return `
-          <div class="bg-coffee-cream/40 rounded-lg p-2 mb-2">
-            <div class="mb-1.5">
-              <p class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(g.name || '商品')}</p>
-              <p class="text-xs text-gray-500 truncate">条码：${escapeHtml(g.barcode || '--')}</p>
-              <p class="text-xs text-gray-600 mt-1">库存数量：<span class="font-bold text-coffee-main">${qty}</span></p>
-            </div>
-            <button onclick="openReplaceModal(${g.id})" class="w-full py-1.5 rounded-md bg-yellow-500 text-white text-xs btn-hover flex items-center justify-center gap-1">
-              <i class="fa-solid fa-recycle"></i>废除替换
+          <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
+            <p class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(g.name || '商品')}</p>
+            <p class="text-xs text-gray-500 truncate">库存: ${qty}</p>
+            <button onclick="openReplaceModal(${g.id})" class="w-full mt-1 py-1 rounded-md bg-yellow-500 text-white text-xs">
+              <i class="fa-solid fa-recycle mr-0.5"></i>替换
             </button>
           </div>
         `;
