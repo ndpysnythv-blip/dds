@@ -673,6 +673,17 @@
 
         <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
           <div>
+            <p class="text-coffee-dark font-medium">横向打印（小票标签）</p>
+            <p class="text-sm text-gray-500">开启后内容将旋转 90° 横向输出，打印机会以横向纸张识别</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="landscape-print-toggle" class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-coffee-main"></div>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between p-3 bg-coffee-cream rounded-lg">
+          <div>
             <p class="text-coffee-dark font-medium">取餐凭证自动消失</p>
             <p class="text-sm text-gray-500">打印标签后自动关闭弹窗</p>
           </div>
@@ -2392,17 +2403,36 @@
 
       const printArea = document.getElementById('native-print-content');
 
-      // 封装通用的打印样式（@page 使用像素，与 label 内容坐标保持一致）
-      function buildPrintStyle(pageWidthPX, pageHeightPX) {
+      // 封装通用的打印样式（@page 使用像素，与 label 内容坐标保持一致
+      // 兼容标签打印机：同时提供 size: w h; 并追加 size: landscape; 确保横向生效
+      function buildPrintStyle(pageWidthPX, pageHeightPX, opts) {
+        opts = opts || {};
+        const isLandscape = !!opts.isLandscape;
+        // mm 双写：先用像素尺寸，再追加 landscape 关键字回退，确保横打机可识别的 mm 尺寸
+        const widthMM = Math.round(pageWidthPX / 3.78);
+        const heightMM = Math.round(pageHeightPX / 3.78);
         return `
           @page {
-            size: ${pageWidthPX}px ${pageHeightPX}px;
+            size: ${widthMM}mm ${heightMM}mm;
+            ${isLandscape ? 'size: ' + widthMM + 'mm ' + heightMM + 'mm;' : ''}
             margin: 0mm;
+            orientation: ${isLandscape ? 'landscape' : 'portrait'};
+          }
+          @media print {
+            @page {
+              size: ${widthMM}mm ${heightMM}mm ${isLandscape ? 'landscape' : ''};
+              margin: 0mm;
+            }
           }
           #native-print-content {
             display: none;
           }
           @media print {
+            html, body {
+              width: ${widthMM}mm;
+              height: ${heightMM}mm;
+              margin: 0 !important;
+            }
             body * {
               visibility: hidden !important;
             }
@@ -2421,7 +2451,8 @@
               background: white !important;
               z-index: 99999 !important;
               padding: 0 !important;
-              margin: 0 !important;
+              width: ${widthMM}mm !important;
+              height: ${heightMM}mm !important;
             }
           }
         `;
@@ -2436,10 +2467,16 @@
         document.head.appendChild(style);
       }
 
+      // 决定本次打印是否横向：
+      // 1) 模板画布已旋转 90/270 度 → 横
+      // 2) 明确开启 landscapePrint 开关 → 横
+      // 3) 纸张宽 > 高 → 默认当作横向纸
+      const rotated = (canvasRotation === 90 || canvasRotation === 270);
+      const widePaper = paperWidthMM > paperHeightMM;
+      const effectiveLandscape = rotated || printSettings.landscapePrint || widePaper;
+
       if (mergeLabels) {
         // 合并标签模式：两张标签横向排列，每张各占一半页面
-        // 单张标签在合并纸张内的大小 = 合并纸张高度（纵向）× 合并纸张宽度的一半（横向）
-        // 这里用像素做单位，与模板内容坐标一致
         const mergePageWidthPX = Math.round(mergePaperWidthMM * MM_TO_PX);
         const mergePageHeightPX = Math.round(mergePaperHeightMM * MM_TO_PX);
         const halfWidthPX = Math.round(mergePageWidthPX / 2);
@@ -2458,10 +2495,10 @@
             </div>
           </div>
         `;
-        applyStyle(buildPrintStyle(mergePageWidthPX, mergePageHeightPX));
+        applyStyle(buildPrintStyle(mergePageWidthPX, mergePageHeightPX, { isLandscape: true }));
       } else {
         // 普通模式：两张标签分开打印，每张一页
-        if (canvasRotation === 90 || canvasRotation === 270) {
+        if (rotated) {
           // 旋转 90/270：页面宽高互换，内容在页面中心旋转
           const pageWidthPX = paperHeightPX;
           const pageHeightPX = paperWidthPX;
@@ -2478,8 +2515,9 @@
               </div>
             </div>
           `;
-          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX));
+          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX, { isLandscape: true }));
         } else if (canvasRotation === 180) {
+          // 上下颠倒（倒打），内容整体旋转 180 度
           printArea.innerHTML = `
             <div style="page-break-after: always; break-after: page; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
               <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(180deg); transform-origin: center center;">
@@ -2492,9 +2530,26 @@
               </div>
             </div>
           `;
-          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
+          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX, { isLandscape: effectiveLandscape }));
+        } else if (effectiveLandscape) {
+          // 用户没有旋转画布，但要求横向打印 —— 把内容旋转 90 度 + 页面宽高互换
+          const pageWidthPX = paperHeightPX;
+          const pageHeightPX = paperWidthPX;
+          printArea.innerHTML = `
+            <div style="page-break-after: always; break-after: page; width: ${pageWidthPX}px; height: ${pageHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(90deg); transform-origin: center center;">
+                ${label1}
+              </div>
+            </div>
+            <div style="page-break-after: avoid; break-after: auto; width: ${pageWidthPX}px; height: ${pageHeightPX}px; position: relative; overflow: hidden; background: white;">
+              <div style="width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: absolute; top: 50%; left: 50%; margin-top: -${paperHeightPX / 2}px; margin-left: -${paperWidthPX / 2}px; transform: rotate(90deg); transform-origin: center center;">
+                ${label2}
+              </div>
+            </div>
+          `;
+          applyStyle(buildPrintStyle(pageWidthPX, pageHeightPX, { isLandscape: true }));
         } else {
-          // 默认：不旋转，两张标签各自一页
+          // 完全纵向：不旋转，两张标签各自一页
           printArea.innerHTML = `
             <div style="page-break-after: always; break-after: page; width: ${paperWidthPX}px; height: ${paperHeightPX}px; position: relative; overflow: hidden; background: white;">
               ${label1}
@@ -2503,7 +2558,7 @@
               ${label2}
             </div>
           `;
-          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX));
+          applyStyle(buildPrintStyle(paperWidthPX, paperHeightPX, { isLandscape: false }));
         }
       }
 
@@ -3689,7 +3744,7 @@
       mergeLabels: false,
       mergePaperWidth: 100,
       mergePaperHeight: 80,
-      landscapePrint: false,
+      landscapePrint: true,
       canvasRotation: 0,
       templateConfig: {
         logo: 'https://img.icons8.com/doodle/96/coffee--v1.png',
@@ -3780,6 +3835,11 @@
     function updatePrintSettingsUI() {
       document.getElementById('auto-print-toggle').checked = printSettings.autoPrint;
       document.getElementById('auto-dismiss-toggle').checked = printSettings.autoDismiss;
+      // 横向打印开关
+      const landscapeToggle = document.getElementById('landscape-print-toggle');
+      if (landscapeToggle) {
+        landscapeToggle.checked = !!printSettings.landscapePrint;
+      }
       
       // 更新呼叫取餐状态显示
       const callStatus = document.getElementById('auto-call-pickup-status');
@@ -3834,6 +3894,9 @@
     function savePrintSettings() {
       printSettings.autoPrint = document.getElementById('auto-print-toggle').checked;
       printSettings.autoDismiss = document.getElementById('auto-dismiss-toggle').checked;
+      // 横向打印
+      const landscapeEl = document.getElementById('landscape-print-toggle');
+      printSettings.landscapePrint = landscapeEl ? landscapeEl.checked : false;
       const selectedModeLabel = document.querySelector('.print-mode-label.border-coffee-main');
       printSettings.printMode = selectedModeLabel ? selectedModeLabel.dataset.mode : 'label';
       printSettings.template = document.querySelector('input[name="print-template"]:checked').value;
