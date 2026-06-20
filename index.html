@@ -2802,11 +2802,11 @@
         const working = isEmployeeWorkingNow(emp.id);
         return `
           <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
-            <div class="flex items-center gap-1 mb-1">
+            <div onclick="openAttendanceForEmployee(${emp.id})" class="flex items-center gap-1 mb-1 cursor-pointer hover:opacity-70">
               <span class="w-1.5 h-1.5 rounded-full ${working ? 'bg-green-500' : 'bg-gray-400'}"></span>
               <span class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(emp.name || '')}</span>
             </div>
-            <p class="text-xs text-gray-500 truncate mb-1">${escapeHtml(emp.no || '')}</p>
+            <p onclick="openAttendanceForEmployee(${emp.id})" class="text-xs text-gray-500 truncate mb-1 cursor-pointer hover:opacity-70">${escapeHtml(emp.no || '')}</p>
             ${!working
               ? `<button onclick="quickCardCheckIn(${emp.id})" class="w-full py-1 rounded-md bg-green-500 text-white text-xs"><i class="fa-solid fa-right-to-bracket mr-0.5"></i>上班</button>`
               : `<button onclick="quickCardCheckOut(${emp.id})" class="w-full py-1 rounded-md bg-blue-500 text-white text-xs"><i class="fa-solid fa-right-from-bracket mr-0.5"></i>下班</button>`
@@ -2916,8 +2916,8 @@
         const qty = inv ? (inv.qty || 0) : (g.stock || 0);
         return `
           <div class="bg-coffee-cream/40 rounded-lg p-1.5 mb-1.5">
-            <p class="text-xs font-bold text-coffee-dark truncate">${escapeHtml(g.name || '商品')}</p>
-            <p class="text-xs text-gray-500 truncate">库存: ${qty}</p>
+            <p onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" class="text-xs font-bold text-coffee-dark truncate cursor-pointer hover:opacity-70">${escapeHtml(g.name || '商品')}</p>
+            <p onclick="document.getElementById('inventory-check-modal').classList.remove('hidden');" class="text-xs text-gray-500 truncate cursor-pointer hover:opacity-70">库存: ${qty}</p>
             <button onclick="openReplaceModal(${g.id})" class="w-full mt-1 py-1 rounded-md bg-yellow-500 text-white text-xs">
               <i class="fa-solid fa-recycle mr-0.5"></i>替换
             </button>
