@@ -10554,8 +10554,25 @@
       // ========== 后台指令处理 ==========
       function saveGoodsDataSafe(dataArr) {
         try {
-          localStorage.setItem('starCoffeeGoods', JSON.stringify(dataArr));
-          if (typeof refreshGoodsDisplay === 'function') refreshGoodsDisplay();
+          // 优先调用主脚本的 saveGoodsData 来完成存储+广播
+          if (typeof window.saveGoodsData === 'function') {
+            window.saveGoodsData(dataArr);
+          } else if (typeof saveGoodsData === 'function') {
+            saveGoodsData(dataArr);
+          } else {
+            localStorage.setItem('starCoffeeGoods', JSON.stringify(dataArr));
+          }
+          // 同步到当前作用域的 GOODS_DATA（主脚本与 AI 脚本共享）
+          try { GOODS_DATA = dataArr; } catch (e) {}
+          // 刷新页面显示
+          try {
+            if (typeof refreshGoodsDisplay === 'function') refreshGoodsDisplay();
+          } catch (e) {}
+          try {
+            if (typeof broadcastData === 'function') {
+              broadcastData({ type: 'goods_update', data: dataArr });
+            }
+          } catch (e) {}
           return true;
         } catch (e) { return false; }
       }
@@ -10583,54 +10600,195 @@
           const adminBtn = document.getElementById('ai-mode-admin');
           if (adminBtn) adminBtn.classList.remove('active-admin');
           addAIMsg('已退出后台模式。');
+          speakWithFallback('已退出后台模式');
           return;
         }
+        // ========== 2. 员工 / 打卡 ==========
+        // 2a. 查看员工
+        if (/员工列表|查看员工|所有员工|员工名单|员工/i.test(lower)) {
+          let emps = [];
+          try {
+            if (typeof window.getEmployees === 'function') emps = window.getEmployees();
+            else if (typeof getEmployees === 'function') emps = getEmployees();
+            else emps = JSON.parse(localStorage.getItem('store_employees') || '[]');
+          } catch (e) { emps = []; }
+          if (!emps || emps.length === 0) { addAIMsg('暂无员工，请先在设置中添加员工。'); speakWithFallback('暂无员工'); return; }
+          const names = emps.map(function (e, i) { return (i + 1) + '. ' + (e.name || '') + '（' + (e.position || '员工') + '）'; });
+          addAIMsg('当前员工列表：\n' + names.join('\n'));
+          speakWithFallback('当前共有 ' + emps.length + ' 位员工');
+          return;
+        }
+        // 2b. 上班打卡 / 签到 [员工名]
+        if (/上班打卡|签到|上班|签到打卡|打卡签到|打卡上班/i.test(lower)) {
+          let emps = [];
+          try {
+            if (typeof window.getEmployees === 'function') emps = window.getEmployees();
+            else if (typeof getEmployees === 'function') emps = getEmployees();
+            else emps = JSON.parse(localStorage.getItem('store_employees') || '[]');
+          } catch (e) { emps = []; }
+          if (!emps || emps.length === 0) { addAIMsg('暂无员工，请先在设置中添加员工。'); speakWithFallback('暂无员工'); return; }
+          // 从文本中提取员工名
+          let targetEmp = null;
+          for (let i = 0; i < emps.length; i++) {
+            const nm = emps[i].name || '';
+            if (nm && text.indexOf(nm) >= 0) { targetEmp = emps[i]; break; }
+          }
+          if (!targetEmp) targetEmp = emps[0]; // 默认第一个
+          // 获取打卡记录
+          let records = [];
+          try {
+            if (typeof window.getAttendanceRecords === 'function') records = window.getAttendanceRecords();
+            else if (typeof getAttendanceRecords === 'function') records = getAttendanceRecords();
+            else records = JSON.parse(localStorage.getItem('attendance_records') || '[]');
+          } catch (e) { records = []; }
+          const todayKey = new Date().toISOString().slice(0, 10);
+          const now = new Date();
+          // 判断该员工今天有没有未下班的记录
+          const active = records.find(function (r) {
+            return r.empId === targetEmp.id && r.date === todayKey && r.checkIn && !r.checkOut;
+          });
+          if (active) {
+            addAIMsg('【' + targetEmp.name + '】今天已经在上班中，请先下班打卡。');
+            speakWithFallback(targetEmp.name + ' 已经在上班中');
+            return;
+          }
+          records.push({
+            id: Date.now(),
+            empId: targetEmp.id,
+            empName: targetEmp.name,
+            empPosition: targetEmp.position || '员工',
+            date: todayKey,
+            checkIn: now.toISOString(),
+            checkOut: null,
+            note: 'AI 快捷打卡'
+          });
+          // 保存
+          try {
+            if (typeof window.saveAttendanceRecords === 'function') window.saveAttendanceRecords(records);
+            else if (typeof saveAttendanceRecords === 'function') saveAttendanceRecords(records);
+            else localStorage.setItem('attendance_records', JSON.stringify(records));
+          } catch (e) {}
+          const timeStr = now.toTimeString().slice(0, 5);
+          addAIMsg('✓【' + targetEmp.name + '】上班打卡成功，打卡时间 ' + timeStr);
+          speakWithFallback(targetEmp.name + ' 上班打卡成功，时间 ' + timeStr);
+          return;
+        }
+        // 2c. 下班打卡 [员工名]
+        if (/下班打卡|下班|下班打卡|下班/i.test(lower)) {
+          let emps = [];
+          try {
+            if (typeof window.getEmployees === 'function') emps = window.getEmployees();
+            else if (typeof getEmployees === 'function') emps = getEmployees();
+            else emps = JSON.parse(localStorage.getItem('store_employees') || '[]');
+          } catch (e) { emps = []; }
+          if (!emps || emps.length === 0) { addAIMsg('暂无员工，请先在设置中添加员工。'); speakWithFallback('暂无员工'); return; }
+          // 从文本中提取员工名
+          let targetEmp = null;
+          for (let i = 0; i < emps.length; i++) {
+            const nm = emps[i].name || '';
+            if (nm && text.indexOf(nm) >= 0) { targetEmp = emps[i]; break; }
+          }
+          if (!targetEmp) targetEmp = emps[0];
+          // 获取打卡记录
+          let records = [];
+          try {
+            if (typeof window.getAttendanceRecords === 'function') records = window.getAttendanceRecords();
+            else if (typeof getAttendanceRecords === 'function') records = getAttendanceRecords();
+            else records = JSON.parse(localStorage.getItem('attendance_records') || '[]');
+          } catch (e) { records = []; }
+          const todayKey = new Date().toISOString().slice(0, 10);
+          // 找今天最新的未下班记录
+          const active = records.filter(function (r) {
+            return r.empId === targetEmp.id && r.date === todayKey && r.checkIn && !r.checkOut;
+          }).sort(function (a, b) { return new Date(b.checkIn) - new Date(a.checkIn); })[0];
+          if (!active) {
+            addAIMsg('【' + targetEmp.name + '】今天没有上班记录，无需下班打卡。');
+            speakWithFallback(targetEmp.name + ' 今天没有上班记录');
+            return;
+          }
+          active.checkOut = new Date().toISOString();
+          // 保存
+          try {
+            if (typeof window.saveAttendanceRecords === 'function') window.saveAttendanceRecords(records);
+            else if (typeof saveAttendanceRecords === 'function') saveAttendanceRecords(records);
+            else localStorage.setItem('attendance_records', JSON.stringify(records));
+          } catch (e) {}
+          const timeStr = new Date().toTimeString().slice(0, 5);
+          addAIMsg('✓【' + targetEmp.name + '】下班打卡成功，打卡时间 ' + timeStr);
+          speakWithFallback(targetEmp.name + ' 下班打卡成功');
+          return;
+        }
+        // 2d. 查看今天的打卡情况
+        if (/今天打卡|今日打卡|打卡记录|打卡情况/i.test(lower)) {
+          let records = [];
+          try {
+            if (typeof window.getAttendanceRecords === 'function') records = window.getAttendanceRecords();
+            else if (typeof getAttendanceRecords === 'function') records = getAttendanceRecords();
+            else records = JSON.parse(localStorage.getItem('attendance_records') || '[]');
+          } catch (e) { records = []; }
+          const todayKey = new Date().toISOString().slice(0, 10);
+          const today = records.filter(function (r) { return r.date === todayKey; });
+          if (today.length === 0) { addAIMsg('今天暂无打卡记录。'); speakWithFallback('今天暂无打卡记录'); return; }
+          const msgs = today.map(function (r) {
+            const ci = r.checkIn ? new Date(r.checkIn).toTimeString().slice(0, 5) : '--';
+            const co = r.checkOut ? new Date(r.checkOut).toTimeString().slice(0, 5) : '未下班';
+            return (r.empName || '员工') + '：上班 ' + ci + ' / 下班 ' + co;
+          });
+          addAIMsg('今天打卡记录：\n' + msgs.join('\n'));
+          speakWithFallback('今天共有 ' + today.length + ' 条打卡记录');
+          return;
+        }
+        // ========== 3. 商品 / 库存 ==========
         // 查看库存
         if (/查看库存|所有库存|库存列表|库存|list stock|list inventory/i.test(lower)) {
           const summary = goodsArr.map(function (g) {
             return g.name + ' × ' + (g.stock != null ? g.stock : '-') + '（¥' + g.price + '）';
           });
           addAIMsg('当前商品库存：\n' + summary.join('\n'));
+          speakWithFallback('已为您列出所有商品库存');
           return;
         }
-        // 下架商品
+        // 下架商品：商品名（匹配 + 数字设置为 0）
         if (/下架|停用|unlist|disable|offline/i.test(lower)) {
           const g = findGoodsByName(text, goodsArr);
-          if (!g) { addAIMsg('未找到匹配的商品，请说明具体商品名。'); return; }
-          // 用价格=0 作为下架标记，同时 stock=0；或者修改商品名称加标记
+          if (!g) { addAIMsg('未找到匹配的商品，请说明具体商品名。'); speakWithFallback('未找到匹配的商品'); return; }
           const newArr = goodsArr.map(function (x) {
-            if (x.id === g.id) return Object.assign({}, x, { stock: 0 });
+            if (x.id === g.id) return Object.assign({}, x, { stock: 0, status: 'off' });
             return x;
           });
           if (saveGoodsDataSafe(newArr)) {
             addAIMsg('已下架【' + g.name + '】（库存设置为 0）。');
+            speakWithFallback('已下架 ' + g.name);
           } else {
             addAIMsg('保存失败，请在设置中手动操作。');
+            speakWithFallback('保存失败');
           }
           return;
         }
         // 上架商品
-        if (/上架|启用|恢复|list|enable|online/i.test(lower) && !/上架|上架 /i.test('上架')) {
+        if (/上架|启用|恢复|list|enable|online/i.test(lower)) {
           const g = findGoodsByName(text, goodsArr);
-          if (!g) { addAIMsg('未找到匹配的商品，请说明具体商品名。'); return; }
+          if (!g) { addAIMsg('未找到匹配的商品，请说明具体商品名。'); speakWithFallback('未找到匹配的商品'); return; }
           const newArr = goodsArr.map(function (x) {
-            if (x.id === g.id) return Object.assign({}, x, { stock: x.stock && x.stock > 0 ? x.stock : 99 });
+            if (x.id === g.id) return Object.assign({}, x, { stock: x.stock && x.stock > 0 ? x.stock : 99, status: 'on' });
             return x;
           });
           if (saveGoodsDataSafe(newArr)) {
             addAIMsg('已上架【' + g.name + '】。');
+            speakWithFallback('已上架 ' + g.name);
           } else {
             addAIMsg('保存失败，请在设置中手动操作。');
+            speakWithFallback('保存失败');
           }
           return;
         }
         // 库存增减：库存 商品名 数量
-        const stockMatch = text.match(/(库存|加|增加|加上|加上|库存加|\+|减去|减|库存减|-)[^0-9]*([\u4e00-\u9fa5A-Za-z\s]+)[\s:：]*(\d+)/);
+        const stockMatch = text.match(/(库存|加|增加|加上|库存加|\+|减去|减|库存减|-)[^0-9]*([\u4e00-\u9fa5A-Za-z\s]+)[\s:：]*(\d+)/);
         if (stockMatch && stockMatch[3]) {
           const action = stockMatch[1];
           const qty = parseInt(stockMatch[3]);
           const g = findGoodsByName(stockMatch[2], goodsArr) || findGoodsByName(text, goodsArr);
-          if (!g) { addAIMsg('未找到匹配的商品。'); return; }
+          if (!g) { addAIMsg('未找到匹配的商品。'); speakWithFallback('未找到匹配的商品'); return; }
           let newStock = qty;
           let actionMsg = '设置为';
           if (/加|增加|加上|\+|库存加/i.test(action)) {
@@ -10646,8 +10804,10 @@
           });
           if (saveGoodsDataSafe(newArr)) {
             addAIMsg('【' + g.name + '】' + actionMsg + '库存：' + newStock);
+            speakWithFallback(g.name + ' ' + actionMsg + '库存：' + newStock);
           } else {
             addAIMsg('保存失败，请在设置中手动操作。');
+            speakWithFallback('保存失败');
           }
           return;
         }
@@ -10656,19 +10816,23 @@
         if (priceMatch && priceMatch[3]) {
           const newPrice = parseFloat(priceMatch[3]);
           const g = findGoodsByName(priceMatch[2], goodsArr) || findGoodsByName(text, goodsArr);
-          if (!g) { addAIMsg('未找到匹配的商品。'); return; }
+          if (!g) { addAIMsg('未找到匹配的商品。'); speakWithFallback('未找到匹配的商品'); return; }
           const newArr = goodsArr.map(function (x) {
             if (x.id === g.id) return Object.assign({}, x, { price: newPrice });
             return x;
           });
           if (saveGoodsDataSafe(newArr)) {
             addAIMsg('【' + g.name + '】的价格已修改为 ¥' + newPrice.toFixed(2));
+            speakWithFallback(g.name + ' 的价格已修改为 ' + newPrice + ' 元');
           } else {
             addAIMsg('保存失败，请在设置中手动操作。');
+            speakWithFallback('保存失败');
           }
           return;
         }
-        addAIMsg('未识别的后台指令。可用指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 退出后台');
+        // 4. 兜底：输出可用指令清单
+        addAIMsg('可用后台指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台');
+        speakWithFallback('请告诉我您要做什么操作');
       }
 
       // ========== English 模式处理 ==========
@@ -10773,7 +10937,7 @@
       }
 
       // 后台管理模式的 API 调用
-      function callAdminApi(text, goods, cb) {
+      function callAdminApi(text, goods, employees, attendance, cb) {
         let base = '';
         try { base = (window.__AI_BASE_URL__) || (window.location.origin); } catch (e) { base = ''; }
         const url = base + '/api/ai/admin';
@@ -10803,7 +10967,7 @@
           const slimGoods = (goods || []).map(function (g) {
             return { id: g.id, name: g.name, price: g.price, cate: g.cate, stock: g.stock, status: g.status || 'on' };
           });
-          xhr.send(JSON.stringify({ text: text, goods: slimGoods }));
+          xhr.send(JSON.stringify({ text: text, goods: slimGoods, employees: employees || [], attendance: attendance || [] }));
         } catch (e) { cb(String(e && e.message || e), null); }
       }
 
@@ -10925,12 +11089,47 @@
             }
           } catch (e) {}
           // 调后端 /api/ai/admin（如可用），否则本地处理
-          callAdminApi(text, goods, function (err2, data2) {
+          // 读取员工和打卡数据（从 localStorage 或主脚本方法）
+          let emps = [];
+          let atts = [];
+          try {
+            if (typeof window.getEmployees === 'function') emps = window.getEmployees();
+            else if (typeof getEmployees === 'function') emps = getEmployees();
+            else emps = JSON.parse(localStorage.getItem('store_employees') || '[]');
+          } catch (e) { emps = []; }
+          try {
+            if (typeof window.getAttendanceRecords === 'function') atts = window.getAttendanceRecords();
+            else if (typeof getAttendanceRecords === 'function') atts = getAttendanceRecords();
+            else atts = JSON.parse(localStorage.getItem('attendance_records') || '[]');
+          } catch (e) { atts = []; }
+          callAdminApi(text, goods, emps, atts, function (err2, data2) {
             if (thinkingEl && thinkingEl.parentNode) thinkingEl.parentNode.removeChild(thinkingEl);
             if (!err2 && data2 && data2.reply) {
               addAIMsg(data2.reply);
+              // 保存后端返回的商品数据
+              if (data2.goods && Array.isArray(data2.goods)) {
+                try { saveGoodsDataSafe(data2.goods); } catch (e) {}
+                try { GOODS_DATA = data2.goods; } catch (e) {}
+              }
+              // 保存员工
+              if (data2.employees && Array.isArray(data2.employees)) {
+                try {
+                  if (typeof window.saveEmployees === 'function') window.saveEmployees(data2.employees);
+                  else if (typeof saveEmployees === 'function') saveEmployees(data2.employees);
+                  else localStorage.setItem('store_employees', JSON.stringify(data2.employees));
+                } catch (e) {}
+              }
+              // 保存打卡记录
+              if (data2.attendance && Array.isArray(data2.attendance)) {
+                try {
+                  if (typeof window.saveAttendanceRecords === 'function') window.saveAttendanceRecords(data2.attendance);
+                  else if (typeof saveAttendanceRecords === 'function') saveAttendanceRecords(data2.attendance);
+                  else localStorage.setItem('attendance_records', JSON.stringify(data2.attendance));
+                } catch (e) {}
+              }
+              // 刷新缓存
               if (data2.reload) {
-                GOODS_DATA = getGoodsData();
+                try { GOODS_DATA = getGoodsData(); } catch (e) {}
               }
               speakWithFallback(data2.reply);
               return;
