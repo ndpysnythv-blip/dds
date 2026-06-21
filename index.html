@@ -517,7 +517,7 @@
   </div>
 
   <!-- 待处理用户订单弹窗 -->
-  <div id="pending-orders-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="pending-orders-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6 max-h-[80vh] overflow-hidden flex flex-col">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-mobile-alt text-green-500"></i>小程序订单</h2>
@@ -538,8 +538,8 @@
   </div>
 
   <!-- 核对码验证弹窗 -->
-  <div id="verify-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="verify-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-qrcode text-green-500"></i>验证核对码</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -591,8 +591,8 @@
   </div>
 
   <!-- 商品结算弹窗（核心修改：付款码输入框防历史记录+文本修改） -->
-  <div id="checkout-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="checkout-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-cash-register text-coffee-main"></i>商品结算</h2>
         <button id="checkout-close-btn" class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -653,7 +653,7 @@
   </div>
 
   <!-- 支付二维码弹窗 -->
-  <div id="pay-qrcode-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden top-pay-modal">
+  <div id="pay-qrcode-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden top-pay-modal overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 top-pay-modal-content">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 id="pay-modal-title" class="text-lg font-bold text-coffee-dark flex items-center gap-2">
@@ -679,8 +679,8 @@
   </div>
 
   <!-- 设置弹窗 -->
-  <div id="settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="settings-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-cogs text-coffee-main"></i>设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -703,8 +703,8 @@
   </div>
 
   <!-- 更多设置二级菜单 -->
-  <div id="more-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="more-settings-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-ellipsis text-coffee-main"></i>更多设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -1126,7 +1126,7 @@
   </div>
 
   <!-- 打印设置弹窗 -->
-  <div id="print-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="print-settings-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-md max-h-[90vh] overflow-hidden">
       <div class="p-6 pb-0">
         <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
@@ -1355,7 +1355,7 @@
   </div>
 
   <!-- 合并标签模板编辑器弹窗 -->
-  <div id="merge-template-editor-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="merge-template-editor-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
       <div class="p-4 border-b border-coffee-light/30 flex justify-between items-center">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-layer-group text-blue-500"></i>合并标签模板编辑器</h2>
@@ -1452,7 +1452,7 @@
   </div>
 
   <!-- 可视化模板编辑器弹窗 -->
-  <div id="template-editor-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="template-editor-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
       <div class="p-4 border-b border-coffee-light/30 flex justify-between items-center">
         <h2 id="editor-title" class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-palette text-coffee-main"></i>标签模板编辑器</h2>
@@ -1659,8 +1659,8 @@
   </div>
 
   <!-- 商品管理弹窗 -->
-  <div id="goods-manage-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="goods-manage-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-cogs text-coffee-main"></i>商品管理</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -1678,8 +1678,8 @@
   </div>
 
   <!-- 添加新商品弹窗 -->
-  <div id="add-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="add-goods-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-plus-square text-coffee-main"></i>添加新商品</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -1722,8 +1722,8 @@
   </div>
 
   <!-- 编辑商品弹窗 -->
-  <div id="edit-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-60 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="edit-goods-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-60 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 id="edit-goods-title" class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-pencil text-coffee-main"></i>编辑商品</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2079,8 +2079,8 @@
   </div>
 
   <!-- 门店设置弹窗 -->
-  <div id="store-settings-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="store-settings-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-store text-coffee-main"></i>门店设置</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2243,7 +2243,7 @@
 
   <!-- 添加/编辑员工弹窗 -->
   <div id="employee-edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 id="employee-edit-title" class="text-lg font-bold text-coffee-dark">添加员工</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2283,7 +2283,7 @@
 
   <!-- 签到打卡弹窗 -->
   <div id="attendance-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-clock text-coffee-main"></i>签到打卡</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2441,7 +2441,7 @@
 
   <!-- 编辑商品库存弹窗（企业级） -->
   <div id="inventory-edit-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-xl p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-xl p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-box-open text-coffee-main"></i>编辑库存信息</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2507,7 +2507,7 @@
 
   <!-- 记录原料消耗弹窗 -->
   <div id="raw-material-use-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[55] hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark">记录原料消耗</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2546,7 +2546,7 @@
 
   <!-- 到期提醒弹窗 -->
   <div id="expiry-alert-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-red-600 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i>库存到期提醒</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2577,8 +2577,8 @@
   </div>
 
   <!-- 调整商品顺序弹窗 -->
-  <div id="sort-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6">
+  <div id="sort-goods-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-lg p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-list-check text-coffee-main"></i>商品列表 / 调整顺序</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2594,8 +2594,8 @@
   </div>
 
   <!-- 添加更多商品弹窗 -->
-  <div id="add-more-goods-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden modal-fade">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="add-more-goods-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden modal-fade overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-coffee-light/30 mb-4">
         <h2 class="text-lg font-bold text-coffee-dark flex items-center gap-2"><i class="fa-solid fa-plus text-coffee-main"></i>添加更多商品</h2>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -2607,7 +2607,7 @@
   </div>
 
   <!-- 取餐凭证弹窗 -->
-  <div id="code-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+  <div id="code-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
     <div class="bg-white rounded-lg card-shadow w-96 p-6 transform transition-all">
       <div class="flex justify-between items-center pb-4 border-b border-gray-200">
         <h3 class="text-lg font-bold text-coffee-dark">取餐凭证</h3>
@@ -2640,8 +2640,8 @@
   </div>
 
   <!-- 打印预览弹窗 -->
-  <div id="print-preview-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6">
+  <div id="print-preview-modal" class="fixed inset-0 bg-black/50 flex items-start justify-center z-50 hidden overflow-y-auto p-4">
+    <div class="bg-white rounded-lg card-shadow w-full max-w-md p-6 max-h-[85vh] overflow-y-auto scrollbar-hide">
       <div class="flex justify-between items-center pb-4 border-b border-gray-200 mb-4">
         <h3 class="text-lg font-bold text-coffee-dark">打印取餐标签</h3>
         <button class="close-modal text-gray-500 hover:text-gray-700 close-btn"><i class="fa-solid fa-xmark"></i></button>
