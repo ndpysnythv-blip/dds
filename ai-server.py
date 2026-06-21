@@ -779,7 +779,15 @@ def _classify_intent(text, items_found, has_remark_only, cart_has_items, lang='z
     if has_remark_only:
         return 'remark'
 
-    # 10) 问候/闲聊
+    # 10) help/帮助/你能干什么
+    if is_en:
+        if re.search(r'\b(help|what can you do|what do you do|your functions|your features|what are you|what is this|how does this work|how to use|guide|tutorial|instructions|tell me about|introduce yourself|who are you|what is your name|capabilities|abilities)\b', tn):
+            return 'help'
+    else:
+        if re.search(r'(帮助|你能干什么|你会做什么|你能做什么|你是干嘛的|你是谁|介绍一下|功能|能干什么|可以做什么|有什么功能|会做什么|做什么的|怎么用|使用说明|使用方法|怎么操作|指导|教程|说明|你叫什么|你是什么|你叫啥|你能干嘛|能干啥|有什么用|有啥用|有什么功能|啥功能)', tn):
+            return 'help'
+
+    # 11) 问候/闲聊
     if is_en:
         if len(text) <= 20 and re.search(r'\b(hello|hi|hey|welcome|good morning|good afternoon|good evening|greetings|howdy)\b', tn):
             return 'chat'
@@ -911,6 +919,9 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
         if intent == 'chat':
             return 'Hello! Welcome to Kora Zola. What would you like? Just say the item name, e.g. "one latte".'
 
+        if intent == 'help':
+            return "Hi! I'm your AI ordering assistant. I can help you with:\n• Order food & drinks (e.g., 'One latte, two tiramisu')\n• Check prices (e.g., 'How much is a latte')\n• Manage your cart (e.g., 'Remove latte', 'Cancel all')\n• Checkout & payment (e.g., 'Checkout', 'Pay now')\n• Show menu (e.g., 'Menu', 'What do you have')\n• Get recommendations (e.g., 'Recommend something')\n\nJust speak or type what you want! Say 'help' again to see this message."
+
         # unknown（英文）：展示推荐而不是仅让用户再试一次
         sig_items = []
         for g in goods or []:
@@ -1040,6 +1051,11 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
     if intent == 'chat':
         return '你好！欢迎来到 Kora Zola。请问想点什么呢？可以直接说商品名，比如"一杯拿铁，少糖"。'
 
+    if intent == 'help':
+        if is_en:
+            return "Hi! I'm your AI ordering assistant. I can help you with:\n• Order food & drinks (e.g., 'One latte, two tiramisu')\n• Check prices (e.g., 'How much is a latte')\n• Manage your cart (e.g., 'Remove latte', 'Cancel all')\n• Checkout & payment (e.g., 'Checkout', 'Pay now')\n• Show menu (e.g., 'Menu', 'What do you have')\n• Get recommendations (e.g., 'Recommend something')\n\nJust speak or type what you want! Say 'help' again to see this message."
+        return '您好！我是您的 AI 点单助手。我可以帮您做这些事：\n• 点单（例如："来一杯拿铁，两份提拉米苏"）\n• 查询价格（例如："拿铁多少钱"）\n• 管理购物车（例如："去掉拿铁"、"清空购物车"）\n• 结账支付（例如："结账"、"付款"）\n• 查看菜单（例如："菜单"、"有什么"）\n• 获取推荐（例如："推荐一下"、"什么好喝"）\n\n直接说话或打字告诉我您想要什么！再说一遍"帮助"可以看到此消息。'
+
     # unknown：给出推荐 + 友好引导，让助手"会思考"
     # 选取 latte / espresso / dessert / drink 各取一个作为推荐展示
     rec_items = []
@@ -1078,6 +1094,8 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
     if possible:
         names = '、'.join([g.get('name', '') for g in possible[:3]])
         extra = '等' if len(possible) > 3 else ''
+        if is_en:
+            return f'Did you mean: {", ".join([g.get("name", "") for g in possible[:3]])}? {rec_str}Please tell me the exact item name and quantity, e.g. "one latte".'
         return f'您是不是想点：{names}{extra}？{rec_str}请告诉我具体是哪一个，或者直接说商品全名+数量，例如"拿铁一杯"。'
     # 完全没商品信息 → 给出友好引导菜单
     categories = {}
@@ -1089,6 +1107,12 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
         if names:
             examples.append(names[0])
     hint_ex = '、'.join(examples[:4])
+    if is_en:
+        rec_str_en = ''
+        if rec_items:
+            rec_names_en = ', '.join([f"{g.get('name', '')}(¥{g.get('price', 0)})" for g in rec_items])
+            rec_str_en = f"Here are some suggestions: {rec_names_en}. "
+        return f"I didn't fully catch that. {rec_str_en}You can say the item name and quantity, e.g. 'one latte', 'two tiramisu'. Or say 'menu' to see the full list, 'how much is a latte' for prices, or 'checkout' when you're ready."
     return f'抱歉我没能准确理解您的话。{rec_str}您可以直接告诉我商品名+数量，例如"来一杯拿铁"、"两份提拉米苏"。也可以说"菜单"查看全部，或问"拿铁多少钱"来查询价格。目前还有 {hint_ex} 等可选。'
 
 
