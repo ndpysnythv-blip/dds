@@ -920,7 +920,7 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
             return 'Hello! Welcome to Kora Zola. What would you like? Just say the item name, e.g. "one latte".'
 
         if intent == 'help':
-            return "Hi! I'm your AI ordering assistant. I can help you with:\n• Order food & drinks (e.g., 'One latte, two tiramisu')\n• Check prices (e.g., 'How much is a latte')\n• Manage your cart (e.g., 'Remove latte', 'Cancel all')\n• Checkout & payment (e.g., 'Checkout', 'Pay now')\n• Show menu (e.g., 'Menu', 'What do you have')\n• Get recommendations (e.g., 'Recommend something')\n\nJust speak or type what you want! Say 'help' again to see this message."
+            return "I'm your AI ordering assistant! Just tell me what you want, e.g. 'One latte please' or 'A tiramisu'. I'll help you order quickly."
 
         # unknown（英文）：展示推荐而不是仅让用户再试一次
         sig_items = []
@@ -1053,8 +1053,8 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
 
     if intent == 'help':
         if is_en:
-            return "Hi! I'm your AI ordering assistant. I can help you with:\n• Order food & drinks (e.g., 'One latte, two tiramisu')\n• Check prices (e.g., 'How much is a latte')\n• Manage your cart (e.g., 'Remove latte', 'Cancel all')\n• Checkout & payment (e.g., 'Checkout', 'Pay now')\n• Show menu (e.g., 'Menu', 'What do you have')\n• Get recommendations (e.g., 'Recommend something')\n\nJust speak or type what you want! Say 'help' again to see this message."
-        return '您好！我是您的 AI 点单助手。我可以帮您做这些事：\n• 点单（例如："来一杯拿铁，两份提拉米苏"）\n• 查询价格（例如："拿铁多少钱"）\n• 管理购物车（例如："去掉拿铁"、"清空购物车"）\n• 结账支付（例如："结账"、"付款"）\n• 查看菜单（例如："菜单"、"有什么"）\n• 获取推荐（例如："推荐一下"、"什么好喝"）\n\n直接说话或打字告诉我您想要什么！再说一遍"帮助"可以看到此消息。'
+            return "I'm your AI ordering assistant! Just tell me what you want, e.g. 'One latte please' or 'A tiramisu'. I'll help you order quickly."
+        return '我可以帮您点单哦！您看好菜单后对我说，比如"给我来一杯美式咖啡"，我会帮您快速下单。'
 
     # unknown：给出推荐 + 友好引导，让助手"会思考"
     # 选取 latte / espresso / dessert / drink 各取一个作为推荐展示
