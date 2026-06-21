@@ -779,7 +779,15 @@ def _classify_intent(text, items_found, has_remark_only, cart_has_items, lang='z
     if has_remark_only:
         return 'remark'
 
-    # 10) 问候/闲聊
+    # 10) help/帮助/你能干什么
+    if is_en:
+        if re.search(r'\b(help|what can you do|what do you do|your functions|your features|what are you|what is this|how does this work|how to use|guide|tutorial|instructions|tell me about|introduce yourself|who are you|what is your name|capabilities|abilities)\b', tn):
+            return 'help'
+    else:
+        if re.search(r'(帮助|你能干什么|你会做什么|你能做什么|你是干嘛的|你是谁|介绍一下|功能|能干什么|可以做什么|有什么功能|会做什么|做什么的|怎么用|使用说明|使用方法|怎么操作|指导|教程|说明|你叫什么|你是什么|你叫啥|你能干嘛|能干啥|有什么用|有啥用|有什么功能|啥功能)', tn):
+            return 'help'
+
+    # 11) 问候/闲聊
     if is_en:
         if len(text) <= 20 and re.search(r'\b(hello|hi|hey|welcome|good morning|good afternoon|good evening|greetings|howdy)\b', tn):
             return 'chat'
@@ -911,6 +919,9 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
         if intent == 'chat':
             return 'Hello! Welcome to Kora Zola. What would you like? Just say the item name, e.g. "one latte".'
 
+        if intent == 'help':
+            return "Hi! I'm your AI ordering assistant. I can help you with:\n• Order food & drinks (e.g., 'One latte, two tiramisu')\n• Check prices (e.g., 'How much is a latte')\n• Manage your cart (e.g., 'Remove latte', 'Cancel all')\n• Checkout & payment (e.g., 'Checkout', 'Pay now')\n• Show menu (e.g., 'Menu', 'What do you have')\n• Get recommendations (e.g., 'Recommend something')\n\nJust speak or type what you want! Say 'help' again to see this message."
+
         # unknown（英文）：展示推荐而不是仅让用户再试一次
         sig_items = []
         for g in goods or []:
@@ -1040,6 +1051,11 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
     if intent == 'chat':
         return '你好！欢迎来到 Kora Zola。请问想点什么呢？可以直接说商品名，比如"一杯拿铁，少糖"。'
 
+    if intent == 'help':
+        if is_en:
+            return "Hi! I'm your AI ordering assistant. I can help you with:\n• Order food & drinks (e.g., 'One latte, two tiramisu')\n• Check prices (e.g., 'How much is a latte')\n• Manage your cart (e.g., 'Remove latte', 'Cancel all')\n• Checkout & payment (e.g., 'Checkout', 'Pay now')\n• Show menu (e.g., 'Menu', 'What do you have')\n• Get recommendations (e.g., 'Recommend something')\n\nJust speak or type what you want! Say 'help' again to see this message."
+        return '您好！我是您的 AI 点单助手。我可以帮您做这些事：\n• 点单（例如："来一杯拿铁，两份提拉米苏"）\n• 查询价格（例如："拿铁多少钱"）\n• 管理购物车（例如："去掉拿铁"、"清空购物车"）\n• 结账支付（例如："结账"、"付款"）\n• 查看菜单（例如："菜单"、"有什么"）\n• 获取推荐（例如："推荐一下"、"什么好喝"）\n\n直接说话或打字告诉我您想要什么！再说一遍"帮助"可以看到此消息。'
+
     # unknown：给出推荐 + 友好引导，让助手"会思考"
     # 选取 latte / espresso / dessert / drink 各取一个作为推荐展示
     rec_items = []
@@ -1078,6 +1094,8 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
     if possible:
         names = '、'.join([g.get('name', '') for g in possible[:3]])
         extra = '等' if len(possible) > 3 else ''
+        if is_en:
+            return f'Did you mean: {", ".join([g.get("name", "") for g in possible[:3]])}? {rec_str}Please tell me the exact item name and quantity, e.g. "one latte".'
         return f'您是不是想点：{names}{extra}？{rec_str}请告诉我具体是哪一个，或者直接说商品全名+数量，例如"拿铁一杯"。'
     # 完全没商品信息 → 给出友好引导菜单
     categories = {}
@@ -1089,6 +1107,12 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
         if names:
             examples.append(names[0])
     hint_ex = '、'.join(examples[:4])
+    if is_en:
+        rec_str_en = ''
+        if rec_items:
+            rec_names_en = ', '.join([f"{g.get('name', '')}(¥{g.get('price', 0)})" for g in rec_items])
+            rec_str_en = f"Here are some suggestions: {rec_names_en}. "
+        return f"I didn't fully catch that. {rec_str_en}You can say the item name and quantity, e.g. 'one latte', 'two tiramisu'. Or say 'menu' to see the full list, 'how much is a latte' for prices, or 'checkout' when you're ready."
     return f'抱歉我没能准确理解您的话。{rec_str}您可以直接告诉我商品名+数量，例如"来一杯拿铁"、"两份提拉米苏"。也可以说"菜单"查看全部，或问"拿铁多少钱"来查询价格。目前还有 {hint_ex} 等可选。'
 
 
@@ -1232,6 +1256,262 @@ def ai_chat(payload):
 
 
 # ============================================================
+# 后台管理接口：/api/ai/admin
+# ============================================================
+
+def _admin_find_goods_by_name(text, goods):
+    """在商品列表里查找与 text 匹配的商品。"""
+    if not goods or not text:
+        return None
+    # 先精确匹配（商品名作为字串出现）
+    norm = str(text or '')
+    for g in goods:
+        name = str(g.get('name') or '')
+        if name and (name in norm or norm in name):
+            return g
+    # 再做分词匹配：商品名的任一部分出现在用户 text 里
+    for g in goods:
+        name = str(g.get('name') or '')
+        # 按长度 2+ 的子串判断
+        for i in range(len(name)):
+            for j in range(i + 2, len(name) + 1):
+                sub = name[i:j]
+                if len(sub) >= 2 and sub in norm:
+                    return g
+    return None
+
+
+def ai_admin(payload):
+    """
+    payload: { text, goods, employees=[], attendance=[] }
+    返回: { reply, goods, employees, attendance, action, reload=True }
+    调用方可以用返回的 goods/employees/attendance 保存到 localStorage。
+    """
+    text = str(payload.get('text') or '').strip().lower()
+    goods = payload.get('goods') or []
+    employees = payload.get('employees') or []
+    attendance = payload.get('attendance') or []
+
+    if not text:
+        return {'reply': '请输入后台指令。', 'reload': False,
+                'goods': goods, 'employees': employees, 'attendance': attendance}
+
+    # ====== 1. 退出后台 ======
+    if re.search(r'退出|结束|stop|quit|exit|返回普通', text):
+        return {'reply': '已退出后台模式，返回普通点单。', 'reload': False,
+                'goods': goods, 'employees': employees, 'attendance': attendance,
+                'action': 'exit'}
+
+    # ====== 2. 员工 / 打卡 ======
+    if re.search(r'员工|list employees|员工列表|所有员工', text):
+        if not employees:
+            return {'reply': '暂无员工，请先在设置中添加员工。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        names = [f"{i+1}. {e.get('name','')}（{e.get('position','员工')}）"
+                 for i, e in enumerate(employees)]
+        return {'reply': '当前员工列表：\n' + '\n'.join(names), 'reload': False,
+                'goods': goods, 'employees': employees, 'attendance': attendance}
+
+    # 上班打卡：匹配 "上班打卡 [员工名]" 等
+    if re.search(r'上班打卡|签到|打卡上班', text):
+        if not employees:
+            return {'reply': '暂无员工，请先在设置中添加员工。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        # 找到目标员工
+        target = None
+        for emp in employees:
+            name = str(emp.get('name') or '')
+            if name and name in text:
+                target = emp
+                break
+        if target is None:
+            target = employees[0]
+        today_key = datetime.datetime.now().strftime('%Y-%m-%d')
+        now_str = datetime.datetime.now().isoformat()
+        # 是否已在上班
+        active = None
+        for r in attendance:
+            if (r.get('empId') == target.get('id') and r.get('date') == today_key
+                    and r.get('checkIn') and not r.get('checkOut')):
+                active = r
+                break
+        if active is not None:
+            return {'reply': f"【{target.get('name')}】今天已经在上班中，请先下班打卡。",
+                    'reload': False, 'goods': goods,
+                    'employees': employees, 'attendance': attendance}
+        new_rec = {
+            'id': int(datetime.datetime.now().timestamp() * 1000),
+            'empId': target.get('id'),
+            'empName': target.get('name'),
+            'empPosition': target.get('position') or '员工',
+            'date': today_key,
+            'checkIn': now_str,
+            'checkOut': None,
+            'note': 'AI 快捷打卡',
+        }
+        new_att = list(attendance) + [new_rec]
+        time_str = datetime.datetime.now().strftime('%H:%M')
+        return {'reply': f"✓【{target.get('name')}】上班打卡成功，打卡时间 {time_str}",
+                'action': 'check_in', 'reload': True,
+                'goods': goods, 'employees': employees, 'attendance': new_att}
+
+    # 下班打卡
+    if re.search(r'下班打卡|下班', text):
+        if not employees:
+            return {'reply': '暂无员工，请先在设置中添加员工。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        target = None
+        for emp in employees:
+            name = str(emp.get('name') or '')
+            if name and name in text:
+                target = emp
+                break
+        if target is None:
+            target = employees[0]
+        today_key = datetime.datetime.now().strftime('%Y-%m-%d')
+        # 找到今天最新的未下班记录
+        candidates = [r for r in attendance
+                      if r.get('empId') == target.get('id')
+                      and r.get('date') == today_key
+                      and r.get('checkIn') and not r.get('checkOut')]
+        candidates.sort(key=lambda r: r.get('checkIn', ''), reverse=True)
+        active = candidates[0] if candidates else None
+        if active is None:
+            return {'reply': f"【{target.get('name')}】今天没有上班记录，无需下班打卡。",
+                    'reload': False, 'goods': goods,
+                    'employees': employees, 'attendance': attendance}
+        active['checkOut'] = datetime.datetime.now().isoformat()
+        time_str = datetime.datetime.now().strftime('%H:%M')
+        return {'reply': f"✓【{target.get('name')}】下班打卡成功，打卡时间 {time_str}",
+                'action': 'check_out', 'reload': True,
+                'goods': goods, 'employees': employees, 'attendance': attendance}
+
+    # 今日打卡
+    if re.search(r'今天打卡|今日打卡|打卡记录|打卡情况', text):
+        today_key = datetime.datetime.now().strftime('%Y-%m-%d')
+        today_recs = [r for r in attendance if r.get('date') == today_key]
+        if not today_recs:
+            return {'reply': '今天暂无打卡记录。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        msgs = []
+        for r in today_recs:
+            ci = r.get('checkIn')
+            co = r.get('checkOut')
+            ci_str = datetime.datetime.fromisoformat(ci).strftime('%H:%M') if ci else '--'
+            co_str = datetime.datetime.fromisoformat(co).strftime('%H:%M') if co else '未下班'
+            msgs.append(f"{r.get('empName','员工')}：上班 {ci_str} / 下班 {co_str}")
+        return {'reply': '今天打卡记录：\n' + '\n'.join(msgs), 'reload': False,
+                'goods': goods, 'employees': employees, 'attendance': attendance}
+
+    # ====== 3. 商品 / 库存 ======
+    if re.search(r'查看库存|所有库存|库存列表|list stock|list inventory|库存', text) \
+            and not re.search(r'库存加|库存减|加上|减去|加|减', text):
+        summary = []
+        for g in goods:
+            stock = g.get('stock') if g.get('stock') is not None else '-'
+            summary.append(f"{g.get('name','')} × {stock}（¥{g.get('price',0)}）")
+        return {'reply': '当前商品库存：\n' + '\n'.join(summary), 'reload': False,
+                'goods': goods, 'employees': employees, 'attendance': attendance}
+
+    # 下架商品
+    if re.search(r'下架|停用|unlist|disable|offline', text):
+        g = _admin_find_goods_by_name(text, goods)
+        if not g:
+            return {'reply': '未找到匹配的商品，请说明具体商品名。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        new_goods = []
+        for x in goods:
+            if x.get('id') == g.get('id'):
+                ng = dict(x)
+                ng['stock'] = 0
+                ng['status'] = 'off'
+                new_goods.append(ng)
+            else:
+                new_goods.append(x)
+        return {'reply': f"已下架【{g.get('name')}】（库存设置为 0）。",
+                'action': 'unlist', 'reload': True,
+                'goods': new_goods, 'employees': employees, 'attendance': attendance}
+
+    # 上架商品
+    if re.search(r'上架|启用|恢复|enable|online|list', text):
+        g = _admin_find_goods_by_name(text, goods)
+        if not g:
+            return {'reply': '未找到匹配的商品，请说明具体商品名。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        new_goods = []
+        for x in goods:
+            if x.get('id') == g.get('id'):
+                ng = dict(x)
+                cur_stock = ng.get('stock') or 0
+                if not cur_stock:
+                    ng['stock'] = 99
+                ng['status'] = 'on'
+                new_goods.append(ng)
+            else:
+                new_goods.append(x)
+        return {'reply': f"已上架【{g.get('name')}】。",
+                'action': 'list', 'reload': True,
+                'goods': new_goods, 'employees': employees, 'attendance': attendance}
+
+    # 库存加减：库存加 商品 数量 / 库存减 商品 数量
+    m = re.search(r'(库存|加|增加|加上|库存加|\+|减去|减|库存减|-)[^0-9]*?([\u4e00-\u9fa5A-Za-z]+)[\s:：]*(\d+)',
+                  text)
+    if m and m.group(3):
+        action = m.group(1)
+        qty = int(m.group(3))
+        target_name = m.group(2)
+        g = _admin_find_goods_by_name(target_name, goods) or _admin_find_goods_by_name(text, goods)
+        if not g:
+            return {'reply': '未找到匹配的商品。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        new_stock = qty
+        action_msg = '设置为'
+        if re.search(r'加|增加|加上|\+|库存加', action):
+            new_stock = (g.get('stock') or 0) + qty
+            action_msg = '增加后'
+        elif re.search(r'减|减去|库存减|-', action):
+            new_stock = max(0, (g.get('stock') or 0) - qty)
+            action_msg = '减少后'
+        new_goods = []
+        for x in goods:
+            if x.get('id') == g.get('id'):
+                ng = dict(x)
+                ng['stock'] = new_stock
+                new_goods.append(ng)
+            else:
+                new_goods.append(x)
+        return {'reply': f"【{g.get('name')}】{action_msg}库存：{new_stock}",
+                'action': 'stock_change', 'reload': True,
+                'goods': new_goods, 'employees': employees, 'attendance': attendance}
+
+    # 修改价格
+    m = re.search(r'(价格|修改价格|改价|调价|price)[^0-9]*?([\u4e00-\u9fa5A-Za-z]+)[\s:：]*(\d+(?:\.\d+)?)',
+                  text)
+    if m and m.group(3):
+        new_price = float(m.group(3))
+        target_name = m.group(2)
+        g = _admin_find_goods_by_name(target_name, goods) or _admin_find_goods_by_name(text, goods)
+        if not g:
+            return {'reply': '未找到匹配的商品。', 'reload': False,
+                    'goods': goods, 'employees': employees, 'attendance': attendance}
+        new_goods = []
+        for x in goods:
+            if x.get('id') == g.get('id'):
+                ng = dict(x)
+                ng['price'] = new_price
+                new_goods.append(ng)
+            else:
+                new_goods.append(x)
+        return {'reply': f"【{g.get('name')}】的价格已修改为 ¥{new_price:.2f}",
+                'action': 'price_change', 'reload': True,
+                'goods': new_goods, 'employees': employees, 'attendance': attendance}
+
+    # 兜底
+    return {'reply': '可用后台指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台',
+            'reload': False, 'goods': goods, 'employees': employees, 'attendance': attendance}
+
+
+# ============================================================
 # HTTP 处理
 # ============================================================
 
@@ -1358,6 +1638,16 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({'ok': True, **result})
             except Exception as e:
                 log('ERR', 'ai_chat 异常: ' + str(e))
+                self._send_json({'ok': False, 'error': str(e)}, 500)
+            return
+
+        if path == '/api/ai/admin':
+            # 后台管理模式：下架/上架/库存增减/改价/员工打卡等
+            try:
+                result = ai_admin(body or {})
+                self._send_json({'ok': True, **result})
+            except Exception as e:
+                log('ERR', 'ai_admin 异常: ' + str(e))
                 self._send_json({'ok': False, 'error': str(e)}, 500)
             return
 
