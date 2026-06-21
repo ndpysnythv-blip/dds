@@ -2733,9 +2733,10 @@
     let waitList = [];
     let finishList = [];
     let currentGoods = {};
-    // 暴露到 window，供 AI 助手模块跨 script 访问
+    // 暴露到 window，供 AI 助手模块跨 script 访问（主脚本与 AI 脚本数据同源）
     window.__GOODS_DATA__ = () => GOODS_DATA;
     window.__CURRENT_GOODS__ = () => currentGoods;
+    window.__SET_GOODS_DATA__ = (v) => { GOODS_DATA = Array.isArray(v) ? v : GOODS_DATA; saveGoodsData(GOODS_DATA); if (typeof refreshGoodsDisplay === 'function') refreshGoodsDisplay(); };
     window.__SET_CURRENT_GOODS__ = (v) => { currentGoods = v; };
     let currentPayType = '';
     let searchClearTimer = null;
@@ -6847,10 +6848,12 @@
     }, 10800000);
 
     // ========== 重写核心数据保存函数，使其触发同步 ==========
-    // 保存对 saveGoodsData 增强：保存后广播到同步服务器
+    // 保存对 saveGoodsData 增强：保存后广播到同步服务器并同步内存 GOODS_DATA
     const _originalSaveGoodsData = saveGoodsData;
     window.saveGoodsData = function(goodsData) {
       _originalSaveGoodsData(goodsData);
+      if (Array.isArray(goodsData)) GOODS_DATA = goodsData;
+      if (typeof refreshGoodsDisplay === 'function') refreshGoodsDisplay();
       try { broadcastLocalChange('starCoffeeGoods', JSON.stringify(goodsData)); } catch(e) {}
     };
 
@@ -10269,10 +10272,22 @@
         return window.__AI_CURRENT_GOODS__;
       }
 
+      // 统一判断商品是否可用（下架/库存为0都视为不可购买）
+      function isGoodsPurchasable(g) {
+        if (!g) return false;
+        const status = String(g.status || '').toLowerCase();
+        if (status === 'off' || status === 'offline' || status === '0' || status === '下架') return false;
+        const stock = g.stock;
+        if (stock != null && !isNaN(Number(stock)) && Number(stock) <= 0) return false;
+        return true;
+      }
+
       function addGoodsById(id, qty) {
         const data = getGoodsDataSafe();
         const g = data.find(function (x) { return x.id === id; });
         if (!g) return null;
+        // 下架或库存为0的商品不可加购（AI指令与手动点击都同样受限）
+        if (!isGoodsPurchasable(g)) return null;
         const ref = getCurrentGoodsRef();
         if (ref[id]) ref[id].count = (ref[id].count || 0) + qty;
         else ref[id] = Object.assign({}, g, { count: qty });
@@ -10309,7 +10324,10 @@
 
       function getCartSummary() {
         const ref = getCurrentGoodsRef();
-        const items = Object.values(ref);
+        // 过滤掉已下架 / 库存为 0 的商品（保证结账时总金额干净）
+        const items = Object.values(ref).filter(function (g) {
+          return isGoodsPurchasable(g);
+        });
         let count = 0, total = 0;
         items.forEach(function (g) {
           count += g.count || 0;
@@ -10554,8 +10572,10 @@
       // ========== 后台指令处理 ==========
       function saveGoodsDataSafe(dataArr) {
         try {
-          // 优先调用主脚本的 saveGoodsData 来完成存储+广播
-          if (typeof window.saveGoodsData === 'function') {
+          // 优先调用主脚本暴露的 SET 方法，保证主脚本 GOODS_DATA 与本地存储同步
+          if (typeof window.__SET_GOODS_DATA__ === 'function') {
+            window.__SET_GOODS_DATA__(dataArr);
+          } else if (typeof window.saveGoodsData === 'function') {
             window.saveGoodsData(dataArr);
           } else if (typeof saveGoodsData === 'function') {
             saveGoodsData(dataArr);
@@ -10830,11 +10850,56 @@
           }
           return;
         }
+        // 4. 商品溯源：溯源 [商品名/条形码] 或 trace [商品名]
+        if (/溯源|追踪|追溯|源头|生产|供应商|trace|tracking/i.test(lower)) {
+          // 优先匹配条形码（数字串），其次匹配商品名
+          let barcodeMatch = text.match(/(\d{6,})/);
+          let target = null;
+          if (barcodeMatch) {
+            target = goodsArr.find(function (g) { return String(g.barcode || '') === barcodeMatch[1]; });
+          }
+          if (!target) target = findGoodsByName(text, goodsArr);
+          if (!target) { addAIMsg('未找到对应商品，请说明具体商品名或条形码。'); speakWithFallback('未找到对应商品'); return; }
+          const supplier = target.supplier || '默认供应商';
+          const productionDate = target.productionDate || '近期生产';
+          const shelfLife = target.shelfLife || '6个月';
+          const line = '【' + target.name + '】溯源信息\n• 条形码：' + (target.barcode || '—') + '\n• 当前库存：' + (target.stock != null ? target.stock : '—') + '\n• 供应商：' + supplier + '\n• 生产日期：' + productionDate + '\n• 保质期：' + shelfLife + '\n• 零售价：¥' + target.price;
+          addAIMsg(line);
+          speakWithFallback('已为您调出 ' + target.name + ' 的溯源信息');
+          return;
+        }
+        // 5. 新增/删除员工（本地规则）
+        if (/新增员工|添加员工|new employee|add employee/i.test(lower)) {
+          const nm = (text.match(/员工[\s:：]*([\u4e00-\u9fa5A-Za-z]+)/) || [])[1] || '';
+          if (!nm) { addAIMsg('请告诉我新员工的姓名，例如：新增员工 小张。'); speakWithFallback('请告诉我员工的姓名'); return; }
+          let emps = [];
+          try {
+            if (typeof window.getEmployees === 'function') emps = window.getEmployees();
+            else if (typeof getEmployees === 'function') emps = getEmployees();
+            else emps = JSON.parse(localStorage.getItem('store_employees') || '[]');
+          } catch (e) { emps = []; }
+          const newEmp = { id: Date.now(), name: nm, position: '店员', joinDate: new Date().toISOString().slice(0, 10) };
+          emps.push(newEmp);
+          try {
+            if (typeof window.saveEmployees === 'function') window.saveEmployees(emps);
+            else if (typeof saveEmployees === 'function') saveEmployees(emps);
+            else localStorage.setItem('store_employees', JSON.stringify(emps));
+          } catch (e) {}
+          addAIMsg('✓ 已新增员工【' + nm + '】，职位：店员。');
+          speakWithFallback('已新增员工 ' + nm);
+          return;
+        }
+        // 6. 帮助（help/帮助）
+        if (/帮助|指令|能做什么|help|commands/i.test(lower)) {
+          const help = '可用后台指令（语音支持）：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 溯源 [商品名或条形码]\n• 新增员工 [员工名]\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台';
+          addAIMsg(help);
+          speakWithFallback('已为您列出后台可用指令');
+          return;
+        }
         // 4. 兜底：输出可用指令清单
-        addAIMsg('可用后台指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台');
+        addAIMsg('可用后台指令（语音支持）：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 溯源 [商品名或条形码]\n• 新增员工 [员工名]\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台');
         speakWithFallback('请告诉我您要做什么操作');
       }
-
       // ========== English 模式处理 ==========
       function handleEnglishCommand(text, goodsArr) {
         const lower = text.toLowerCase();
@@ -10979,14 +11044,27 @@
         const reply = String(data.reply || '好的');
         const openCheckout = !!data.openCheckout;
 
-        // 1. 加购商品（仅 order 意图加购；price / unknown 只报价，不自动加购物车）
-        if (intent === 'order' && items.length > 0) {
-          items.forEach(function (it) {
+        // 从 items 区分可用 / 不可用商品（尊重 AI / 本地规则的 available 标记）
+        const availableItems = items.filter(function (it) { return it && it.available !== false; });
+        const unavailableItems = items.filter(function (it) { return it && it.available === false; });
+
+        // 1. 加购商品（仅 order 意图加购；price / unknown 只报价，不自动加购物车；下架商品不加入）
+        if (intent === 'order' && availableItems.length > 0) {
+          availableItems.forEach(function (it) {
             if (it && it.id) {
               const qty = Math.max(1, parseInt(it.qty) || 1);
               addGoodsById(it.id, qty);
             }
           });
+        }
+
+        // 1a. 如果当前回复没有提及缺货，补充一条缺货提示（不播，静默显示）
+        if (unavailableItems.length > 0 && intent === 'order') {
+          const unNames = unavailableItems.map(function (it) { return it.name || '商品'; }).join('、');
+          const extraMsg = '（注：' + unNames + ' 目前已下架或库存为0，暂时无法加入订单）';
+          if (reply.indexOf('缺货') === -1 && reply.indexOf('下架') === -1 && reply.indexOf('售罄') === -1) {
+            setTimeout(function () { addAIMsg(extraMsg); }, 400);
+          }
         }
 
         // 2. 删除商品（只删解析到的具体项）
@@ -11011,7 +11089,7 @@
         }
 
         // 5. 打开结账弹窗
-        if (openCheckout && intent !== 'unknown') {
+        if (openCheckout && intent !== 'unknown' && availableItems.length > 0) {
           try {
             if (typeof openCheckoutModal === 'function') { setTimeout(openCheckoutModal, 800); }
             else {

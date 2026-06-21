@@ -1506,8 +1506,63 @@ def ai_admin(payload):
                 'action': 'price_change', 'reload': True,
                 'goods': new_goods, 'employees': employees, 'attendance': attendance}
 
+    # 商品溯源：匹配 "溯源/追踪/追溯/trace/tracking [商品名或条形码]
+    if re.search(r'溯源|追踪|追溯|源头|生产|供应商|trace|tracking', text):
+        target = None
+        # 先匹配条形码（6+位及以上的纯数字）
+        bm = re.search(r'(\d{6,})', text)
+        if bm:
+            code = bm.group(1)
+            for g in goods:
+                if str(g.get('barcode') or '') == code:
+                    target = g
+                    break
+        if target is None:
+            target = _admin_find_goods_by_name(text, goods)
+        if target is None:
+            return {'reply': '未找到对应商品，请说明具体商品名或条形码。',
+                    'reload': False, 'goods': goods, 'employees': employees, 'attendance': attendance,
+                    'action': 'trace'}
+        supplier = target.get('supplier') or '默认供应商'
+        production_date = target.get('productionDate') or target.get('production_date') or '近期生产'
+        shelf_life = target.get('shelfLife') or target.get('shelf_life') or '6个月'
+        reply_lines = [
+            f"【{target.get('name','')}】溯源信息",
+            f"• 条形码：{target.get('barcode') or '—'}",
+            f"• 当前库存：{target.get('stock') if target.get('stock') is not None else '—'}",
+            f"• 供应商：{supplier}",
+            f"• 生产日期：{production_date}",
+            f"• 保质期：{shelf_life}",
+            f"• 零售价：¥{target.get('price', 0)}",
+        ]
+        return {'reply': '\n'.join(reply_lines),
+                'reload': False, 'goods': goods, 'employees': employees, 'attendance': attendance,
+                'action': 'trace'}
+
+    # 新增员工
+    if re.search(r'新增员工|添加员工|new employee|add employee', text):
+        m_name = re.search(r'员工[\s:：]*([\u4e00-\u9fa5A-Za-z]{2,})', text)
+        nm = m_name.group(1) if m_name else ''
+        if not nm:
+            return {'reply': '请告诉我新员工的姓名，例如：新增员工 小张。',
+                    'reload': False, 'goods': goods, 'employees': employees, 'attendance': attendance}
+        new_emps = list(employees) + [{
+            'id': int(datetime.datetime.now().timestamp() * 1000),
+            'name': nm,
+            'position': '店员',
+            'joinDate': datetime.datetime.now().strftime('%Y-%m-%d')}]
+        return {'reply': f'✓ 已新增员工【{nm}】，职位：店员。',
+                'action': 'add_employee', 'reload': True,
+                'goods': goods, 'employees': new_emps, 'attendance': attendance}
+
+    # 帮助
+    if re.search(r'帮助|指令|能做什么|help|command', text):
+        help_text = ('可用后台指令（语音支持）：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 溯源 [商品名或条形码]\n• 新增员工 [员工名]\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台')
+        return {'reply': help_text, 'reload': False,
+                'goods': goods, 'employees': employees, 'attendance': attendance}
+
     # 兜底
-    return {'reply': '可用后台指令：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台',
+    return {'reply': '可用后台指令（语音支持）：\n• 下架 [商品名]\n• 上架 [商品名]\n• 库存加 [商品名] [数量]\n• 库存减 [商品名] [数量]\n• 修改价格 [商品名] [价格]\n• 查看库存\n• 溯源 [商品名或条形码]\n• 新增员工 [员工名]\n• 员工列表\n• 上班打卡 [员工名]\n• 下班打卡 [员工名]\n• 今日打卡\n• 退出后台',
             'reload': False, 'goods': goods, 'employees': employees, 'attendance': attendance}
 
 
