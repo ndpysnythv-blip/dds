@@ -290,7 +290,13 @@ __CART_JSON_PLACEHOLDER__
 def _normalize(text):
     if text is None:
         return ''
-    return re.sub(r'\s+', '', str(text)).lower()
+    # 中文模式：折叠所有空白，方便商品名（连续中文）子串匹配
+    # 英文模式：保留单个空格，以便 \b 词边界正常工作
+    s = str(text).lower()
+    # 若文本中不存在中文字符，则认为是英文输入，保留单词之间的空格
+    if re.search(r'[\u4e00-\u9fff]', s):
+        return re.sub(r'\s+', '', s)
+    return re.sub(r'\s+', ' ', s).strip()
 
 
 def _match_goods(text, goods):
@@ -444,22 +450,94 @@ def _is_good_available(g):
     return True
 
 
-def _smart_match_items(text, goods, cart_items):
+# 英文关键词 → 中文商品名关键词映射（用于英文模式下的商品识别增强）
+EN_KEYWORD_TO_CN = {
+    'latte': ['拿铁'],
+    'cappuccino': ['卡布奇诺'],
+    'americano': ['美式'],
+    'espresso': ['浓缩', '意式'],
+    'coffee': ['拿铁', '美式', '卡布奇诺', '浓缩', '焦糖玛奇朵', '摩卡'],
+    'cafe': ['拿铁', '美式', '卡布奇诺'],
+    'caramel': ['焦糖玛奇朵'],
+    'macchiato': ['玛奇朵', '焦糖玛奇朵'],
+    'mocha': ['摩卡'],
+    'tiramisu': ['提拉米苏'],
+    'cake': ['提拉米苏'],
+    'dessert': ['提拉米苏', '蔓越莓司康'],
+    'scone': ['司康', '蔓越莓司康'],
+    'cranberry': ['蔓越莓'],
+    'juice': ['橙汁'],
+    'orange juice': ['橙汁'],
+    'orange': ['橙汁'],
+    'drink': ['橙汁', '气泡水'],
+    'beverage': ['橙汁', '气泡水'],
+    'sparkling': ['气泡水'],
+    'water': ['气泡水'],
+    'soda': ['气泡水'],
+    'cold drink': ['橙汁', '气泡水'],
+    'hot drink': ['拿铁', '美式', '卡布奇诺'],
+    'ice': ['冰'],
+    'cold': ['冰'],
+    'hot': ['热'],
+    'sugar': ['糖'],
+    'no sugar': ['无糖'],
+    'less ice': ['少冰'],
+    'no ice': ['去冰'],
+}
+# 中文商品名的常见英文别称（用于英文模式下，用商品名中的中文关键词 → 去英文文本里查）
+CN_TO_EN_ALIAS = {
+    '拿铁': 'latte',
+    '美式': 'americano',
+    '卡布奇诺': 'cappuccino',
+    '浓缩': 'espresso',
+    '玛奇朵': 'macchiato',
+    '焦糖': 'caramel',
+    '提拉米苏': 'tiramisu',
+    '司康': 'scone',
+    '橙汁': 'orange juice|orange|juice',
+    '气泡水': 'sparkling|water|soda',
+    '摩卡': 'mocha',
+    '椰': 'coconut',
+}
+
+
+def _smart_match_items(text, goods, cart_items, lang='zh'):
     """在文本中找出所有提到的商品 → [{id, name, qty, available, stock}]
     支持：'拿铁 2 杯'、'两份提拉米苏'、'拿铁和美式各一杯'、'再来一份'（依赖 cart）
     匹配等级策略（高→低）：
       5 - 商品全名完整出现在文本中
-      4 - 商品名的**前缀**出现在文本中
+      4 - 商品名的**前缀**出现在文本中 / 英文模式下通过 EN_KEYWORD_TO_CN 映射命中
       3 - 商品名的**后缀**出现在文本中
       1 - 任意 >=2 字子词出现在文本中（最后手段）
     去重：若多个商品在文本同一位置都命中，保留等级最高的那个
     返回项带 available 字段，便于调用方判断是否缺货
+    lang='en' 时，额外做：
+      1) 通过 EN_KEYWORD_TO_CN 把英文词转成中文商品关键词再匹配
+      2) 通过 CN_TO_EN_ALIAS 把中文商品名中的关键词映射为英文词后再在英文文本中查找
     """
     if not goods:
         return []
     tn = _normalize(text)
+    is_en = (lang == 'en')
     # step 1: 对每个商品，在文本中找所有命中 (匹配等级, 文本起始位置, 命中词, 商品)
     candidate_hits = []  # (score, pos, word, g)
+
+    # —— 英文模式增强：先扫描英文关键词 → 映射为中文商品名 ——
+    if is_en:
+        kw_keys = sorted(EN_KEYWORD_TO_CN.keys(), key=len, reverse=True)
+        for ekw in kw_keys:
+            pat = r'(?:^|[^\w])(' + re.escape(ekw) + r')(?=$|[^\w])'
+            m = re.search(pat, tn)
+            if not m:
+                continue
+            hit_pos = m.start(1)
+            cns = EN_KEYWORD_TO_CN.get(ekw, [])
+            for g in goods:
+                if not g.get('name'):
+                    continue
+                gn = _normalize(g.get('name', ''))
+                if any(cn in gn for cn in cns):
+                    candidate_hits.append((4, hit_pos, ekw + '→' + gn, g))
 
     for g in goods:
         name_n = _normalize(g.get('name', ''))
@@ -470,6 +548,26 @@ def _smart_match_items(text, goods, cart_items):
             for m in re.finditer(re.escape(name_n), tn):
                 candidate_hits.append((5, m.start(), name_n, g))
             continue  # 全名命中了就不必再子词匹配
+
+        # 英文模式：商品名里含 "拿铁/美式/..." 等中文词 → 用 CN_TO_EN_ALIAS 找用户英文文本中的对应词
+        if is_en:
+            gn = name_n
+            found = False
+            for cn_kw, en_aliases in CN_TO_EN_ALIAS.items():
+                if cn_kw in gn:
+                    # 多个英文别名用 | 分隔，支持 or 匹配
+                    aliases = [a.strip() for a in en_aliases.split('|') if a.strip()]
+                    for alias in aliases:
+                        if alias and alias in tn:
+                            for mm in re.finditer(re.escape(alias), tn):
+                                candidate_hits.append((4, mm.start(), alias, g))
+                            found = True
+                            break
+                if found:
+                    break
+            if found:
+                continue
+
         # 等级 4: 商品名的前缀（2~len 字）出现在文本中
         found_prefix = False
         for length in range(len(name_n), 1, -1):  # 从最长前缀往下找
@@ -628,12 +726,12 @@ def _classify_intent(text, items_found, has_remark_only, cart_has_items, lang='z
         if cart_has_items and not has_remark_only:
             return 'remove'
 
-    # 3) 价格询问
+    # 3) 价格询问（更丰富）
     if is_en:
-        if re.search(r'\b(how much|price|cost|how much is|how much for|how much does|how much money)\b', tn):
+        if re.search(r'\b(how much|price|cost|how much is|how much for|how much does|how much money|how much are|how much does it cost|cost of|what is the price|what\'?s the price|how expensive)\b', tn):
             return 'price'
     else:
-        if re.search(r'(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份)', tn):
+        if re.search(r'(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份|多贵|价钱|卖多少钱|单价|一份多少钱|一杯多少钱|要多少钱|大概多少钱|请问多少钱)', tn):
             return 'price'
 
     # 4) 菜单/有什么
@@ -665,12 +763,12 @@ def _classify_intent(text, items_found, has_remark_only, cart_has_items, lang='z
     if has_items and re.search(order_pat, tn):
         return 'order'
 
-    # 7) 确认/结账
+    # 7) 确认/结账（更丰富的关键词：微信支付、支付宝、扫码、付款、结算等都识别为确认结账）
     if is_en:
-        if not has_items and re.search(r'\b(confirm|checkout|check out|done|pay|payment|that\'?s all|that is all|yes|okay|ok|sure|that will be all|i\'?m done|go ahead|proceed)\b', tn):
+        if not has_items and re.search(r'\b(confirm|checkout|check out|done|pay|payment|that\'?s all|that is all|yes|okay|ok|sure|that will be all|i\'?m done|go ahead|proceed|pay now|time to pay|let me pay|i\'?ll pay|pay the bill|please bill me|settle the bill|let\'?s pay|wechat pay|alipay|scan to pay|please pay|paying|paid|settle|cashier|bill me|that will be all|wrap it up|that is everything|finish|ready to order)\b', tn):
             return 'confirm'
     else:
-        if not has_items and re.search(r'(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)', tn):
+        if not has_items and re.search(r'(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了|可以了|没问题|行了就这样|微信支付|支付宝|微信|扫码|扫码支付|扫一下|付款吧|去付款|去买单|去结账|给我结账|给我买单|去付钱|给钱|付款一下|付钱|支付一下|买单吧|结账吧|结算一下|给我结算|支付完成|pay|付款完毕|好了就这样|好就这些|可以下单了|这就下单|那就下单|那就这样|ok啦|OK|好嘞|好的呢|就买这些|买好了|买吧|付吧|给|拿去吧|给你钱|好了就这些|下单|确认订单|确认支付|确认一下|对没错|嗯|嗯好的|行|行的|行就这些)', tn):
             return 'confirm'
 
     # 8) 兜底：有商品命中 → 算 order
@@ -748,7 +846,7 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
                     if g:
                         lines.append(f"{g.get('name','')} ¥{g.get('price',0)}")
                 names_line = ', '.join(lines)
-                return f'{names_line}. Would you like to add any to your cart? Just say "yes" or the item name again.'
+                return f'Here are the prices: {names_line}. These items were NOT added to your cart. If you want them, please say "I want a latte" explicitly.'
             return 'Which item would you like to know the price of? Try "how much is a latte?".'
 
         if intent == 'menu':
@@ -813,21 +911,26 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
         if intent == 'chat':
             return 'Hello! Welcome to Kora Zola. What would you like? Just say the item name, e.g. "one latte".'
 
-        # unknown（英文）
-        possible = []
+        # unknown（英文）：展示推荐而不是仅让用户再试一次
+        sig_items = []
         for g in goods or []:
-            name_n = _normalize(g.get('name', ''))
-            if not name_n: continue
-            for i in range(len(name_n)):
-                for j in range(i + 2, len(name_n) + 1):
-                    sub = name_n[i:j]
-                    if len(sub) >= 2 and sub in tn:
-                        if g not in possible: possible.append(g)
-                        break
-                if g in possible: break
-        if possible:
-            names = ', '.join([g.get('name', '') for g in possible[:3]])
-            return f'Did you mean: {names}? Please say the full item name plus quantity, e.g. "one latte".'
+            if g.get('cate') in ('latte', 'espresso') and len(sig_items) < 2:
+                sig_items.append(g)
+        if len(sig_items) < 3:
+            for g in goods or []:
+                if g.get('cate') == 'dessert' and len(sig_items) < 3:
+                    sig_items.append(g)
+                    break
+        if len(sig_items) < 3:
+            for g in goods or []:
+                if g.get('cate') == 'drink' and len(sig_items) < 3:
+                    sig_items.append(g)
+                    break
+        if not sig_items:
+            sig_items = (goods or [])[:3]
+        if sig_items:
+            names = ', '.join([f"{g.get('name', '')}(¥{g.get('price', 0)})" for g in sig_items])
+            return f"I didn't fully catch that. Here are some suggestions you can try: {names}. Or say 'menu' to see the full list, 'how much is a latte' for prices, or 'checkout' when you're ready."
         return "I'm sorry, I did not understand. Please say the item name and quantity, e.g. \"one latte\"."
 
     # —— 中文回复（默认，带缺货提示） ——
@@ -864,7 +967,8 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
                 if g:
                     lines.append(f"{g.get('name','')} ¥{g.get('price',0)}")
             names_line = '；'.join(lines)
-            return f'{names_line}。需要直接帮您加入购物车吗？说"确认下单"就可以支付啦。'
+            first_item_name = lines[0].split(' ')[0] if lines else '拿铁'
+            return f'{names_line}。（尚未加入购物车，您可以放心询价）如果想点单，直接说"来一杯{first_item_name}"即可。'
         return '请问您想了解哪个商品的价格？可以直接说"拿铁多少钱"。'
 
     if intent == 'menu':
@@ -936,8 +1040,20 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
     if intent == 'chat':
         return '你好！欢迎来到 Kora Zola。请问想点什么呢？可以直接说商品名，比如"一杯拿铁，少糖"。'
 
-    # unknown：给出最像商品的提示
-    # 把所有商品名中 2 字以上的子词做一次是否存在的检查；如果有些关键词命中，则反问确认
+    # unknown：给出推荐 + 友好引导，让助手"会思考"
+    # 选取 latte / espresso / dessert / drink 各取一个作为推荐展示
+    rec_items = []
+    if goods:
+        latte_list = [g for g in goods if g.get('cate') in ('latte', 'espresso')]
+        if latte_list:
+            rec_items.append(latte_list[len(latte_list) // 2])
+        dessert_list = [g for g in goods if g.get('cate') == 'dessert']
+        if dessert_list:
+            rec_items.append(dessert_list[0])
+        drink_list = [g for g in goods if g.get('cate') == 'drink']
+        if drink_list:
+            rec_items.append(drink_list[0])
+
     possible = []
     for g in goods or []:
         name_n = _normalize(g.get('name', ''))
@@ -953,10 +1069,16 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
                     break
             if g in possible:
                 break
+
+    rec_str = ''
+    if rec_items:
+        rec_names = '、'.join([f"{g.get('name', '')}(¥{g.get('price', 0)})" for g in rec_items])
+        rec_str = f'给您一些参考，我们的热门有：{rec_names}。'
+
     if possible:
         names = '、'.join([g.get('name', '') for g in possible[:3]])
         extra = '等' if len(possible) > 3 else ''
-        return f'您是不是想点：{names}{extra}？请告诉我具体是哪一个，或者直接说商品全名+数量，例如"拿铁一杯"。'
+        return f'您是不是想点：{names}{extra}？{rec_str}请告诉我具体是哪一个，或者直接说商品全名+数量，例如"拿铁一杯"。'
     # 完全没商品信息 → 给出友好引导菜单
     categories = {}
     for g in goods or []:
@@ -966,7 +1088,8 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
     for key, names in categories.items():
         if names:
             examples.append(names[0])
-    return f'抱歉我没能准确理解。您可以直接告诉我：商品名 + 数量，例如"来一杯拿铁"、"两份提拉米苏"。目前有{", ".join(examples[:4])} 等可选。'
+    hint_ex = '、'.join(examples[:4])
+    return f'抱歉我没能准确理解您的话。{rec_str}您可以直接告诉我商品名+数量，例如"来一杯拿铁"、"两份提拉米苏"。也可以说"菜单"查看全部，或问"拿铁多少钱"来查询价格。目前还有 {hint_ex} 等可选。'
 
 
 def local_parse(text, goods, cart_items, lang='zh'):
@@ -979,8 +1102,8 @@ def local_parse(text, goods, cart_items, lang='zh'):
         return {'intent': 'unknown', 'items': [], 'remarks': [],
                 'reply': empty_reply, 'openCheckout': False}
 
-    # 1) 商品识别
-    items = _smart_match_items(t, goods, cart_items or [])
+    # 1) 商品识别（带语言参数，英文模式下走英文词→中文商品名映射）
+    items = _smart_match_items(t, goods, cart_items or [], lang)
 
     # 2) 备注识别
     remarks = _extract_remarks_smart(t)
