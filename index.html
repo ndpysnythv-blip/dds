@@ -10375,9 +10375,21 @@
         updateCartPreview();
       }
 
+      // 去重缓冲：短时间内相同内容不会被重复添加（解决"两条一模一样消息"的 bug）
+      var _aiMsgLastText = '';
+      var _aiMsgLastTime = 0;
+
       function addAIMsg(text) {
         const el = document.getElementById('ai-messages');
         if (!el) return;
+        // 去重：3 秒内相同内容直接忽略（标点/空格一致才视为重复）
+        const now = Date.now();
+        const norm = String(text).replace(/\s+/g, ' ').trim();
+        if (norm && norm === _aiMsgLastText && (now - _aiMsgLastTime) < 3000) {
+          return;
+        }
+        _aiMsgLastText = norm;
+        _aiMsgLastTime = now;
         const wrap = document.createElement('div');
         wrap.className = 'flex items-start gap-2';
         // 英文模式下，AI 的英文回复下方显示中文翻译
@@ -10732,18 +10744,26 @@
           xhr.open('POST', url, true);
           xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
           xhr.timeout = 15000;
+          // 标志：确保本次请求回调只触发一次，避免 readyState/onerror/ontimeout 多重触发导致
+          // addAIMsg 写出两条一模一样的回复。
+          let callbackCalled = false;
+          function onceCb(err, data) {
+            if (callbackCalled) return;
+            callbackCalled = true;
+            cb(err, data);
+          }
           xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
               try {
                 const data = JSON.parse(xhr.responseText || '{}');
-                if (data && (data.intent || data.reply)) { cb(null, data); return; }
-                if (data && data.ok) { cb(null, data); return; }
-                cb((data && data.error) || '服务端返回错误', null);
-              } catch (err) { cb('解析响应失败', null); }
+                if (data && (data.intent || data.reply)) { onceCb(null, data); return; }
+                if (data && data.ok) { onceCb(null, data); return; }
+                onceCb((data && data.error) || '服务端返回错误', null);
+              } catch (err) { onceCb('解析响应失败', null); }
             }
           };
-          xhr.onerror = function () { cb('网络错误（请确认已启动 ai-server.py）', null); };
-          xhr.ontimeout = function () { cb('请求超时', null); };
+          xhr.onerror = function () { onceCb('网络错误（请确认已启动 ai-server.py）', null); };
+          xhr.ontimeout = function () { onceCb('请求超时', null); };
           const payload = { text: text, goods: slimGoods, cart: slimCart, mode: mode, lang: lang };
           if (extraParams && typeof extraParams === 'object') {
             for (const k in extraParams) { if (Object.prototype.hasOwnProperty.call(extraParams, k)) payload[k] = extraParams[k]; }
@@ -10762,17 +10782,24 @@
           xhr.open('POST', url, true);
           xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
           xhr.timeout = 8000;
+          // 标志：避免 readystate / onerror / ontimeout 多次触发
+          let callbackCalled = false;
+          function onceCb(err, data) {
+            if (callbackCalled) return;
+            callbackCalled = true;
+            cb(err, data);
+          }
           xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
               try {
                 const data = JSON.parse(xhr.responseText || '{}');
-                if (data && data.ok) { cb(null, data); return; }
-                cb((data && data.error) || '服务端返回错误', null);
-              } catch (err) { cb('解析响应失败', null); }
+                if (data && data.ok) { onceCb(null, data); return; }
+                onceCb((data && data.error) || '服务端返回错误', null);
+              } catch (err) { onceCb('解析响应失败', null); }
             }
           };
-          xhr.onerror = function () { cb('网络不通', null); };
-          xhr.ontimeout = function () { cb('请求超时', null); };
+          xhr.onerror = function () { onceCb('网络不通', null); };
+          xhr.ontimeout = function () { onceCb('请求超时', null); };
           const slimGoods = (goods || []).map(function (g) {
             return { id: g.id, name: g.name, price: g.price, cate: g.cate, stock: g.stock, status: g.status || 'on' };
           });
