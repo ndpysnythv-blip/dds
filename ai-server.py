@@ -427,15 +427,33 @@ def _extract_quantity(text):
     return cleaned
 
 
+def _is_good_available(g):
+    """商品是否可下单（上架+有库存）。"""
+    if not g:
+        return False
+    status = str(g.get('status') or 'on').lower()
+    if status in ('off', 'offline', 'unavailable', '下架', '0'):
+        return False
+    stock = g.get('stock')
+    if stock is not None:
+        try:
+            if int(stock) <= 0:
+                return False
+        except (ValueError, TypeError):
+            pass
+    return True
+
+
 def _smart_match_items(text, goods, cart_items):
-    """在文本中找出所有提到的商品 → [{id, name, qty}]
+    """在文本中找出所有提到的商品 → [{id, name, qty, available, stock}]
     支持：'拿铁 2 杯'、'两份提拉米苏'、'拿铁和美式各一杯'、'再来一份'（依赖 cart）
     匹配等级策略（高→低）：
-      5 - 商品全名完整出现在文本中       如"拿铁咖啡"→ 文本含"拿铁咖啡"
-      4 - 商品名的**前缀**出现在文本中     如"拿铁咖啡"→ 文本含"拿铁"
-      3 - 商品名的**后缀**出现在文本中     如"生椰拿铁"→ 文本含"拿铁"
-      1 - 任意 >=2 字子词出现在文本中     （最宽松，仅作为最后手段）
+      5 - 商品全名完整出现在文本中
+      4 - 商品名的**前缀**出现在文本中
+      3 - 商品名的**后缀**出现在文本中
+      1 - 任意 >=2 字子词出现在文本中（最后手段）
     去重：若多个商品在文本同一位置都命中，保留等级最高的那个
+    返回项带 available 字段，便于调用方判断是否缺货
     """
     if not goods:
         return []
@@ -533,13 +551,24 @@ def _smart_match_items(text, goods, cart_items):
         if existing:
             existing['qty'] = max(existing['qty'], qty)
         else:
-            result_map[g['id']] = {'id': g['id'], 'name': g['name'], 'qty': qty}
+            entry = {'id': g['id'], 'name': g['name'], 'qty': qty}
+            entry['available'] = _is_good_available(g)
+            entry['stock'] = g.get('stock', None)
+            entry['status'] = g.get('status', 'on')
+            result_map[g['id']] = entry
 
     # step 4: 上下文感知 —— "再来一份 / 再要一个 / 同样再来"
     if not result_map and re.search(r'(再来一份|再来一杯|再加一份|再加一个|同样的|还是这个|还是老样子|再来|再要|再加|一样的|续杯|同样的来一份)', tn):
         if cart_items:
             first = cart_items[0]
-            result_map[first['id']] = {'id': first['id'], 'name': first['name'], 'qty': 1}
+            result_map[first['id']] = {
+                'id': first['id'],
+                'name': first['name'],
+                'qty': 1,
+                'available': _is_good_available(first),
+                'stock': first.get('stock', None),
+                'status': first.get('status', 'on'),
+            }
 
     return list(result_map.values())
 
@@ -572,89 +601,241 @@ def _extract_remarks_smart(text, existing_remarks=None):
     return found
 
 
-def _classify_intent(text, items_found, has_remark_only, cart_has_items):
+def _classify_intent(text, items_found, has_remark_only, cart_has_items, lang='zh'):
     """基于关键词 + 槽位信息，做更稳健的意图判断。
-    优先级（从高到低）：
-      cancel → 取消/清空/不要了
-      remove → 去掉/删除 + 有商品
-      price  → 多少钱/价格
-      menu   → 有什么/有哪些
-      recommend → 推荐/招牌/热门
-      order  → 有"来/要/点/杯/份/打包"等动作词 + 命中商品；或仅命中商品
-      confirm → 确认/结账（必须没有商品命中）
-      remark → 只有备注词（冰/糖/温度）
-      chat   → 问候
+    lang: 'zh' 中文关键词, 'en' 英文关键词（会忽略中文，全部用英文判断）
     """
     tn = _normalize(text)
     has_items = bool(items_found)
+    is_en = (lang == 'en')
 
     # 1) 取消/清空
-    if re.search(r'(取消订单|全部取消|全部不要|清空|重来|重新点|重新下单|不要了|算了|不用了|退掉|cancel all|clear all)', tn):
-        return 'cancel'
+    if is_en:
+        if re.search(r'\b(cancel|clear|reset|start over|empty|no thanks|no thank you|clear all|cancel all|scratch that|nevermind|never mind)\b', tn):
+            return 'cancel'
+    else:
+        if re.search(r'(取消订单|全部取消|全部不要|清空|重来|重新点|重新下单|不要了|算了|不用了|退掉|cancel all|clear all)', tn):
+            return 'cancel'
 
     # 2) 删除/去掉（必须有"去掉/不要"类关键词 + 命中了具体商品）
-    if re.search(r'(去掉|不要|删除|移除|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)', tn):
+    if is_en:
+        remove_pat = r'\b(remove|take off|take out|delete|drop|minus|without|don\'?t want|no |cancel one)\b'
+    else:
+        remove_pat = r'(去掉|不要|删除|移除|减去|少一份|少一个|去掉这个|别加|去掉那个|去掉这|去掉那|不要这个|不要那个|no|remove)'
+    if re.search(remove_pat, tn):
         if has_items:
             return 'remove'
-        # 没说具体商品名但购物车里有 → 也算 remove（需要用户进一步说明）
         if cart_has_items and not has_remark_only:
             return 'remove'
 
     # 3) 价格询问
-    if re.search(r'(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份)', tn):
-        return 'price'
+    if is_en:
+        if re.search(r'\b(how much|price|cost|how much is|how much for|how much does|how much money)\b', tn):
+            return 'price'
+    else:
+        if re.search(r'(多少钱|价格|价位|多少元|几元|多少钱一杯|how much|price|多少钱一份)', tn):
+            return 'price'
 
-    # 4) 菜单/有什么（排除"有什么推荐"——那是 recommend）
-    #    覆盖：有什么、有没有、有啥、有哪些、有什么可以/推荐、菜单
-    if re.search(r'(有没有(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有啥|还有啥|还有什么|有哪些|菜单|菜单一览|都有什么|都有啥|提供什么|有什么可以|有什么好)', tn):
-        # "有什么推荐/招牌/热门" 优先判为 recommend
-        if re.search(r'(推荐|招牌|热门|给点建议|给建议|好喝的|好吃的|冷饮|热饮|特色|哪款|哪一种)', tn):
-            return 'recommend'
-        return 'menu'
+    # 4) 菜单/有什么
+    if is_en:
+        if re.search(r'\b(menu|what do you have|what do you offer|what can i get|what is available|what is on the menu|list|what\'?s available|what\'?s on offer)\b', tn):
+            # "any recommendation?" -> recommend
+            if re.search(r'\b(recommend|suggestion|suggest|popular|favorite|favourite|signature|best seller|hot item|new)\b', tn):
+                return 'recommend'
+            return 'menu'
+    else:
+        if re.search(r'(有没有(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有什么(咖啡|饮品|甜品|甜点|小食|蛋糕|点心|东西|喝的|吃的|可选|品种|种类|其他的|别的)?|有啥|还有啥|还有什么|有哪些|菜单|菜单一览|都有什么|都有啥|提供什么|有什么可以|有什么好)', tn):
+            if re.search(r'(推荐|招牌|热门|给点建议|给建议|好喝的|好吃的|冷饮|热饮|特色|哪款|哪一种)', tn):
+                return 'recommend'
+            return 'menu'
 
     # 5) 推荐请求
-    if re.search(r'(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|不知道点什么|给点建议|给建议|推荐一下|有什么推荐|有啥推荐|哪款好|哪个好|选什么|挑一个|suggest|recommend|popular)', tn):
-        return 'recommend'
+    if is_en:
+        if re.search(r'\b(recommend|suggest|suggestion|popular|favorite|favourite|what do you suggest|what is good|any recommendation|any suggestions|signature|best|try)\b', tn):
+            return 'recommend'
+    else:
+        if re.search(r'(推荐|招牌|热门|什么好|好喝|好吃|喝点什么|吃点什么|来点什么|不知道点什么|给点建议|给建议|推荐一下|有什么推荐|有啥推荐|哪款好|哪个好|选什么|挑一个|suggest|recommend|popular)', tn):
+            return 'recommend'
 
-    # 6) 强下单动作词 —— 只匹配明确的短语（避免"拿铁多少钱"中的"拿"被误匹配）
-    #    只匹配：来杯/来一份/点一杯/加一杯/打包带走一份 这样的完整短语
-    if has_items and re.search(r'(来杯|来一杯|来一份|点一杯|点一份|点一个|加一杯|加一份|加一个|点个|来个|点两杯|点两份|来两杯|来两份|打包一份|打包带走|打包带走一份|给我来|给我点|我要|我点|给我点|帮我点|帮我来|想要一杯|想要一份|想要)', tn):
+    # 6) 强下单动作词
+    if is_en:
+        order_pat = r'\b(i want|i would like|i\'?d like|give me|can i have|let me have|one order of|make it|add|i\'ll have|i will have|could i have|please make|please|get me|for here|to go|take away|takeout|take out)\b'
+    else:
+        order_pat = r'(来杯|来一杯|来一份|点一杯|点一份|点一个|加一杯|加一份|加一个|点个|来个|点两杯|点两份|来两杯|来两份|打包一份|打包带走|打包带走一份|给我来|给我点|我要|我点|帮我点|帮我来|想要一杯|想要一份|想要)'
+    if has_items and re.search(order_pat, tn):
         return 'order'
 
-    # 7) 确认/结账（必须没有新增商品——否则就是点单）
-    if not has_items and re.search(r'(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)', tn):
-        return 'confirm'
+    # 7) 确认/结账
+    if is_en:
+        if not has_items and re.search(r'\b(confirm|checkout|check out|done|pay|payment|that\'?s all|that is all|yes|okay|ok|sure|that will be all|i\'?m done|go ahead|proceed)\b', tn):
+            return 'confirm'
+    else:
+        if not has_items and re.search(r'(确认下单|确认一下|确认|结账|买单|去支付|支付|付款|就这样|就这些|就这些吧|好了|够了|checkout|done|ok|是的|对|好的|就这个|就这个吧|行了)', tn):
+            return 'confirm'
 
     # 8) 兜底：有商品命中 → 算 order
     if has_items:
         return 'order'
 
-    # 9) 纯备注
+    # 9) 纯备注（温度/规格/糖度等——英文中仅当没命中商品时才是备注）
     if has_remark_only:
         return 'remark'
 
     # 10) 问候/闲聊
-    if len(text) <= 12 and re.search(r'(你好|您好|在吗|哈喽|嗨|你好啊|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀|hiya|欢迎|welcome)', tn):
-        return 'chat'
+    if is_en:
+        if len(text) <= 20 and re.search(r'\b(hello|hi|hey|welcome|good morning|good afternoon|good evening|greetings|howdy)\b', tn):
+            return 'chat'
+    else:
+        if len(text) <= 12 and re.search(r'(你好|您好|在吗|哈喽|嗨|你好啊|哈喽你好|hello|hi|hey|Hi|HI|你好呀|嗨呀|hiya|欢迎|welcome)', tn):
+            return 'chat'
 
     return 'unknown'
 
 
-def _generate_reply(intent, items, remarks, text, goods, cart_items):
-    """根据意图 + 槽位，生成自然一点的回复（不再是固定话术）。"""
+def _generate_reply(intent, items, remarks, text, goods, cart_items, lang='zh'):
+    """根据意图 + 槽位，生成自然回复。lang='en' 时回复全英文。
+    特别处理：如果 items 中有 unavailable 的商品，会在回复中单独提示缺货。
+    """
     tn = _normalize(text)
+    is_en = (lang == 'en')
     cart_total = sum(float(x.get('price', 0) or 0) * int(x.get('count', 1) or 1) for x in (cart_items or []))
     cart_count = sum(int(x.get('count', 1) or 1) for x in (cart_items or []))
-    # 把本次 items 也计进来（用于 order 意图的"合计"播报）
+
+    # 区分可用/不可用商品
+    available_items = [it for it in items if it.get('available', True)]
+    unavailable_items = [it for it in items if not it.get('available', True)]
+
     extra_total = 0
     if intent == 'order':
-        for it in items:
+        for it in available_items:
             g = next((x for x in goods if x.get('id') == it['id']), None)
             if g:
                 extra_total += float(g.get('price', 0) or 0) * int(it.get('qty') or 1)
     total_after = cart_total + extra_total
 
-    # —— 每种意图的"可理解"自然回复 ——
+    # —— 英文回复 ——
+    if is_en:
+        unavailable_note = ''
+        if unavailable_items:
+            un_names = ', '.join([x.get('name', '') for x in unavailable_items])
+            unavailable_note = f' (Sorry, {un_names} is currently out of stock.)'
+
+        if intent == 'cancel':
+            if cart_items:
+                return f'Cart cleared. Removed {cart_count} items totaling ¥{cart_total:.2f}. You can start fresh now.'
+            return 'Your cart is already empty. You can say something like "one latte" to start.'
+
+        if intent == 'confirm':
+            if not cart_items:
+                return 'Your cart is empty. Please add items first, then say "checkout".'
+            names = ', '.join([f"{x.get('name','')}×{x.get('count',1)}" for x in cart_items])
+            return f'Order confirmed: {names}. Total ¥{cart_total:.2f}. Please scan the QR code to pay.'
+
+        if intent == 'remove':
+            if items:
+                names = ', '.join([x['name'] for x in items])
+                return f'Sure. Removed {names} from your cart.'
+            if cart_items:
+                names = ', '.join([f"{x.get('name','')}×{x.get('count',1)}" for x in cart_items])
+                return f'Currently in cart: {names}. Which one would you like to remove?'
+            return 'Nothing in cart to remove. Please add items first.'
+
+        if intent == 'price':
+            if items:
+                lines = []
+                for it in items:
+                    g = next((x for x in goods if x.get('id') == it['id']), None)
+                    if g:
+                        lines.append(f"{g.get('name','')} ¥{g.get('price',0)}")
+                names_line = ', '.join(lines)
+                return f'{names_line}. Would you like to add any to your cart? Just say "yes" or the item name again.'
+            return 'Which item would you like to know the price of? Try "how much is a latte?".'
+
+        if intent == 'menu':
+            groups = {}
+            for g in goods or []:
+                key = g.get('cate') or 'other'
+                groups.setdefault(key, []).append(g.get('name', ''))
+            label_map = {
+                'espresso': 'Espresso',
+                'latte': 'Lattes & Milk Coffee',
+                'dessert': 'Desserts',
+                'drink': 'Other Drinks',
+            }
+            parts = []
+            for key, names in groups.items():
+                label = label_map.get(key, key)
+                if names:
+                    parts.append(f"{label}: {', '.join(names[:5])}")
+            if not parts:
+                return 'We serve coffee, desserts and drinks. Just tell me what you want, e.g. "one latte".'
+            body = ' | '.join(parts)
+            return f'Sure, here is our menu — {body}. Which one would you like?'
+
+        if intent == 'recommend':
+            coffee = [g for g in goods if g.get('cate') in ('latte', 'espresso')]
+            desserts = [g for g in goods if g.get('cate') == 'dessert']
+            drinks = [g for g in goods if g.get('cate') == 'drink']
+            picks = []
+            if coffee: picks.append(coffee[len(coffee) // 2])
+            if desserts: picks.append(desserts[0])
+            if drinks: picks.append(drinks[0])
+            if picks:
+                names = ', '.join([f"{g.get('name','')}(¥{g.get('price',0)})" for g in picks])
+                return f'I recommend: {names}. Just tell me which one you want, e.g. "one latte, two tiramisus".'
+            return 'Our signature items are Latte, Caramel Macchiato and Tiramisu. Which would you like?'
+
+        if intent == 'order':
+            if not available_items and not unavailable_items:
+                return 'Sorry, I did not catch the item name. Please repeat, e.g. "one americano".'
+            if not available_items and unavailable_items:
+                un_names = ', '.join([x.get('name', '') for x in unavailable_items])
+                return f'Sorry — {un_names} is out of stock right now. Would you like to try something else?'
+            names = ', '.join([f"{x['name']}×{x['qty']}" for x in available_items])
+            remark_part = ''
+            if remarks:
+                remark_part = f', notes: {", ".join(remarks)}'
+            after = f'Total after adding: ¥{total_after:.2f}' if total_after > 0 else 'Total ¥0'
+            base = f'Got it: {names}{remark_part}. {after}. Anything else?'
+            if unavailable_items:
+                un_names = ', '.join([x.get('name', '') for x in unavailable_items])
+                base += f' (Note: {un_names} is currently out of stock and could not be added.)'
+            return base
+
+        if intent == 'remark':
+            if remarks:
+                note = f'Notes: {", ".join(remarks)}.'
+                if cart_items:
+                    return f'OK, I have noted: {note} I will attach this to your current order.'
+                return f'OK. {note} But you have not selected any items yet. Please tell me what you would like.'
+            return 'OK.'
+
+        if intent == 'chat':
+            return 'Hello! Welcome to Kora Zola. What would you like? Just say the item name, e.g. "one latte".'
+
+        # unknown（英文）
+        possible = []
+        for g in goods or []:
+            name_n = _normalize(g.get('name', ''))
+            if not name_n: continue
+            for i in range(len(name_n)):
+                for j in range(i + 2, len(name_n) + 1):
+                    sub = name_n[i:j]
+                    if len(sub) >= 2 and sub in tn:
+                        if g not in possible: possible.append(g)
+                        break
+                if g in possible: break
+        if possible:
+            names = ', '.join([g.get('name', '') for g in possible[:3]])
+            return f'Did you mean: {names}? Please say the full item name plus quantity, e.g. "one latte".'
+        return "I'm sorry, I did not understand. Please say the item name and quantity, e.g. \"one latte\"."
+
+    # —— 中文回复（默认，带缺货提示） ——
+    unavailable_note = ''
+    if unavailable_items:
+        un_names = '、'.join([x.get('name', '') for x in unavailable_items])
+        unavailable_note = f'（注：{un_names} 目前缺货，暂时无法加入订单）'
+
     if intent == 'cancel':
         if cart_items:
             return f'已为您清空购物车（共 {cart_count} 件商品，合计¥{cart_total:.2f}）。您可以重新开始点单。'
@@ -664,14 +845,12 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items):
         if not cart_items:
             return '购物车里还没有商品哦。您可以先告诉我想点的商品，再说"确认下单"。'
         names = '、'.join([f"{x.get('name','')}×{x.get('count',1)}" for x in cart_items])
-        msg = f'好的，已确认您的订单：{names}，合计¥{cart_total:.2f}。请扫码完成支付。'
-        return msg
+        return f'好的，已确认您的订单：{names}，合计¥{cart_total:.2f}。请扫码完成支付。'
 
     if intent == 'remove':
         if items:
             names = '、'.join([x['name'] for x in items])
             return f'好的，已为您从购物车中移除：{names}。'
-        # 没说具体商品
         if cart_items:
             names = '、'.join([f"{x.get('name','')}×{x.get('count',1)}" for x in cart_items])
             return f'当前购物车里有：{names}。请问您想去掉哪一个？'
@@ -685,12 +864,10 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items):
                 if g:
                     lines.append(f"{g.get('name','')} ¥{g.get('price',0)}")
             names_line = '；'.join(lines)
-            hint = '需要直接帮您加入购物车吗？说"确认下单"就可以支付啦。'
-            return f'{names_line}。{hint}'
+            return f'{names_line}。需要直接帮您加入购物车吗？说"确认下单"就可以支付啦。'
         return '请问您想了解哪个商品的价格？可以直接说"拿铁多少钱"。'
 
     if intent == 'menu':
-        # 按分类聚合（更自然）
         groups = {}
         for g in goods or []:
             key = g.get('cate') or '其他'
@@ -712,39 +889,41 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items):
         return f'好的，我们目前提供的品类如下——{body}。您想点哪一款？'
 
     if intent == 'recommend':
-        # 挑出 3 个"招牌"候选（选价格中档的 + 第一个甜品）
         coffee = [g for g in goods if g.get('cate') in ('latte', 'espresso')]
         desserts = [g for g in goods if g.get('cate') == 'dessert']
         drinks = [g for g in goods if g.get('cate') == 'drink']
         picks = []
-        if coffee:
-            picks.append(coffee[len(coffee) // 2])  # 选中间那个（非最贵也非最便宜）
-        if desserts:
-            picks.append(desserts[0])
-        if drinks:
-            picks.append(drinks[0])
+        if coffee: picks.append(coffee[len(coffee) // 2])
+        if desserts: picks.append(desserts[0])
+        if drinks: picks.append(drinks[0])
         if picks:
             names = '、'.join([f"{g.get('name','')}(¥{g.get('price',0)})" for g in picks])
             return f'推荐您尝试：{names}。您可以直接告诉我要哪个，例如"来一杯拿铁，两份提拉米苏"。'
         return '我们的招牌有拿铁咖啡、焦糖玛奇朵、提拉米苏、美式咖啡，您想尝试哪一款？'
 
     if intent == 'order':
-        if not items:
+        if not available_items and not unavailable_items:
             return '好的，不过我还没听清具体是哪个商品哦。可以再说一次商品名，例如"美式咖啡一杯"。'
-        names = '、'.join([f"{x['name']}×{x['qty']}" for x in items])
+        # 全缺货
+        if not available_items and unavailable_items:
+            un_names = '、'.join([x.get('name', '') for x in unavailable_items])
+            return f'抱歉，{un_names} 目前缺货，暂时无法点单。您可以尝试其他商品，例如"提拉米苏一份"。'
+        names = '、'.join([f"{x['name']}×{x['qty']}" for x in available_items])
         remark_part = ''
         if remarks:
             remark_part = f'，备注：{" ".join(remarks)}'
         after = f'本次加入后合计¥{total_after:.2f}' if total_after > 0 else '合计 ¥0'
-        # 更自然的说法，随机化一下（不随机；用语气变化）
         variants = [
             f'好的，已为您下单：{names}{remark_part}。{after}。还需要其他商品吗？',
             f'收到，已经为您加入：{names}{remark_part}。{after}。可以继续点或说"确认下单"。',
             f'没问题～{names}已记录{remark_part}。{after}。还要点别的吗？',
         ]
-        # 用文本长度做一个伪随机（保持稳定，不每次跳）
         idx = (len(text) + sum(ord(c) for c in text)) % len(variants)
-        return variants[idx]
+        result = variants[idx]
+        if unavailable_items:
+            un_names = '、'.join([x.get('name', '') for x in unavailable_items])
+            result += f' 注：{un_names} 目前缺货，暂时无法加入。'
+        return result
 
     if intent == 'remark':
         if remarks:
@@ -757,7 +936,7 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items):
     if intent == 'chat':
         return '你好！欢迎来到 Kora Zola。请问想点什么呢？可以直接说商品名，比如"一杯拿铁，少糖"。'
 
-    # unknown：给出最像商品的提示，而不是说听不懂
+    # unknown：给出最像商品的提示
     # 把所有商品名中 2 字以上的子词做一次是否存在的检查；如果有些关键词命中，则反问确认
     possible = []
     for g in goods or []:
@@ -790,38 +969,32 @@ def _generate_reply(intent, items, remarks, text, goods, cart_items):
     return f'抱歉我没能准确理解。您可以直接告诉我：商品名 + 数量，例如"来一杯拿铁"、"两份提拉米苏"。目前有{", ".join(examples[:4])} 等可选。'
 
 
-def local_parse(text, goods, cart_items):
-    """轻量但可理解的本地规则引擎：
-    1) 抽取槽位（商品+数量、备注）
-    2) 意图判断（受文本 + 槽位共同影响）
-    3) 生成自然回复（不再是硬编码的单一话术）
+def local_parse(text, goods, cart_items, lang='zh'):
+    """轻量但可理解的本地规则引擎。
+    lang: 'zh' 中文模式，'en' 英文模式（全英文回复）
     """
     t = text.strip()
     if not t:
+        empty_reply = 'Please say what you would like.' if lang == 'en' else '请告诉我您想点什么。'
         return {'intent': 'unknown', 'items': [], 'remarks': [],
-                'reply': '请告诉我您想点什么。', 'openCheckout': False}
+                'reply': empty_reply, 'openCheckout': False}
 
-    # 1) 商品识别（支持多商品）
+    # 1) 商品识别
     items = _smart_match_items(t, goods, cart_items or [])
 
     # 2) 备注识别
     remarks = _extract_remarks_smart(t)
 
-    # 3) 是否只有备注（用于区分"只给备注"的意图）
-    # 条件：有备注词 + 没有商品命中 + 文本中也没有其他强关键词
+    # 3) 纯备注判断
     has_remark_only = bool(remarks) and not bool(items)
 
-    # 4) 意图判断
-    intent = _classify_intent(t, items, has_remark_only, bool(cart_items))
+    # 4) 意图判断（带语言参数）
+    intent = _classify_intent(t, items, has_remark_only, bool(cart_items), lang)
 
-    # 5) 生成自然回复
-    reply = _generate_reply(intent, items, remarks, t, goods or [], cart_items or [])
+    # 5) 生成自然回复（带语言参数）
+    reply = _generate_reply(intent, items, remarks, t, goods or [], cart_items or [], lang)
 
-    # 6) 如果是 confirm，标记 openCheckout=True（前端会据此打开支付弹窗）
     open_checkout = (intent == 'confirm' and bool(cart_items))
-
-    # 7) 对于"推荐 / 菜单 / 价格"，也把命中的 items 带上，便于前端给用户点击确认下单
-    # （price 已经在 items 里了；recommend/menu 则没有 items，这里不做强塞）
 
     return {
         'intent': intent,
@@ -841,23 +1014,33 @@ def ai_chat(payload):
     payload 期望：
       {
         "text": "用户说的一句话",
-        "goods": [ {id, name, price, cate}... ],   // 当前门店商品列表
-        "cart":  [ {id, name, price, count}... ] // 购物车现状
+        "goods": [ {id, name, price, cate, stock, status}... ],  // 当前商品
+        "cart":  [ {id, name, price, count}... ],                // 购物车现状
+        "mode": "normal"|"english"|"admin",                       // 交互模式
+        "lang": "zh"|"en"                                          // 响应语言
       }
     返回：{ "source": "llm"|"local", "engine": "...", ...意图JSON }
     """
     text = str(payload.get('text', '') or '').strip()
     goods = payload.get('goods') or []
     cart_items = payload.get('cart') or []
+    mode = str(payload.get('mode') or 'normal').lower()
+    lang = str(payload.get('lang') or 'zh').lower()
+    # mode=english 时语言自动设为英文
+    if mode == 'english':
+        lang = 'en'
+    # admin 模式：由前端自己处理，这里兜底为普通解析
+    # 如果后端暴露独立 /api/ai/admin 接口，将走专门逻辑
 
     if not text:
+        empty_rep = 'Please say what you would like.' if lang == 'en' else '请输入您想说的内容。'
         return {'source': 'local', 'engine': 'fallback-empty',
                 'intent': 'unknown', 'items': [], 'remarks': [],
-                'reply': '请输入您想说的内容。', 'openCheckout': False}
+                'reply': empty_rep, 'openCheckout': False}
 
-    # 1) 先尝试大模型
+    # 1) 先尝试大模型（仅普通模式 + 配置了 LLM 时才走）
     ai_cfg = CONFIG.get('ai', {})
-    use_llm = bool(ai_cfg.get('enabled')) and bool(ai_cfg.get('apiKey')) and bool(ai_cfg.get('apiBase')) and bool(ai_cfg.get('model'))
+    use_llm = (mode == 'normal') and bool(ai_cfg.get('enabled')) and bool(ai_cfg.get('apiKey')) and bool(ai_cfg.get('apiBase')) and bool(ai_cfg.get('model'))
     result = None
     source = 'local'
     engine = 'local-rules'
@@ -867,16 +1050,16 @@ def ai_chat(payload):
         cart_json = json.dumps(cart_items, ensure_ascii=False)
         sys_prompt = SYSTEM_PROMPT.replace('__GOODS_JSON_PLACEHOLDER__', goods_json) \
                                    .replace('__CART_JSON_PLACEHOLDER__', cart_json)
+        if lang == 'en':
+            sys_prompt = 'You are an English-speaking ordering assistant. Respond in English only. ' + sys_prompt
         try:
             t0 = time.time()
             raw = call_llm(sys_prompt, text)
-            # 大模型有时会套 markdown ```json ... ```
             raw_clean = re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=re.IGNORECASE | re.DOTALL)
             parsed = json.loads(raw_clean)
-            # 关键字段给默认值
             parsed.setdefault('items', [])
             parsed.setdefault('remarks', [])
-            parsed.setdefault('reply', '好的。')
+            parsed.setdefault('reply', 'OK.')
             parsed.setdefault('intent', 'unknown')
             parsed.setdefault('openCheckout', False)
             result = parsed
@@ -886,9 +1069,9 @@ def ai_chat(payload):
         except Exception as e:
             log('WARN', f'LLM 调用失败，回退到本地解析：{e}')
 
-    # 2) 降级本地解析
+    # 2) 降级本地解析（带语言参数）
     if result is None:
-        result = local_parse(text, goods, cart_items)
+        result = local_parse(text, goods, cart_items, lang)
         log('INFO', f'本地解析 intent={result.get("intent")} items={len(result.get("items",[]))}')
 
     # 归一化：保证 items 中每项都带 id/name/qty；如果大模型只给了 name，自动从 goods 反查 id
