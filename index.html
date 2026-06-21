@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover, user-scalable=no">
   <title>Kora Zola  - 收银系统</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -24,9 +24,15 @@
   </script>
   <style type="text/tailwindcss">
     @layer utilities {
+      /* ===== 性能与通用样式 ===== */
+      html, body { -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
       .card-shadow { box-shadow: 0 2px 8px rgba(111, 78, 55, 0.1); }
-      .btn-hover { @apply transition-all duration-300 hover:scale-105 hover:shadow-lg; }
-      .card-hover { @apply transition-all duration-300 hover:border-coffee-main hover:shadow-md hover:-translate-y-1; }
+      /* 按钮点击反馈：使用 transform/box-shadow 具体属性，避免昂贵的 transition-all 全量重绘 */
+      .btn-hover { transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease, opacity 0.18s ease; }
+      .btn-hover:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(111, 78, 55, 0.12); }
+      .btn-hover:active { transform: translateY(0) scale(0.97); }
+      .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+      .card-hover:hover { border-color: #8B5A2B; box-shadow: 0 4px 14px rgba(111, 78, 55, 0.1); transform: translateY(-2px); }
       .number-input { @apply w-16 text-center bg-coffee-cream border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main; }
       .code-input { @apply w-full py-2 px-3 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-center text-lg; }
       .search-input { @apply w-full py-1.5 px-3 pl-8 border border-coffee-light rounded-md focus:outline-none focus:ring-2 focus:ring-coffee-main text-sm; }
@@ -48,7 +54,9 @@
       .bottom-pay-bar {
         @apply fixed bottom-0 left-0 right-0 bg-white border-t-2 border-coffee-light/50 z-40 py-3 px-4 shadow-lg;
       }
-      .count-btn { @apply transition-all duration-200 hover:bg-coffee-main hover:text-white; }
+      .count-btn { transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease; }
+      .count-btn:hover { background-color: #8B5A2B; color: #fff; }
+      .count-btn:active { transform: scale(0.95); }
       .close-btn { @apply w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors; }
       .undo-btn { @apply px-3 py-1.5 rounded-md bg-coffee-cream text-coffee-dark text-xs btn-hover flex items-center gap-1; }
 
@@ -68,16 +76,16 @@
       .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
 
       /* 提高取餐面板z-index，避免被底部栏遮挡，添加折叠后点击光标 */
-      .pickup-panel { @apply transition-all duration-300 w-80 bg-white rounded-lg card-shadow p-4 fixed right-4 bottom-4 z-50 cursor-default; }
+      .pickup-panel { transition: transform 0.3s ease, box-shadow 0.3s ease, width 0.3s ease, height 0.3s ease, padding 0.3s ease; width: 20rem; background: #fff; border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(111,78,55,0.1); padding: 1rem; position: fixed; right: 1rem; bottom: 1rem; z-index: 50; }
       .pickup-panel.collapsed {
-        @apply w-16 h-16 rounded-full flex items-center justify-center p-0 !important;
-        cursor: pointer; /* 折叠后显示手型光标，提示可点击 */
+        width: 4rem; height: 4rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; padding: 0;
+        cursor: pointer;
       }
-      .pickup-panel .panel-content { @apply transition-all duration-300; }
-      .pickup-panel.collapsed .panel-content { @apply hidden !important; }
+      .pickup-panel .panel-content { transition: opacity 0.2s ease; }
+      .pickup-panel.collapsed .panel-content { display: none; }
       /* 折叠面板的中心图标样式 */
-      .collapsed-icon { @apply hidden text-2xl text-coffee-main; }
-      .pickup-panel.collapsed .collapsed-icon { @apply block !important; }
+      .collapsed-icon { display: none; font-size: 1.5rem; color: #8B5A2B; }
+      .pickup-panel.collapsed .collapsed-icon { display: block; }
       .call-modal { @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden; }
       .call-modal-content {
         @apply bg-white rounded-lg p-8 shadow-xl text-center;
@@ -247,6 +255,48 @@
       }
       /* 确保日志内容在水印之上 */
       .log-detail-inner { position: relative; z-index: 1; }
+
+      /* ===== 全局滚动/动画性能优化（避免滚动时的合成层抖动） ===== */
+      .btn-hover, .card-hover, .goods-card, .pickup-panel, .call-modal-content {
+        will-change: transform;
+      }
+      /* 弹窗容器禁止在动画过程中重新布局子元素 */
+      .modal-fade { will-change: opacity; }
+
+      /* ===== 按钮通用可点击区域：移动端最低 44px ===== */
+      button, [role="button"] {
+        min-height: 40px;
+      }
+
+      /* ===== 响应式布局：平板 ===== */
+      @media (max-width: 1024px) {
+        #goods-list { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        .pickup-panel { width: 18rem; right: 0.75rem; bottom: 0.75rem; padding: 0.75rem; }
+      }
+      /* ===== 响应式布局：小平板 / 大屏手机 ===== */
+      @media (max-width: 768px) {
+        #goods-list { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.75rem !important; }
+        .bottom-pay-bar { padding: 0.5rem 0.75rem; }
+        .pickup-panel { width: calc(100% - 1.5rem); right: 0.75rem; bottom: 0.75rem; left: 0.75rem; }
+        .pickup-panel.collapsed { width: 3.5rem; height: 3.5rem; left: auto; padding: 0; }
+        h1 { font-size: 1.15rem; }
+        main { padding: 0.75rem; }
+      }
+      /* ===== 响应式布局：手机 ===== */
+      @media (max-width: 480px) {
+        #goods-list { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; gap: 0.5rem !important; }
+        .category-btn { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+        .pay-qrcode-container { width: 14rem; height: 14rem; }
+        .call-modal-content { padding: 1.5rem !important; min-width: unset !important; width: 90% !important; }
+        /* 刘海屏/底部虚拟键区安全距离 */
+        body { padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+        .bottom-pay-bar { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)); }
+        header { padding-top: env(safe-area-inset-top); }
+      }
+      /* ===== 桌面（>1280px）保持多列，显式加大间距 ===== */
+      @media (min-width: 1280px) {
+        #goods-list { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+      }
     }
   </style>
   <style>
@@ -3820,71 +3870,86 @@
     // 渲染商品列表
     function renderGoodsList(cate) {
       const goodsListEl = document.getElementById('goods-list');
-      goodsListEl.innerHTML = '';
-      let filteredGoods = cate === 'all' ? GOODS_DATA : GOODS_DATA.filter(item => item.cate === cate);
+      if (!goodsListEl) return;
+      // 清空容器（使用 textContent 比 innerHTML 更安全高效）
+      goodsListEl.textContent = '';
+      let filteredGoods = cate === 'all' ? GOODS_DATA : GOODS_DATA.filter(function(item){ return item.cate === cate; });
       if (filteredGoods.length === 0) {
-        goodsListEl.innerHTML = `
-          <div class="col-span-full text-center py-10 text-coffee-dark">
-            <i class="fa-solid fa-box-open text-4xl text-coffee-light mb-3"></i>
-            <p>当前分类下暂无商品</p>
-          </div>
-        `;
+        const empty = document.createElement('div');
+        empty.className = 'col-span-full text-center py-10 text-coffee-dark';
+        empty.innerHTML = `<i class="fa-solid fa-box-open text-4xl text-coffee-light mb-3"></i><p>当前分类下暂无商品</p>`;
+        goodsListEl.appendChild(empty);
         return;
       }
-      filteredGoods.forEach(goods => {
+      // 使用 DocumentFragment 减少回流次数
+      const frag = document.createDocumentFragment();
+      const CATE_LABEL = { espresso: '意式咖啡', latte: '拿铁系列', dessert: '甜点小食', drink: '非咖饮品' };
+      for (let i = 0, len = filteredGoods.length; i < len; i++) {
+        const goods = filteredGoods[i];
         const goodsCard = document.createElement('div');
         goodsCard.className = 'goods-card cursor-pointer';
+        goodsCard.dataset.goodsId = goods.id;
+        const label = CATE_LABEL[goods.cate] || '未分类';
         goodsCard.innerHTML = `
           <div class="p-5">
             <div class="mb-3">
-              <span class="inline-block px-2 py-1 bg-coffee-cream text-coffee-dark text-xs rounded-full">
-                ${goods.cate === 'espresso' ? '意式咖啡' : 
-                  goods.cate === 'latte' ? '拿铁系列' : 
-                  goods.cate === 'dessert' ? '甜点小食' : '非咖饮品'}
-              </span>
+              <span class="inline-block px-2 py-1 bg-coffee-cream text-coffee-dark text-xs rounded-full">${label}</span>
             </div>
             <h3 class="font-medium text-coffee-dark text-lg truncate mb-2">${goods.name}</h3>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-coffee-main font-bold text-xl">¥${goods.price.toFixed(2)}</span>
+              <span class="text-coffee-main font-bold text-xl">¥${(typeof goods.price === 'number' ? goods.price : 0).toFixed(2)}</span>
               <button class="px-4 py-2 rounded-lg bg-coffee-main text-white text-sm shadow-md pointer-events-none">
                 <i class="fa-solid fa-money-bill-wave mr-1"></i>付款
               </button>
             </div>
           </div>
         `;
-        goodsListEl.appendChild(goodsCard);
-        // 点击卡片任意位置都能添加商品
-        // 单击：添加商品到购物车；双击/右键：编辑商品详情
-        // 使用 clickTimer 延迟单击处理，避免双击时误触发两次单击
-        let clickTimer = null;
-        goodsCard.addEventListener('click', function() {
-          if (clickTimer) return; // 已有双击等待中，跳过单击
-          clickTimer = setTimeout(() => {
-            const goodsId = goods.id;
-            const selectedGoods = GOODS_DATA.find(item => item.id === goodsId);
-            currentGoods[goodsId] = currentGoods[goodsId] ? { ...selectedGoods, count: currentGoods[goodsId].count + 1 } : { ...selectedGoods, count: 1 };
-            updateBottomAmount();
-            openCheckoutModal();
-            clickTimer = null;
-          }, 250);
-        });
-        goodsCard.addEventListener('dblclick', function() {
-          if (clickTimer) {
-            clearTimeout(clickTimer);
-            clickTimer = null;
-          }
-          openEditGoodsModal(goods.id);
-        });
-        goodsCard.addEventListener('contextmenu', function(e) {
-          e.preventDefault();
-          if (clickTimer) {
-            clearTimeout(clickTimer);
-            clickTimer = null;
-          }
-          openEditGoodsModal(goods.id);
-        });
-      });
+        frag.appendChild(goodsCard);
+      }
+      goodsListEl.appendChild(frag);
     }
+
+    // 商品卡片事件委托：点击、双击、右键统一绑定在容器上，避免每次渲染重复绑定
+    (function bindGoodsListDelegate() {
+      const goodsListEl = document.getElementById('goods-list');
+      if (!goodsListEl) return;
+      let clickTimer = null;
+      // 单击：加入购物车并打开结算弹窗
+      goodsListEl.addEventListener('click', function(e) {
+        const card = e.target.closest('.goods-card');
+        if (!card) return;
+        if (clickTimer) return; // 等待双击判定中
+        clickTimer = setTimeout(function() {
+          clickTimer = null;
+          const goodsId = Number(card.dataset.goodsId);
+          const selectedGoods = GOODS_DATA.find(function(it){ return it.id === goodsId; });
+          if (!selectedGoods) return;
+          if (currentGoods[goodsId]) {
+            currentGoods[goodsId] = { ...selectedGoods, count: currentGoods[goodsId].count + 1 };
+          } else {
+            currentGoods[goodsId] = { ...selectedGoods, count: 1 };
+          }
+          updateBottomAmount();
+          openCheckoutModal();
+        }, 230);
+      });
+      // 双击：编辑商品
+      goodsListEl.addEventListener('dblclick', function(e) {
+        const card = e.target.closest('.goods-card');
+        if (!card) return;
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        openEditGoodsModal(Number(card.dataset.goodsId));
+      });
+      // 右键：编辑商品
+      goodsListEl.addEventListener('contextmenu', function(e) {
+        const card = e.target.closest('.goods-card');
+        if (!card) return;
+        e.preventDefault();
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        openEditGoodsModal(Number(card.dataset.goodsId));
+      });
+    })();
+
 
     // 删除商品
     function deleteGoods(goodsId) {
@@ -4204,23 +4269,39 @@
 
     // 更新底部待付款金额
     function updateBottomAmount() {
+      const amountEl = document.getElementById('bottom-amount');
+      if (!amountEl) return;
+      let total = 0;
       if (currentGoods._total) {
-        document.getElementById('bottom-amount').textContent = `¥${currentGoods._total.toFixed(2)}`;
-        return;
+        total = currentGoods._total;
+      } else {
+        const items = Object.values(currentGoods);
+        for (let i = 0, len = items.length; i < len; i++) {
+          const g = items[i];
+          total += (g.price || 0) * (g.count || 0);
+        }
       }
-      const total = Object.values(currentGoods).reduce((sum, goods) => sum + (goods.price || 0) * (goods.count || 0), 0);
-      document.getElementById('bottom-amount').textContent = `¥${total.toFixed(2)}`;
+      amountEl.textContent = '¥' + total.toFixed(2);
     }
 
-    // 分类切换事件
+    // 分类切换事件（事件委托版本，比 querySelectorAll 循环绑定更轻量）
     function bindCategoryEvents() {
-      const btns = document.querySelectorAll('.category-btn');
-      btns.forEach(btn => btn.addEventListener('click', function() {
-        btns.forEach(b => b.classList.remove('active', 'bg-coffee-main', 'text-white') && b.classList.add('bg-coffee-cream', 'text-coffee-dark'));
-        this.classList.add('active', 'bg-coffee-main', 'text-white');
-        this.classList.remove('bg-coffee-cream', 'text-coffee-dark');
-        renderGoodsList(this.dataset.cate);
-      }));
+      const wrap = document.querySelector('.category-btn') && document.querySelector('.category-btn').parentElement;
+      if (!wrap) return;
+      wrap.addEventListener('click', function(e) {
+        const btn = e.target.closest('.category-btn');
+        if (!btn) return;
+        // 取消所有按钮的激活状态
+        const all = wrap.querySelectorAll('.category-btn');
+        for (let i = 0; i < all.length; i++) {
+          all[i].classList.remove('active', 'bg-coffee-main', 'text-white');
+          all[i].classList.add('bg-coffee-cream', 'text-coffee-dark');
+        }
+        // 激活当前按钮
+        btn.classList.add('active', 'bg-coffee-main', 'text-white');
+        btn.classList.remove('bg-coffee-cream', 'text-coffee-dark');
+        renderGoodsList(btn.dataset.cate);
+      });
     }
 
     // 设置相关配置
