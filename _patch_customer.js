@@ -1,15 +1,9 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=10.0, viewport-fit=cover">
-  <meta name="theme-color" content="#8B5A2B">
-  <meta name="format-detection" content="telephone=no">
-  <title>Kora Zola - 点单</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script>
+// 替换 customer.html 中的 script 块为优化版
+const fs = require('fs');
+const path = '/workspace/customer.html';
+const html = fs.readFileSync(path, 'utf-8');
+
+const newScript = `  <script>
     // ============ 工具函数（稳定、低开销）============
     function safeGetLS(key, fb) {
       try { var r = localStorage.getItem(key); return r ? JSON.parse(r) : fb; }
@@ -31,16 +25,16 @@
 
     // ============ 数据层 ============
     var DEFAULT_GOODS = [
-      { id: 1, name: '经典意式浓缩', price: 18, stock: 99, cate: 'espresso', img: 'https://picsum.photos/id/431/200/150' },
-      { id: 2, name: '美式咖啡', price: 22, stock: 99, cate: 'espresso', img: 'https://picsum.photos/id/766/200/150' },
-      { id: 3, name: '拿铁咖啡', price: 28, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/225/200/150' },
-      { id: 4, name: '卡布奇诺', price: 30, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/312/200/150' },
-      { id: 5, name: '生椰拿铁', price: 32, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/433/200/150' },
-      { id: 6, name: '提拉米苏', price: 26, stock: 50, cate: 'dessert', img: 'https://picsum.photos/id/292/200/150' },
-      { id: 7, name: '蔓越莓司康', price: 16, stock: 30, cate: 'dessert', img: 'https://picsum.photos/id/434/200/150' },
-      { id: 8, name: '鲜榨橙汁', price: 20, stock: 20, cate: 'drink', img: 'https://picsum.photos/id/447/200/150' },
-      { id: 9, name: '气泡水', price: 18, stock: 40, cate: 'drink', img: 'https://picsum.photos/id/488/200/150' },
-      { id: 10, name: '焦糖玛奇朵', price: 35, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/614/200/150' }
+      { id: 1, name: '\u7ecf\u5178\u610f\u5f0f\u6d53\u7f29', price: 18, stock: 99, cate: 'espresso', img: 'https://picsum.photos/id/431/200/150' },
+      { id: 2, name: '\u7f8e\u5f0f\u5496\u5561', price: 22, stock: 99, cate: 'espresso', img: 'https://picsum.photos/id/766/200/150' },
+      { id: 3, name: '\u62ff\u94c1\u5496\u5561', price: 28, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/225/200/150' },
+      { id: 4, name: '\u5361\u5e03\u5947\u8bfa', price: 30, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/312/200/150' },
+      { id: 5, name: '\u751f\u6930\u62ff\u94c1', price: 32, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/433/200/150' },
+      { id: 6, name: '\u63d0\u62c9\u7c73\u82cf', price: 26, stock: 50, cate: 'dessert', img: 'https://picsum.photos/id/292/200/150' },
+      { id: 7, name: '\u8513\u8d8a\u8393\u53f8\u5eb7', price: 16, stock: 30, cate: 'dessert', img: 'https://picsum.photos/id/434/200/150' },
+      { id: 8, name: '\u9c9c\u69a8\u6a59\u6c41', price: 20, stock: 20, cate: 'drink', img: 'https://picsum.photos/id/447/200/150' },
+      { id: 9, name: '\u6c14\u6ce1\u6c34', price: 18, stock: 40, cate: 'drink', img: 'https://picsum.photos/id/488/200/150' },
+      { id: 10, name: '\u7126\u7cd6\u739b\u5947\u6735', price: 35, stock: 99, cate: 'latte', img: 'https://picsum.photos/id/614/200/150' }
     ];
     var GOODS_DATA = safeGetLS('starCoffeeGoods', DEFAULT_GOODS);
     var GOODS_CACHE = {};
@@ -64,7 +58,7 @@
         wrap.className = 'goods-card';
         wrap.innerHTML = '<img src="' + g.img + '" alt="' + g.name + '" class="w-full h-32 object-cover" loading="lazy">' +
           '<div class="p-3"><h3 class="font-medium text-coffee-dark text-sm mb-1">' + g.name + '</h3>' +
-          '<div class="flex justify-between items-center"><span class="text-coffee-main font-bold">¥' + (typeof g.price === 'number' ? g.price.toFixed(2) : '0.00') + '</span>' +
+          '<div class="flex justify-between items-center"><span class="text-coffee-main font-bold">\u00a5' + (typeof g.price === 'number' ? g.price.toFixed(2) : '0.00') + '</span>' +
           '<div class="flex items-center gap-2">' +
           '<button class="add-minus-btn w-7 h-7 flex items-center justify-center rounded-full bg-coffee-cream text-coffee-dark btn-hover" data-id="' + g.id + '" data-action="minus"><i class="fa-solid fa-minus text-xs"></i></button>' +
           '<span class="text-sm w-6 text-center" id="count-' + g.id + '">' + (cart[g.id] ? cart[g.id].count : 0) + '</span>' +
@@ -86,8 +80,8 @@
       }
       var countEl = $('cart-count'), totalEl = $('cart-total'), detailEl = $('cart-detail'), submitBtn = $('submit-order');
       if (countEl) countEl.textContent = totalCount;
-      if (totalEl) totalEl.textContent = '¥' + totalPrice.toFixed(2);
-      if (detailEl) detailEl.textContent = cartList.length ? cartList.map(function (it) { return it.name + '×' + it.count; }).join('，') : '购物车是空的';
+      if (totalEl) totalEl.textContent = '\u00a5' + totalPrice.toFixed(2);
+      if (detailEl) detailEl.textContent = cartList.length ? cartList.map(function (it) { return it.name + '\u00d7' + it.count; }).join('\uff0c') : '\u8d2d\u7269\u8f66\u662f\u7a7a\u7684';
       if (submitBtn) submitBtn.disabled = totalCount === 0;
       for (var j = 0; j < cartList.length; j++) {
         var el = document.getElementById('count-' + cartList[j].id);
@@ -156,8 +150,8 @@
     // ============ 等待支付页渲染 ============
     function showWaitingPage(order) {
       var cartList = Object.values(order.goods).filter(function (it) { return it.count > 0; });
-      if ($('waiting-goods')) $('waiting-goods').innerHTML = cartList.map(function (it) { return '<p class="mb-1">' + it.name + ' × ' + it.count + '</p>'; }).join('');
-      if ($('waiting-total')) $('waiting-total').textContent = '¥' + order.total.toFixed(2);
+      if ($('waiting-goods')) $('waiting-goods').innerHTML = cartList.map(function (it) { return '<p class="mb-1">' + it.name + ' \u00d7 ' + it.count + '</p>'; }).join('');
+      if ($('waiting-total')) $('waiting-total').textContent = '\u00a5' + order.total.toFixed(2);
       if ($('verify-code')) $('verify-code').textContent = order.verifyCode;
       var qrContainer = $('verify-qr');
       if (qrContainer) {
@@ -193,9 +187,9 @@
         else { pickupQr.textContent = code; }
       }
       if (!order) {
-        if (titleEl) titleEl.textContent = '请前往收银台付款';
+        if (titleEl) titleEl.textContent = '\u8bf7\u524d\u5f80\u6536\u94f6\u53f0\u4ed8\u6b3e';
         if (statusIconEl) statusIconEl.className = 'fa-solid fa-spinner fa-spin text-coffee-main';
-        if (statusTextEl) statusTextEl.textContent = '等待付款...';
+        if (statusTextEl) statusTextEl.textContent = '\u7b49\u5f85\u4ed8\u6b3e...';
         if (verifySection) verifySection.classList.remove('hidden');
         if (pickupCodeSection) pickupCodeSection.classList.add('hidden');
         _lastPickupCode = null;
@@ -203,30 +197,30 @@
       }
       switch (order.status) {
         case 'making':
-          if (titleEl) titleEl.textContent = '正在制作中...';
+          if (titleEl) titleEl.textContent = '\u6b63\u5728\u5236\u4f5c\u4e2d...';
           if (statusIconEl) statusIconEl.className = 'fa-solid fa-fire text-orange-500';
-          if (statusTextEl) statusTextEl.textContent = '正在制作中...';
+          if (statusTextEl) statusTextEl.textContent = '\u6b63\u5728\u5236\u4f5c\u4e2d...';
           if (verifySection) verifySection.classList.add('hidden');
           if (order.pickupCode && pickupCodeSection) { pickupCodeSection.classList.remove('hidden'); if (pickupCodeDisplay) pickupCodeDisplay.textContent = order.pickupCode; renderQr(order.pickupCode); }
           break;
         case 'wait':
-          if (titleEl) titleEl.textContent = '请取餐';
+          if (titleEl) titleEl.textContent = '\u8bf7\u53d6\u9910';
           if (statusIconEl) statusIconEl.className = 'fa-solid fa-bell text-green-500';
-          if (statusTextEl) statusTextEl.textContent = '待取餐';
+          if (statusTextEl) statusTextEl.textContent = '\u5f85\u53d6\u9910';
           if (verifySection) verifySection.classList.add('hidden');
           if (order.pickupCode && pickupCodeSection) { pickupCodeSection.classList.remove('hidden'); if (pickupCodeDisplay) pickupCodeDisplay.textContent = order.pickupCode; renderQr(order.pickupCode); }
           break;
         case 'finish':
-          if (titleEl) titleEl.textContent = '已取餐';
+          if (titleEl) titleEl.textContent = '\u5df2\u53d6\u9910';
           if (statusIconEl) statusIconEl.className = 'fa-solid fa-check-circle text-gray-500';
-          if (statusTextEl) statusTextEl.textContent = '已完成';
+          if (statusTextEl) statusTextEl.textContent = '\u5df2\u5b8c\u6210';
           if (verifySection) verifySection.classList.add('hidden');
           if (order.pickupCode && pickupCodeSection) { pickupCodeSection.classList.remove('hidden'); if (pickupCodeDisplay) pickupCodeDisplay.textContent = order.pickupCode; renderQr(order.pickupCode); }
           break;
         default:
-          if (titleEl) titleEl.textContent = '请前往收银台付款';
+          if (titleEl) titleEl.textContent = '\u8bf7\u524d\u5f80\u6536\u94f6\u53f0\u4ed8\u6b3e';
           if (statusIconEl) statusIconEl.className = 'fa-solid fa-spinner fa-spin text-coffee-main';
-          if (statusTextEl) statusTextEl.textContent = '等待付款...';
+          if (statusTextEl) statusTextEl.textContent = '\u7b49\u5f85\u4ed8\u6b3e...';
           if (verifySection) verifySection.classList.remove('hidden');
           if (pickupCodeSection) pickupCodeSection.classList.add('hidden');
           _lastPickupCode = null;
@@ -293,8 +287,8 @@
       if (Date.now() - last.createTime < 1800000) {
         currentOrderId = last.id;
         var cartList = Object.values(last.goods).filter(function (it) { return it.count > 0; });
-        if ($('waiting-goods')) $('waiting-goods').innerHTML = cartList.map(function (it) { return '<p class="mb-1">' + it.name + ' × ' + it.count + '</p>'; }).join('');
-        if ($('waiting-total')) $('waiting-total').textContent = '¥' + last.total.toFixed(2);
+        if ($('waiting-goods')) $('waiting-goods').innerHTML = cartList.map(function (it) { return '<p class="mb-1">' + it.name + ' \u00d7 ' + it.count + '</p>'; }).join('');
+        if ($('waiting-total')) $('waiting-total').textContent = '\u00a5' + last.total.toFixed(2);
         updateOrderStatusDisplay(last);
         showPage('waiting-page');
         startCheckOrderStatus();
@@ -302,7 +296,19 @@
     })();
 
     window.addEventListener('beforeunload', function () { if (orderPollTimer) clearInterval(orderPollTimer); });
-  </script>
-  </script>
-</body>
-</html>
+  </script>`;
+
+// 找到第一个 <script> 标签和最后一个 </script> 的位置（在 body 内）
+var firstScript = html.indexOf('\n  <script>');
+var lastScriptEnd = html.lastIndexOf('  </script>');
+
+if (firstScript !== -1 && lastScriptEnd !== -1 && lastScriptEnd > firstScript) {
+  var before = html.substring(0, firstScript + 1); // 保留换行
+  var after = html.substring(lastScriptEnd); // 保留  </script> 之后的内容
+  var patched = before + newScript + '\n' + after;
+  fs.writeFileSync(path, patched, 'utf-8');
+  console.log('[OK] customer.html script 块已替换');
+} else {
+  console.log('[FAIL] 无法定位 script 块。firstScript=' + firstScript + ', lastScriptEnd=' + lastScriptEnd);
+  // 退而求其次：直接在 </body> 前插入
+}
